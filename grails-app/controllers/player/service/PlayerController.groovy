@@ -1,9 +1,12 @@
 package player.service
 
 import grails.converters.JSON
+import groovy.json.JsonSlurper
 import org.springframework.util.MimeTypeUtils
+import com.mongodb.*
 
 class PlayerController {
+    def mongoService
 
     def index() {
         def responseData = [
@@ -31,6 +34,9 @@ class PlayerController {
         out.write('\r\n')
         out.write((responseData as JSON).toString())
         request.parameterNames.each { name->
+            if(name != "manifest") {
+                saveComponentData(name, request.getParameter(name))
+            }
             sendFile(out, boundary, name, request.getParameter(name))
         }
         out.write('\r\n')
@@ -40,6 +46,14 @@ class PlayerController {
         return false
     }
 
+    def saveComponentData(String collection, data) {
+        System.out.println("saveComponentData")
+        def coll = mongoService.collection(collection)
+        def jsonSlurper = new JsonSlurper()
+        BasicDBObject doc = new BasicDBObject(jsonSlurper.parseText(data))
+        System.out.println(doc.toString())
+        coll.insert(doc)
+    }
     def sendFile(out, boundary, name, content) {
         out.write('\r\n')
         out.write('--')
