@@ -1,4 +1,4 @@
-package player.service
+package com.rumble
 
 import com.mongodb.BasicDBObject
 import com.mongodb.DBCursor

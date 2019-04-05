@@ -1,4 +1,4 @@
-package player.service
+package com.rumble
 
 import grails.boot.GrailsApp
 import grails.boot.config.GrailsAutoConfiguration

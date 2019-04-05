@@ -1,4 +1,4 @@
-package player.service
+package com.rumble
 
 class BootStrap {
 

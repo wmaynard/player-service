@@ -1,4 +1,4 @@
-package player.service
+package com.rumble
 
 import grails.converters.JSON
 import org.grails.web.json.JSONArray

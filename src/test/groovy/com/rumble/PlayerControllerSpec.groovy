@@ -1,4 +1,4 @@
-package player.service
+package com.rumble
 
 import grails.testing.web.controllers.ControllerUnitTest
 import spock.lang.Specification
