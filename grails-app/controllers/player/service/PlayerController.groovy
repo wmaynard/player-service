@@ -35,25 +35,28 @@ class PlayerController {
         out.write('Content-Disposition: inline')
         out.write('\r\n')
         out.write('\r\n')
-        out.write((responseData as JSON).toString())
 
         //TODO: Change this to an upsert for race conditions
         def id
-        def doc = playerService.exists(manifest.identity.installId)
-        if(!doc) {
+        def player = playerService.exists(manifest.identity.installId)
+        if(!player) {
             id = playerService.create(manifest.identity.installId, manifest.identity)
         } else {
-            id = doc.getObjectId("_id")
+            id = player.getObjectId("_id")
         }
 
-        //TODO: Merge conflict?
+        responseData.accountId = id.toString()
+        out.write((responseData as JSON).toString()) // actual response
 
-        request.parameterNames.each { name->
-            if(name != "manifest") {
-                saveComponentData(id, name, request.getParameter(name))
-            }
-            sendFile(out, boundary, name, request.getParameter(name))
+        // Send component responses based on entries in manifest
+        manifest.entries.each { component, data ->
+            saveComponentData(id, component, request.getParameter(component))
+
+            // Don't send anything if successful
+            sendFile(out, boundary, component, "")
+            //TODO: Send conflicting data
         }
+
         out.write('\r\n')
         out.write('--')
         out.write(boundary)
