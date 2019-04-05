@@ -68,7 +68,7 @@ class PlayerController {
 
             if(conflict) {
                 //TODO: Generate merge token
-                responseData.mergeToken = "MERGE_TOKEN"
+                responseData.mergeToken = playerService.generateMergeToken(id)
             }
         }
 

@@ -65,4 +65,15 @@ class PlayerService {
         System.out.println(doc.toString())
         coll.insert(doc)
     }
+
+    def generateMergeToken(accountId) {
+        System.out.println("generateMergeToken")
+        def coll = mongoService.collection("player")
+        def mergeToken = UUID.randomUUID().toString()
+        BasicDBObject doc = new BasicDBObject()
+        doc.append("$set", new BasicDBObject().append("mergeToken", mergeToken))
+        BasicDBObject query = new BasicDBObject().append("_id", accountId)
+        coll.update(query, doc)
+        return mergeToken
+    }
 }
