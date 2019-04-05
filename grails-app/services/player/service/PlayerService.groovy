@@ -41,4 +41,28 @@ class PlayerService {
         def coll = mongoService.collection("player")
         coll.find(eq("installId", installId)).first()
     }
+
+    def getComponentData(accountId, String component) {
+        System.out.println("getComponentData")
+        def coll = mongoService.collection(component)
+        DBObject query = new BasicDBObject("accountId", accountId)
+        DBCursor cursor = coll.find(query)
+        if (cursor.size() > 0) {
+            // There should only be one result
+            //TODO: Log if there are more than one result because something is wrong
+            return cursor.first()
+        }
+
+        return false
+    }
+
+    def saveComponentData(accountId, String collection, data) {
+        System.out.println("saveComponentData")
+        def coll = mongoService.collection(collection)
+        def jsonSlurper = new JsonSlurper()
+        BasicDBObject doc = new BasicDBObject("accountId", accountId)
+                .append("data", jsonSlurper.parseText(data))
+        System.out.println(doc.toString())
+        coll.insert(doc)
+    }
 }
