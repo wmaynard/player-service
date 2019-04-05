@@ -1,15 +1,18 @@
 package com.rumble
 
-import com.mongodb.*
+import com.mongodb.DB
+import com.mongodb.DBCollection
+import com.mongodb.MongoClient
+import com.mongodb.MongoClientURI
 
 class MongoService {
     private static mongoClient
-    private static databaseName = "test"
+    private static databaseName = System.getProperty("MONGODB_NAME") ?: System.getenv("MONGODB_NAME")
 
     static MongoClient client() {
         if(mongoClient == null){
-            MongoClientURI uri = new MongoClientURI(
-                    "mongodb://mongoAdmin:vBYpVpdsnNoBmj7S@player-service-nn-shard-00-00-ey7zm.mongodb.net:27017,player-service-nn-shard-00-01-ey7zm.mongodb.net:27017,player-service-nn-shard-00-02-ey7zm.mongodb.net:27017/test?ssl=true&replicaSet=player-service-nn-shard-0&authSource=admin&retryWrites=true")
+            def u = System.getProperty("MONGODB_URI") ?: System.getenv("MONGODB_URI")
+            MongoClientURI uri = new MongoClientURI(u)
             return new MongoClient(uri)
         }else {
             return mongoClient
