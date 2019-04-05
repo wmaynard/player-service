@@ -1,10 +1,15 @@
 package player.service
 
 import grails.converters.JSON
+import org.grails.web.json.JSONArray
+import org.grails.web.json.JSONObject
 import groovy.json.JsonSlurper
 import org.springframework.util.MimeTypeUtils
 import com.mongodb.*
 import com.mongodb.BasicDBObject
+import com.mongodb.DBCursor
+import com.mongodb.DBObject
+import org.bson.types.ObjectId
 
 class PlayerController {
     def mongoService
@@ -42,7 +47,29 @@ class PlayerController {
         if(!player) {
             id = playerService.create(manifest.identity.installId, manifest.identity)
         } else {
+            def conflict = false
             id = player.getObjectId("_id")
+
+            //TODO: Check for account conflict
+
+            //TODO: Check for install conflict
+            if(player.identity.installId != manifest.identity.installId) {
+                conflict = true
+                responseData.success = false
+                responseData.errorCode = "installConflict"
+            }
+
+            //TODO: Check for version conflict
+            if(player.identity.version != manifest.identity.version) {
+                conflict = true
+                responseData.success = false
+                responseData.errorCode = "versionConflict"
+            }
+
+            if(conflict) {
+                //TODO: Generate merge token
+                responseData.mergeToken = "MERGE_TOKEN"
+            }
         }
 
         responseData.accountId = id.toString()
@@ -50,11 +77,16 @@ class PlayerController {
 
         // Send component responses based on entries in manifest
         manifest.entries.each { component, data ->
+            def content = ""
+            def c = getComponentData(id, component)
+            if(!c) {
             saveComponentData(id, component, request.getParameter(component))
+            } else {
+                content = c
+            }
 
             // Don't send anything if successful
-            sendFile(out, boundary, component, "")
-            //TODO: Send conflicting data
+            sendFile(out, boundary, component, content)
         }
 
         out.write('\r\n')
@@ -74,6 +106,20 @@ class PlayerController {
         System.out.println(doc.toString())
         coll.insert(doc)
     }
+
+    def getComponentData(accountId, String component) {
+        System.out.println("getComponentData")
+        def coll = mongoService.collection(component)
+        DBObject query = new BasicDBObject("accountId", accountId)
+        DBCursor cursor = coll.find(query)
+        if (cursor.size() > 0) {
+            // There should only be one result
+            //TODO: Log if there are more than one result because something is wrong
+            return cursor.first()
+        }
+
+        return false
+    }
     def sendFile(out, boundary, name, content) {
         out.write('\r\n')
         out.write('--')
@@ -88,6 +134,6 @@ class PlayerController {
         out.write('.dat"')
         out.write('\r\n')
         out.write('\r\n')
-        out.write(content)
+        out.write(content.toString())
     }
 }
