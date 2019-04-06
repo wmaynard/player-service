@@ -1,14 +1,9 @@
 package com.rumble
 
 import grails.converters.JSON
-import org.grails.web.json.JSONArray
-import org.grails.web.json.JSONObject
 import groovy.json.JsonSlurper
 import org.springframework.util.MimeTypeUtils
-import com.mongodb.*
 import com.mongodb.BasicDBObject
-import com.mongodb.DBCursor
-import com.mongodb.DBObject
 import org.bson.types.ObjectId
 
 class PlayerController {
@@ -17,9 +12,10 @@ class PlayerController {
 
     def index() {
         def manifest = JSON.parse(params.manifest)
+        def requestId = manifest.identity?.requestId ?: UUID.randomUUID().toString()
         def responseData = [
             success: true,
-            requestId: '03B31646-611E-4BC3-AF92-8B2982443799',
+            requestId: requestId,
             remoteAddr: request.remoteAddr,
             geoipAddr: request.remoteAddr,
             country: 'US',
