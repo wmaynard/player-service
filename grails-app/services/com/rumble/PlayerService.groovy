@@ -12,6 +12,7 @@ class PlayerService {
     def mongoService
     def profileService
 
+    private static def COMPONENT_COLLECTION_NAME_PREFIX = "c_"
     private static def COLLECTION_NAME = "player"
 
     def exists(String installId, upsertData = null) {
@@ -61,19 +62,13 @@ class PlayerService {
         return doc
     }
 
-    def findByAccountId(String accountId) {
-        def coll = mongoService.collection("player")
-        coll.find(eq("_id", accountId)).first()
-    }
-
-    def findByInstallId(String installId) {
-        def coll = mongoService.collection("player")
-        coll.find(eq("installId", installId)).first()
+    def getComponentCollectionName(String component) {
+        return COMPONENT_COLLECTION_NAME_PREFIX + component
     }
 
     def getComponentData(accountId, String component) {
         System.out.println("getComponentData")
-        def coll = mongoService.collection(component)
+        def coll = mongoService.collection(getComponentCollectionName(component))
         DBObject query = new BasicDBObject("accountId", accountId)
         DBCursor cursor = coll.find(query)
         if (cursor.size() > 0) {
@@ -81,13 +76,12 @@ class PlayerService {
             //TODO: Log if there are more than one result because something is wrong
             return cursor.first()
         }
-
         return false
     }
 
     def saveComponentData(accountId, String collection, data) {
         System.out.println("saveComponentData")
-        def coll = mongoService.collection(collection)
+        def coll = mongoService.collection(getComponentCollectionName(collection))
         def jsonSlurper = new JsonSlurper()
         BasicDBObject doc = new BasicDBObject("accountId", accountId)
                 .append("data", jsonSlurper.parseText(data))
