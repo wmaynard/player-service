@@ -7,6 +7,7 @@ import com.mongodb.BasicDBObject
 import org.bson.types.ObjectId
 
 class PlayerController {
+    def profileService
     def mongoService
     def playerService
 
@@ -37,26 +38,58 @@ class PlayerController {
         out.write('\r\n')
         out.write('\r\n')
 
-        //TODO: Change this to an upsert for race conditions
+        //TODO: Validate checksums
+
         def id
-        def player = playerService.exists(manifest.identity.installId)
+        def player = playerService.exists(manifest.identity.installId, manifest.identity)
+        def conflict = false
         if(!player) {
-            id = playerService.create(manifest.identity.installId, manifest.identity)
+            //TODO: Error 'cause upsert failed
+            return false
         } else {
-            def conflict = false
+
             id = player.getObjectId("_id")
 
-            //TODO: Check for account conflict
+            //TODO: Validate account
+            def validProfiles = profileService.validateProfile(manifest.identity)
+            /* validProfiles = [
+             *   facebook: FACEBOOK_ID,
+             *   gameCenter: GAMECENTER_ID,
+             *   googlePlay: GOOGLEPLAY_ID
+             * ]
+             */
+            if(validProfiles) {
+                def conflictProfiles = [:]
+                // Get profiles attached to player we found
+                def playerProfiles = profileService.getProfiles(player.getObjectId("_id"))
+
+                if(playerProfiles) {
+                    // Assuming there is only one type of profile for each account, check to see if they conflict
+                    validProfiles.each { profile, profileData ->
+                        //TODO: Check for profile conflict
+                        if (profileData != playerProfiles[profile]) {
+                            conflictProfiles[profile] = profileData
+                        }
+                    }
+                }
+
+                if(conflictProfiles.size() > 0) {
+                    conflict = true
+                    responseData.success = false
+                    responseData.errorCode = "accountConflict"
+                    //TODO: Include which accounts are conflicting? Security concerns?
+                }
+            }
 
             //TODO: Check for install conflict
-            if(player.identity.installId != manifest.identity.installId) {
+            if(!conflict && player.lsi != manifest.identity.installId) {
                 conflict = true
                 responseData.success = false
                 responseData.errorCode = "installConflict"
             }
 
             //TODO: Check for version conflict
-            if(player.identity.clientVersion != manifest.identity.clientVersion) {
+            if(!conflict && player.clientVersion != manifest.identity.clientVersion) {
                 conflict = true
                 responseData.success = false
                 responseData.errorCode = "versionConflict"
@@ -74,11 +107,11 @@ class PlayerController {
         // Send component responses based on entries in manifest
         manifest.entries.each { component, data ->
             def content = ""
+            if (responseData.errorCode) {
             def c = playerService.getComponentData(id, component)
-            if(!c) {
-                playerService.saveComponentData(id, component, request.getParameter(component))
-            } else {
                 content = c
+            } else {
+                playerService.saveComponentData(id, component, request.getParameter(component))
             }
 
             // Don't send anything if successful

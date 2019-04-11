@@ -3,33 +3,62 @@ package com.rumble
 import com.mongodb.BasicDBObject
 import com.mongodb.DBCursor
 import com.mongodb.DBObject
+import com.mongodb.client.model.UpdateOptions
+import org.bson.Document
 import org.bson.types.ObjectId
 import groovy.json.JsonSlurper
 
 class PlayerService {
     def mongoService
+    def profileService
 
-    def exists(String installId) {
-        def coll = mongoService.collection("player")
-        DBObject query = new BasicDBObject("installId", installId)
-        DBCursor cursor = coll.find(query)
-        if (cursor.size() > 0) {
-            // There should only be one result
-            //TODO: Log if there are more than one result because something is wrong
-            return cursor.first()
+    private static def COLLECTION_NAME = "player"
+
+    def exists(String installId, upsertData = null) {
+        def coll = mongoService.collection(COLLECTION_NAME)
+        DBObject query = new BasicDBObject("lsi", installId)
+        if(upsertData) {
+            def now = System.currentTimeMillis()
+            def setOnInsertObj = new BasicDBObject()
+                    .append("clientVersion", upsertData.clientVersion)
+                    .append("dv", 0)
+                    .append("lsi", installId)
+                    .append("cd", now)
+
+            def player = coll.findAndModify(
+                    query, // query
+                    new BasicDBObject(), // fields
+                    new BasicDBObject(), // sort
+                    false, // remove
+                    new BasicDBObject('$setOnInsert', setOnInsertObj)
+                            .append('$set', new BasicDBObject('lc', now)), // update
+                    true, // returnNew
+                    true // upsert
+            )
+            return player
         } else {
-            return false
+            DBCursor cursor = coll.find(query)
+            if (cursor.size() > 0) {
+                // There should only be one result
+                //TODO: Log if there are more than one result because something is wrong
+                return cursor.first()
+            }
         }
+        return false
     }
 
     def create(String installId, data) {
-        def coll = mongoService.collection("player")
+        def coll = mongoService.collection(COLLECTION_NAME)
         def jsonSlurper = new JsonSlurper()
-        BasicDBObject doc = new BasicDBObject("installId", installId)
-                .append("identity", jsonSlurper.parseText(data))
+        def now = System.currentTimeMillis()
+        def identity = jsonSlurper.parseText(data)
+        BasicDBObject doc = new BasicDBObject()
+                .append("clientVersion", identity)
+                .append("dv", 0)
+                .append("lsi", installId)
+                .append("cd", now)
         coll.insert(doc)
-        ObjectId id = doc.getObjectId("_id")
-        return id
+        return doc
     }
 
     def findByAccountId(String accountId) {
@@ -68,7 +97,7 @@ class PlayerService {
 
     def generateMergeToken(accountId) {
         System.out.println("generateMergeToken")
-        def coll = mongoService.collection("player")
+        def coll = mongoService.collection(COLLECTION_NAME)
         def mergeToken = UUID.randomUUID().toString()
         BasicDBObject doc = new BasicDBObject()
         doc.append("$set", new BasicDBObject().append("mergeToken", mergeToken))
