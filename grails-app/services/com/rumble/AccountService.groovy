@@ -3,12 +3,9 @@ package com.rumble
 import com.mongodb.BasicDBObject
 import com.mongodb.DBCursor
 import com.mongodb.DBObject
-import com.mongodb.client.model.UpdateOptions
-import org.bson.Document
-import org.bson.types.ObjectId
 import groovy.json.JsonSlurper
 
-class PlayerService {
+class AccountService {
     def mongoService
     def profileService
 

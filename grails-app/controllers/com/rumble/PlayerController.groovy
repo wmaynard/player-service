@@ -1,15 +1,12 @@
 package com.rumble
 
 import grails.converters.JSON
-import groovy.json.JsonSlurper
 import org.springframework.util.MimeTypeUtils
-import com.mongodb.BasicDBObject
-import org.bson.types.ObjectId
 
 class PlayerController {
     def profileService
     def mongoService
-    def playerService
+    def accountService
 
     def index() {
         def manifest = JSON.parse(params.manifest)
@@ -41,7 +38,7 @@ class PlayerController {
         //TODO: Validate checksums
 
         def id
-        def player = playerService.exists(manifest.identity.installId, manifest.identity)
+        def player = accountService.exists(manifest.identity.installId, manifest.identity)
         def conflict = false
         if(!player) {
             //TODO: Error 'cause upsert failed
@@ -97,7 +94,7 @@ class PlayerController {
 
             if(conflict) {
                 //TODO: Generate merge token
-                responseData.mergeToken = playerService.generateMergeToken(id)
+                responseData.mergeToken = accountService.generateMergeToken(id)
             }
         }
 
@@ -108,10 +105,10 @@ class PlayerController {
         manifest.entries.each { component, data ->
             def content = ""
             if (responseData.errorCode) {
-            def c = playerService.getComponentData(id, component)
+            def c = accountService.getComponentData(id, component)
                 content = c
             } else {
-                playerService.saveComponentData(id, component, request.getParameter(component))
+                accountService.saveComponentData(id, component, request.getParameter(component))
             }
 
             // Don't send anything if successful
