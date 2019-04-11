@@ -4,9 +4,10 @@ import grails.converters.JSON
 import org.springframework.util.MimeTypeUtils
 
 class PlayerController {
-    def profileService
-    def mongoService
     def accountService
+    def mongoService
+    def profileService
+
 
     def index() {
         def manifest = JSON.parse(params.manifest)
@@ -39,12 +40,11 @@ class PlayerController {
 
         def id
         def player = accountService.exists(manifest.identity.installId, manifest.identity)
-        def conflict = false
         if(!player) {
             //TODO: Error 'cause upsert failed
             return false
         } else {
-
+            def conflict = false
             id = player.getObjectId("_id")
 
             //TODO: Validate account
@@ -99,6 +99,7 @@ class PlayerController {
         }
 
         responseData.accountId = id.toString()
+        responseData.createdDate = player.cd.toString()
         out.write((responseData as JSON).toString()) // actual response
 
         // Send component responses based on entries in manifest

@@ -18,10 +18,10 @@ class AccountService {
         if(upsertData) {
             def now = System.currentTimeMillis()
             def setOnInsertObj = new BasicDBObject()
-                    .append("cv", upsertData.clientVersion)
-                    .append("dv", 0)
-                    .append("lsi", installId)
-                    .append("cd", now)
+                    .append("cv", upsertData.clientVersion) // client version
+                    .append("dv", 0)                        // data version
+                    .append("lsi", installId)               // last saved install
+                    .append("cd", now)                      // created date
 
             def player = coll.findAndModify(
                     query, // query
@@ -51,10 +51,10 @@ class AccountService {
         def now = System.currentTimeMillis()
         def identity = jsonSlurper.parseText(data)
         BasicDBObject doc = new BasicDBObject()
-                .append("cv", identity)
-                .append("dv", 0)
-                .append("lsi", installId)
-                .append("cd", now)
+                .append("cv", identity.clientVersion)   // client version
+                .append("dv", 0)                        // data version
+                .append("lsi", installId)               // install id
+                .append("cd", now)                      // created date
         coll.insert(doc)
         return doc
     }
