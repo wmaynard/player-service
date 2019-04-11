@@ -21,7 +21,7 @@ class PlayerService {
         if(upsertData) {
             def now = System.currentTimeMillis()
             def setOnInsertObj = new BasicDBObject()
-                    .append("clientVersion", upsertData.clientVersion)
+                    .append("cv", upsertData.clientVersion)
                     .append("dv", 0)
                     .append("lsi", installId)
                     .append("cd", now)
@@ -32,7 +32,7 @@ class PlayerService {
                     new BasicDBObject(), // sort
                     false, // remove
                     new BasicDBObject('$setOnInsert', setOnInsertObj)
-                            .append('$set', new BasicDBObject('lc', now)), // update
+                            .append('$set', new BasicDBObject('lc', now)), // last checked
                     true, // returnNew
                     true // upsert
             )
@@ -54,7 +54,7 @@ class PlayerService {
         def now = System.currentTimeMillis()
         def identity = jsonSlurper.parseText(data)
         BasicDBObject doc = new BasicDBObject()
-                .append("clientVersion", identity)
+                .append("cv", identity)
                 .append("dv", 0)
                 .append("lsi", installId)
                 .append("cd", now)
@@ -69,7 +69,7 @@ class PlayerService {
     def getComponentData(accountId, String component) {
         System.out.println("getComponentData")
         def coll = mongoService.collection(getComponentCollectionName(component))
-        DBObject query = new BasicDBObject("accountId", accountId)
+        DBObject query = new BasicDBObject("aid", accountId)
         DBCursor cursor = coll.find(query)
         if (cursor.size() > 0) {
             // There should only be one result
@@ -83,7 +83,7 @@ class PlayerService {
         System.out.println("saveComponentData")
         def coll = mongoService.collection(getComponentCollectionName(collection))
         def jsonSlurper = new JsonSlurper()
-        BasicDBObject doc = new BasicDBObject("accountId", accountId)
+        BasicDBObject doc = new BasicDBObject("aid", accountId)
                 .append("data", jsonSlurper.parseText(data))
         System.out.println(doc.toString())
         coll.insert(doc)
@@ -94,7 +94,7 @@ class PlayerService {
         def coll = mongoService.collection(COLLECTION_NAME)
         def mergeToken = UUID.randomUUID().toString()
         BasicDBObject doc = new BasicDBObject()
-        doc.append("$set", new BasicDBObject().append("mergeToken", mergeToken))
+        doc.append("$set", new BasicDBObject().append("mt", mergeToken))
         BasicDBObject query = new BasicDBObject().append("_id", accountId)
         coll.update(query, doc)
         return mergeToken

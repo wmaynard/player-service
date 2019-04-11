@@ -34,8 +34,8 @@ class ProfileService {
         def coll = mongoService.collection(PROFILE_COLLECTION_NAME)
         def now = System.currentTimeMillis()
         DBObject doc = new BasicDBObject("type", type)
-                .append("accountId",accountId)
-                .append("profileId", profileId)
+                .append("aid",accountId)
+                .append("pid", profileId)
                 .append("lu", now)
 
         if(data) {
@@ -51,7 +51,7 @@ class ProfileService {
 
     def getProfiles(accountId) {
         def coll = mongoService.collection(PROFILE_COLLECTION_NAME)
-        DBObject query = new BasicDBObject("accountId", accountId)
+        DBObject query = new BasicDBObject("aid", accountId)
         def result = coll.find(query)
         return result.toArray()
     }

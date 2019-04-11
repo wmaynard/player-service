@@ -89,7 +89,7 @@ class PlayerController {
             }
 
             //TODO: Check for version conflict
-            if(!conflict && player.clientVersion != manifest.identity.clientVersion) {
+            if(!conflict && player.cv != manifest.identity.clientVersion) {
                 conflict = true
                 responseData.success = false
                 responseData.errorCode = "versionConflict"
