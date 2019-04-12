@@ -71,7 +71,7 @@ class AccountService {
         if (cursor.size() > 0) {
             // There should only be one result
             //TODO: Log if there are more than one result because something is wrong
-            return cursor.first()
+             return cursor.first()
         }
         return false
     }
@@ -83,7 +83,28 @@ class AccountService {
         BasicDBObject doc = new BasicDBObject("aid", accountId)
                 .append("data", jsonSlurper.parseText(data))
         System.out.println(doc.toString())
-        coll.insert(doc)
+        coll.findAndModify(
+                new BasicDBObject(),            // query
+                new BasicDBObject(),            // fields
+                new BasicDBObject(),            // sort
+                false,                          // remove
+                doc,                            // update
+                true,                           // returnNew
+                true                            // upsert
+        )
+    }
+
+    def validateMergeToken(accountId, mergeToken) {
+        def coll = mongoService.collection(COLLECTION_NAME)
+        DBCursor cursor = coll.find(new BasicDBObject("_id", accountId)
+                .append("mt", mergeToken)
+        )
+
+        if(cursor.size() > 1) {
+            // TODO: Log if there is more than one because this shouldn't happen
+        }
+
+        return (cursor.size() > 0)
     }
 
     def generateMergeToken(accountId) {

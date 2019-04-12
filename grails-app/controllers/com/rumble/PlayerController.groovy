@@ -44,23 +44,43 @@ class PlayerController {
             return false
         }
 
-            def conflict = false
+        def conflict = false
         def id = player.getObjectId("_id")
 
-            //TODO: Validate account
-            def validProfiles = profileService.validateProfile(manifest.identity)
-            /* validProfiles = [
-             *   facebook: FACEBOOK_ID,
-             *   gameCenter: GAMECENTER_ID,
-             *   googlePlay: GOOGLEPLAY_ID
-             * ]
-             */
-            if(validProfiles) {
+        //TODO: Validate account
+        def validProfiles = profileService.validateProfile(manifest.identity)
+        /* validProfiles = [
+         *   facebook: FACEBOOK_ID,
+         *   gameCenter: GAMECENTER_ID,
+         *   googlePlay: GOOGLEPLAY_ID
+         * ]
+         */
+        if(params.mergeToken) {
+            // Validate merge token
+            if(accountService.validateMergeToken(id, params.mergeToken)) {
+                responseData.accountId = id.toString()
+                responseData.createdDate = player.cd.toString()
+                out.write((responseData as JSON).toString()) // actual response
+
+                // Save over data
+                // Send component responses based on entries in manifest
+                manifest.entries.each { component, data ->
+                    accountService.saveComponentData(id, component, request.getParameter(component))
+
+                    // Don't send anything if successful
+                    sendFile(out, boundary, component, "")
+                }
+            } else {
+                responseData.success = false
+                responseData.errorCode = "mergeConflict"
+            }
+        } else {
+            if (validProfiles) {
                 def conflictProfiles = [:]
                 // Get profiles attached to player we found
                 def playerProfiles = profileService.getProfiles(player.getObjectId("_id"))
 
-                if(playerProfiles) {
+                if (playerProfiles) {
                     // Assuming there is only one type of profile for each account, check to see if they conflict
                     validProfiles.each { profile, profileData ->
                         //TODO: Check for profile conflict
@@ -70,7 +90,7 @@ class PlayerController {
                     }
                 }
 
-                if(conflictProfiles.size() > 0) {
+                if (conflictProfiles.size() > 0) {
                     conflict = true
                     responseData.success = false
                     responseData.errorCode = "accountConflict"
@@ -79,41 +99,41 @@ class PlayerController {
             }
 
             //TODO: Check for install conflict
-            if(!conflict && player.lsi != manifest.identity.installId) {
+            if (!conflict && player.lsi != manifest.identity.installId) {
                 conflict = true
                 responseData.success = false
                 responseData.errorCode = "installConflict"
             }
 
             //TODO: Check for version conflict
-            if(!conflict && player.cv != manifest.identity.clientVersion) {
+            if (!conflict && player.cv != manifest.identity.clientVersion) {
                 conflict = true
                 responseData.success = false
                 responseData.errorCode = "versionConflict"
             }
 
-            if(conflict) {
+            if (conflict) {
                 //TODO: Generate merge token
                 responseData.mergeToken = accountService.generateMergeToken(id)
             }
-        }
 
-        responseData.accountId = id.toString()
-        responseData.createdDate = player.cd.toString()
-        out.write((responseData as JSON).toString()) // actual response
+            responseData.accountId = id.toString()
+            responseData.createdDate = player.cd.toString()
+            out.write((responseData as JSON).toString()) // actual response
 
-        // Send component responses based on entries in manifest
-        manifest.entries.each { component, data ->
-            def content = ""
-            if (responseData.errorCode) {
+            // Send component responses based on entries in manifest
+            manifest.entries.each { component, data ->
+                def content = ""
+                if (responseData.errorCode) {
                     // Return the data in the format that the client expects it (which is really just the embedded data field)
                     content = accountService.getComponentData(id, component)?.data
-            } else {
-                accountService.saveComponentData(id, component, request.getParameter(component))
-            }
+                } else {
+                    accountService.saveComponentData(id, component, request.getParameter(component))
+                }
 
-            // Don't send anything if successful
-            sendFile(out, boundary, component, content)
+                // Don't send anything if successful
+                sendFile(out, boundary, component, content)
+            }
         }
 
         out.write('\r\n')
