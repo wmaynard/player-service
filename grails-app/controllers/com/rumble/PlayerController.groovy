@@ -38,14 +38,14 @@ class PlayerController {
 
         //TODO: Validate checksums
 
-        def id
         def player = accountService.exists(manifest.identity.installId, manifest.identity)
         if(!player) {
             //TODO: Error 'cause upsert failed
             return false
-        } else {
+        }
+
             def conflict = false
-            id = player.getObjectId("_id")
+        def id = player.getObjectId("_id")
 
             //TODO: Validate account
             def validProfiles = profileService.validateProfile(manifest.identity)
@@ -106,8 +106,8 @@ class PlayerController {
         manifest.entries.each { component, data ->
             def content = ""
             if (responseData.errorCode) {
-            def c = accountService.getComponentData(id, component)
-                content = c
+                    // Return the data in the format that the client expects it (which is really just the embedded data field)
+                    content = accountService.getComponentData(id, component)?.data
             } else {
                 accountService.saveComponentData(id, component, request.getParameter(component))
             }
