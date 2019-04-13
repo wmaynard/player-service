@@ -3,6 +3,9 @@ package com.rumble
 class UrlMappings {
 
     static mappings = {
+        "/health"(controller:'health')
+
+
         "/$controller/$action?/$id?(.$format)?"{
             constraints {
                 // apply constraints here
@@ -10,7 +13,7 @@ class UrlMappings {
         }
 
         "/"(view:"/index")
-        "500"(view:'/error')
-        "404"(view:'/notFound')
+        "404"(controller: 'platformError', action: 'notFound')
+        "500"(controller: 'platformError', action: 'uncaughtException')
     }
 }
