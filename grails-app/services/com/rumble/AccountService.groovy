@@ -112,7 +112,7 @@ class AccountService {
         def coll = mongoService.collection(COLLECTION_NAME)
         def mergeToken = UUID.randomUUID().toString()
         BasicDBObject doc = new BasicDBObject()
-        doc.append("$set", new BasicDBObject().append("mt", mergeToken))
+        doc.append('$set', new BasicDBObject().append("mt", mergeToken))
         BasicDBObject query = new BasicDBObject().append("_id", accountId)
         coll.update(query, doc)
         return mergeToken
