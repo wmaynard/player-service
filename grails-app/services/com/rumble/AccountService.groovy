@@ -39,7 +39,9 @@ class AccountService {
             if (cursor.size() > 0) {
                 // There should only be one result
                 //TODO: Log if there are more than one result because something is wrong
-                return cursor.first()
+                def result = cursor.first()
+                cursor.close()
+                return result
             }
         }
         return false
@@ -71,7 +73,9 @@ class AccountService {
         if (cursor.size() > 0) {
             // There should only be one result
             //TODO: Log if there are more than one result because something is wrong
-             return cursor.first()
+            def result = cursor.first()
+            cursor.close()
+             return result
         }
         return false
     }
@@ -100,11 +104,13 @@ class AccountService {
                 .append("mt", mergeToken)
         )
 
-        if(cursor.size() > 1) {
+        def cursorSize = cursor.size()
+        cursor.close()
+        if(cursorSize > 1) {
             // TODO: Log if there is more than one because this shouldn't happen
         }
 
-        return (cursor.size() > 0)
+        return (cursorSize > 0)
     }
 
     def generateMergeToken(accountId) {

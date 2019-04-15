@@ -13,14 +13,14 @@ class PlayerController {
     def index() {
         def manifest
         def responseData = [
-            success: true,
-            remoteAddr: request.remoteAddr,
-            geoipAddr: request.remoteAddr,
-            country: 'US',
-            dateCreated: '\'' + System.currentTimeMillis() + '\'',
-            accessToken: UUID.randomUUID().toString(),
-            assetPath: 'https://rumble-game-alliance-dist.s3.amazonaws.com/client/',
-            clientvars: [:]
+                success: true,
+                remoteAddr: request.remoteAddr,
+                geoipAddr: request.remoteAddr,
+                country: 'US',
+                dateCreated: '\'' + System.currentTimeMillis() + '\'',
+                accessToken: UUID.randomUUID().toString(),
+                assetPath: 'https://rumble-game-alliance-dist.s3.amazonaws.com/client/',
+                clientvars: [:]
         ]
 
         def boundary = MimeTypeUtils.generateMultipartBoundaryString()
@@ -43,6 +43,9 @@ class PlayerController {
             out.write('--')
             out.write(boundary)
             out.write('--')
+            if(mongoService.hasClient()) {
+                mongoService.client().close()
+            }
             return false
         } else {
             def slurper = new JsonSlurper()
@@ -64,6 +67,9 @@ class PlayerController {
             out.write('--')
             out.write(boundary)
             out.write('--')
+            if(mongoService.hasClient()) {
+                mongoService.client().close()
+            }
             return false
         }
 
@@ -164,6 +170,9 @@ class PlayerController {
         out.write('--')
         out.write(boundary)
         out.write('--')
+        if(mongoService.hasClient()) {
+            mongoService.client().close()
+        }
         return false
     }
 

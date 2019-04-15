@@ -13,10 +13,14 @@ class MongoService {
         if(mongoClient == null){
             def u = System.getProperty("MONGODB_URI") ?: System.getenv("MONGODB_URI")
             MongoClientURI uri = new MongoClientURI(u)
-            return new MongoClient(uri)
-        }else {
-            return mongoClient
+            mongoClient = new MongoClient(uri)
         }
+
+        return mongoClient
+    }
+
+    static boolean hasClient() {
+        return (mongoClient == null)
     }
 
     DBCollection collection(String collectionName) {

@@ -8,8 +8,12 @@ import grails.converters.JSON
 import org.springframework.web.context.request.RequestContextHolder
 
 class PlatformErrorController {
+    def mongoService
 
     def uncaughtException() {
+        if(mongoService.hasClient()) {
+            mongoService.client().close()
+        }
 
         try {
 
@@ -40,6 +44,9 @@ class PlatformErrorController {
     }
 
     def notFound() {
+        if(mongoService.hasClient()) {
+            mongoService.client().close()
+        }
 
         render ([ success: false, errorCode: 'notFound' ] as JSON)
     }
