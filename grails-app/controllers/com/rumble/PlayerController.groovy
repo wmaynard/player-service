@@ -145,17 +145,18 @@ class PlayerController {
             out.write(JsonOutput.toJson(responseData)) // actual response
 
             // Send component responses based on entries in manifest
-            manifest.entries.each { component, data ->
+            manifest.entries.each { component ->
                 def content = ""
                 if (responseData.errorCode) {
                     // Return the data in the format that the client expects it (which is really just the embedded data field)
-                    content = accountService.getComponentData(id, component)?.data
+                    def c = accountService.getComponentData(id, component.name)
+                    content = (c) ? c.data ?: c : false
                 } else {
-                    accountService.saveComponentData(id, component, request.getParameter(component))
+                    accountService.saveComponentData(id, component.name, request.getParameter(component.name))
                 }
 
                 // Don't send anything if successful
-                sendFile(out, boundary, component, content)
+                sendFile(out, boundary, component.name, content)
             }
         }
 
