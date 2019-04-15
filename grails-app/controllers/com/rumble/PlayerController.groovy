@@ -1,6 +1,7 @@
 package com.rumble
 
-import grails.converters.JSON
+import groovy.json.JsonOutput
+import groovy.json.JsonSlurper
 import org.springframework.util.MimeTypeUtils
 
 class PlayerController {
@@ -10,20 +11,18 @@ class PlayerController {
 
 
     def index() {
-        def manifest = JSON.parse(params.manifest)
-        def requestId = manifest.identity?.requestId ?: UUID.randomUUID().toString()
+        def manifest
         def responseData = [
             success: true,
-            requestId: requestId,
             remoteAddr: request.remoteAddr,
             geoipAddr: request.remoteAddr,
             country: 'US',
-            accountId: manifest.identity.installId,
             dateCreated: '\'' + System.currentTimeMillis() + '\'',
             accessToken: UUID.randomUUID().toString(),
             assetPath: 'https://rumble-game-alliance-dist.s3.amazonaws.com/client/',
             clientvars: [:]
         ]
+
         def boundary = MimeTypeUtils.generateMultipartBoundaryString()
         response.setContentType('multipart/related; boundary="' + boundary + '"')
         def out = response.writer
@@ -36,11 +35,35 @@ class PlayerController {
         out.write('\r\n')
         out.write('\r\n')
 
+        if(!params.manifest) {
+            responseData.success = false
+            responseData.errorCode = "authError"
+            out.write(JsonOutput.toJson(responseData))
+            out.write('\r\n')
+            out.write('--')
+            out.write(boundary)
+            out.write('--')
+            return false
+        } else {
+            def slurper = new JsonSlurper()
+            manifest = slurper.parseText(params.manifest)
+            def requestId = manifest.identity?.requestId ?: UUID.randomUUID().toString()
+            responseData.requestId = requestId
+            responseData.accountId = manifest.identity.installId
+        }
+
         //TODO: Validate checksums
 
         def player = accountService.exists(manifest.identity.installId, manifest.identity)
         if(!player) {
             //TODO: Error 'cause upsert failed
+            responseData.success = false
+            responseData.errorCode = "dbError"
+            out.write(JsonOutput.toJson(responseData))
+            out.write('\r\n')
+            out.write('--')
+            out.write(boundary)
+            out.write('--')
             return false
         }
 
@@ -60,7 +83,7 @@ class PlayerController {
             if(accountService.validateMergeToken(id, params.mergeToken)) {
                 responseData.accountId = id.toString()
                 responseData.createdDate = player.cd.toString()
-                out.write((responseData as JSON).toString()) // actual response
+                out.write(JsonOutput.toJson(responseData))
 
                 // Save over data
                 // Send component responses based on entries in manifest
@@ -119,7 +142,7 @@ class PlayerController {
 
             responseData.accountId = id.toString()
             responseData.createdDate = player.cd.toString()
-            out.write((responseData as JSON).toString()) // actual response
+            out.write(JsonOutput.toJson(responseData)) // actual response
 
             // Send component responses based on entries in manifest
             manifest.entries.each { component, data ->
