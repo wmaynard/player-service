@@ -9,7 +9,6 @@ class PlayerController {
     def mongoService
     def profileService
 
-
     def index() {
         def manifest
         def responseData = [
@@ -92,6 +91,10 @@ class PlayerController {
                 out.write(JsonOutput.toJson(responseData))
 
                 // Save over data
+                validProfiles.each { profile, profileData ->
+                    profileService.addProfile(profile, id.toString(), profileData, manifest.identity)
+                }
+
                 // Send component responses based on entries in manifest
                 manifest.entries.each { component, data ->
                     accountService.saveComponentData(id, component, request.getParameter(component))
@@ -124,6 +127,10 @@ class PlayerController {
                     responseData.success = false
                     responseData.errorCode = "accountConflict"
                     //TODO: Include which accounts are conflicting? Security concerns?
+                } else if(conflictProfiles.size() == 0 && !playerProfiles) {
+                    validProfiles.each { profile, profileData ->
+                        profileService.addProfile(profile, id.toString(), profileData, manifest.identity)
+                    }
                 }
             }
 
