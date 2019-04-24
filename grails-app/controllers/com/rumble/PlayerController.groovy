@@ -90,9 +90,11 @@ class PlayerController {
                 responseData.createdDate = player.cd.toString()
                 out.write(JsonOutput.toJson(responseData))
 
+                profileService.saveInstallIdProfile(id.toString(), manifest.identity.installId, manifest.identity)
+
                 // Save over data
                 validProfiles.each { profile, profileData ->
-                    profileService.addProfile(profile, id.toString(), profileData, manifest.identity)
+                    profileService.saveProfile(profile, id.toString(), profileData)
                 }
 
                 // Send component responses based on entries in manifest
@@ -127,10 +129,6 @@ class PlayerController {
                     responseData.success = false
                     responseData.errorCode = "accountConflict"
                     //TODO: Include which accounts are conflicting? Security concerns?
-                } else if(conflictProfiles.size() == 0 && !playerProfiles) {
-                    validProfiles.each { profile, profileData ->
-                        profileService.addProfile(profile, id.toString(), profileData, manifest.identity)
-                    }
                 }
             }
 
@@ -151,6 +149,15 @@ class PlayerController {
             if (conflict) {
                 //TODO: Generate merge token
                 responseData.mergeToken = accountService.generateMergeToken(id)
+            } else {
+                // If we've gotten this far, there should be no conflicts, so save all the things
+                // Save Install ID profile
+                profileService.saveInstallIdProfile(id.toString(), manifest.identity.installId, manifest.identity)
+
+                // Save social profiles
+                validProfiles.each { profile, profileData ->
+                    profileService.saveProfile(profile, id.toString(), profileData)
+                }
             }
 
             responseData.accountId = id.toString()

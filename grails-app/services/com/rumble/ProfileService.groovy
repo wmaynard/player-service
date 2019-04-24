@@ -1,10 +1,8 @@
 package com.rumble
 
-//import grails.gorm.transactions.Transactional
 import com.mongodb.BasicDBObject
 import com.mongodb.DBObject
 
-//@Transactional
 class ProfileService {
     def appleService
     def facebookService
@@ -30,21 +28,45 @@ class ProfileService {
         return validProfiles
     }
 
-    def addProfile(type, accountId, profileId, data){
+    def saveProfile(type, accountId, profileId, updateData = null){
         def coll = mongoService.collection(PROFILE_COLLECTION_NAME)
         def now = System.currentTimeMillis()
-        DBObject doc = new BasicDBObject("type", type)
+        def query = new BasicDBObject("type", type)
+                .append("aid",accountId)
+                .append("pid", profileId)
+
+        DBObject upsertDoc = new BasicDBObject("type", type)
                 .append("aid",accountId)
                 .append("pid", profileId)
                 .append("lu", now)
 
-        if(data) {
-            data.each { k, v ->
-                doc.append(k, v)
+        DBObject updateDoc = new BasicDBObject("lu", now)
+
+        if(updateData) {
+            updateData.each { k, v ->
+                updateDoc.append(k, v)
+                upsertDoc.append(k, v)
             }
         }
-        coll.insert(doc)
-        return doc
+
+        def profile = coll.findAndModify(
+                query, // query
+                new BasicDBObject(), // fields
+                false, // remove
+                new BasicDBObject('$setOnInsert', upsertDoc)
+                        .append('$set', updateDoc), // update
+                true, // returnNew
+                true // upsert
+        )
+
+        return profile
+    }
+
+    def saveInstallIdProfile(accountId, installId, identityData) {
+        // Extract data to save with the Install ID
+        def data = AccountService.extractInstallData(identityData)
+
+        return saveProfile("installId", accountId, installId, data)
     }
 
     def getProfile(type, accountId, profileId) {}

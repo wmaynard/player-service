@@ -19,8 +19,8 @@ class AccountService {
             def now = System.currentTimeMillis()
             def setOnInsertObj = new BasicDBObject()
                     .append("cv", upsertData.clientVersion) // client version
-                    .append("dv", 0)                        // data version
-                    .append("lsi", installId)               // last saved install
+                    .append("dv", upsertData.dataVersion ?: 0)  // data version
+                    .append("lsi", installId)                   // last saved install ID
                     .append("cd", now)                      // created date
 
             def player = coll.findAndModify(
@@ -122,5 +122,18 @@ class AccountService {
         BasicDBObject query = new BasicDBObject().append("_id", accountId)
         coll.update(query, doc)
         return mergeToken
+    }
+
+    static def extractInstallData(identityData) {
+        def data = [:]
+
+        // Subtracting data for convenience
+        identityData.each { k, v ->
+            if(k!= "installId" && k != "facebook" && k != "gameCenter" && k != "googlePlay") {
+                data[k] = v
+            }
+        }
+
+        return data
     }
 }
