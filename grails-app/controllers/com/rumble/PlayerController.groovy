@@ -99,12 +99,36 @@ class PlayerController {
 
                 def updatedAccount = accountService.updateAccountData(id.toString(), manifest.identity)
 
+
+                def entries = [:]
+                def entriesChecksums = []
+
                 // Send component responses based on entries in manifest
                 manifest.entries.each { component, data ->
                     accountService.saveComponentData(id, component, request.getParameter(component))
 
                     // Don't send anything if successful
-                    sendFile(out, boundary, component, "")
+                    entries[component.name] = ""
+
+                    //TODO: Generate new checksums
+                    def cs = [
+                            "name": component.name,
+                            "checksum": "placeholder"
+                    ]
+                    entriesChecksums.add(cs)
+                }
+
+                // Recreate manifest to send back to the client
+                def mani = [
+                        "identity": manifest.identity,
+                        "entries": entriesChecksums,
+                        "manifestVersion": "placeholder", //TODO: Save manifestVersion
+                        "checksum": "placeholder" //TODO: master checksum
+                ]
+
+                sendFile(out, boundary, "manifest", JsonOutput.toJson(mani))
+                entries.each { name, data ->
+                    sendFile(out, boundary, name, data)
                 }
             } else {
                 responseData.success = false
@@ -168,6 +192,8 @@ class PlayerController {
             responseData.accountId = id.toString()
             out.write(JsonOutput.toJson(responseData)) // actual response
 
+            def entries = [:]
+            def entriesChecksums = []
             // Send component responses based on entries in manifest
             manifest.entries.each { component ->
                 def content = ""
@@ -180,7 +206,27 @@ class PlayerController {
                 }
 
                 // Don't send anything if successful
-                sendFile(out, boundary, component.name, content)
+                entries[component.name] = content
+
+                //TODO: Generate checksums
+                def cs = [
+                        "name": component.name,
+                        "checksum": "placeholder"
+                ]
+                entriesChecksums.add(cs)
+            }
+
+            // Recreate manifest to send back to the client
+            def mani = [
+                    "identity": manifest.identity,
+                    "entries": entriesChecksums,
+                    "manifestVersion": "placeholder", //TODO: Save manifestVersion
+                    "checksum": "placeholder" //TODO: master checksum
+            ]
+
+            sendFile(out, boundary, "manifest", JsonOutput.toJson(mani))
+            entries.each { name, data ->
+                sendFile(out, boundary, name, data)
             }
         }
 
