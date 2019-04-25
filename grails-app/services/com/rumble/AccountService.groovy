@@ -21,6 +21,7 @@ class AccountService {
                     .append("cv", upsertData.clientVersion) // client version
                     .append("dv", upsertData.dataVersion ?: 0)  // data version
                     .append("lsi", installId)                   // last saved install ID
+                    .append("dt", upsertData.deviceType ?: "n/a") // last device type
                     .append("cd", now)                      // created date
 
             def player = coll.findAndModify(
@@ -59,6 +60,41 @@ class AccountService {
                 .append("cd", now)                      // created date
         coll.insert(doc)
         return doc
+    }
+
+    def updateAccountData(accountId, identityData) {
+        def now = System.currentTimeMillis()
+        def coll = mongoService.collection(COLLECTION_NAME)
+        BasicDBObject updateDoc = new BasicDBObject("lu", now)
+
+        if(identityData.clientVersion) {
+            updateDoc.append("cv", identityData.clientVersion)
+        }
+
+        if(identityData.dataVersion) {
+            updateDoc.append("dv", identityData.dataVersion)
+        }
+
+        if(identityData.dataVersion) {
+            updateDoc.append("dt", identityData.deviceType)
+        }
+
+        if(identityData.installId) {
+            updateDoc.append("lsi", identityData.installId)
+        }
+
+        System.out.println(updateDoc.toString())
+        def account = coll.findAndModify(
+                new BasicDBObject("_id", accountId),    // query
+                new BasicDBObject(),                    // fields
+                new BasicDBObject(),                    // sort
+                false,                          // remove
+                updateDoc,                              // update
+                true,                         // returnNew
+                false                            // upsert
+        )
+
+        return account
     }
 
     def getComponentCollectionName(String component) {

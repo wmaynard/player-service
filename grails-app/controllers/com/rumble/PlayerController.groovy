@@ -97,6 +97,8 @@ class PlayerController {
                     profileService.saveProfile(profile, id.toString(), profileData)
                 }
 
+                def updatedAccount = accountService.updateAccountData(id.toString(), manifest.identity)
+
                 // Send component responses based on entries in manifest
                 manifest.entries.each { component, data ->
                     accountService.saveComponentData(id, component, request.getParameter(component))
@@ -158,10 +160,12 @@ class PlayerController {
                 validProfiles.each { profile, profileData ->
                     profileService.saveProfile(profile, id.toString(), profileData)
                 }
+
+                def updatedAccount = accountService.updateAccountData(id.toString(), manifest.identity)
+                responseData.createdDate = updatedAccount.cd.toString()
             }
 
             responseData.accountId = id.toString()
-            responseData.createdDate = player.cd.toString()
             out.write(JsonOutput.toJson(responseData)) // actual response
 
             // Send component responses based on entries in manifest
