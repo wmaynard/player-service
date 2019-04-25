@@ -74,6 +74,7 @@ class PlayerController {
 
         def conflict = false
         def id = player.getObjectId("_id")
+        responseData.accessToken = id.toString()
 
         //TODO: Validate account
         def validProfiles = profileService.validateProfile(manifest.identity)
