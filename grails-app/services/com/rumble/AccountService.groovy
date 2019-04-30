@@ -4,6 +4,7 @@ import com.mongodb.BasicDBObject
 import com.mongodb.DBCursor
 import com.mongodb.DBObject
 import groovy.json.JsonSlurper
+import org.bson.types.ObjectId
 
 class AccountService {
     def mongoService
@@ -85,7 +86,7 @@ class AccountService {
 
         System.out.println(updateDoc.toString())
         def account = coll.findAndModify(
-                new BasicDBObject("_id", accountId),    // query
+                new BasicDBObject("_id", (accountId instanceof String) ? new ObjectId(accountId) : accountId),    // query
                 new BasicDBObject(),                    // fields
                 new BasicDBObject(),                    // sort
                 false,                          // remove

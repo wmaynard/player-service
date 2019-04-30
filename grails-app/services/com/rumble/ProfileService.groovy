@@ -12,17 +12,27 @@ class ProfileService {
     static def PROFILE_COLLECTION_NAME = "profiles"
 
     def validateProfile(identityData) {
+        def valid
         def validProfiles = [:]
         if(identityData.facebook) {
-            validProfiles.facebook = facebookService.validateAccount(identityData.facebook)
+            valid = facebookService.validateAccount(identityData.facebook)
+            if(valid) {
+                validProfiles.facebook = valid
+            }
         }
 
         if(identityData.gameCenter) {
-            validProfiles.gameCenter = appleService.validateAccount(identityData.gameCenter)
+            valid = appleService.validateAccount(identityData.gameCenter)
+            if(valid) {
+                validProfiles.gameCenter = valid
+            }
         }
 
         if(identityData.googlePlay) {
-            validProfiles.googlePlay = googleService.validateAccount(identityData.googlePlay)
+            valid = googleService.validateAccount(identityData.googlePlay)
+            if(valid) {
+                validProfiles.googlePlay = valid
+            }
         }
 
         return validProfiles
@@ -38,20 +48,20 @@ class ProfileService {
         DBObject upsertDoc = new BasicDBObject("type", type)
                 .append("aid",accountId)
                 .append("pid", profileId)
-                .append("lu", now)
+                .append("cd", now)
 
         DBObject updateDoc = new BasicDBObject("lu", now)
 
         if(updateData) {
             updateData.each { k, v ->
                 updateDoc.append(k, v)
-                upsertDoc.append(k, v)
             }
         }
 
         def profile = coll.findAndModify(
                 query, // query
                 new BasicDBObject(), // fields
+                new BasicDBObject(), // sort
                 false, // remove
                 new BasicDBObject('$setOnInsert', upsertDoc)
                         .append('$set', updateDoc), // update
