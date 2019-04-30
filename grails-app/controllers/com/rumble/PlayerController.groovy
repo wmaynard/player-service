@@ -187,7 +187,7 @@ class PlayerController {
                 }
 
                 def updatedAccount = accountService.updateAccountData(id.toString(), manifest.identity)
-                responseData.createdDate = updatedAccount.cd.toString()
+                responseData.createdDate = updatedAccount.cd?.toString() ?: null
             }
 
             responseData.accountId = id.toString()
