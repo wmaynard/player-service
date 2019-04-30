@@ -156,6 +156,7 @@ class PlayerController {
                     responseData.success = false
                     responseData.errorCode = "accountConflict"
                     //TODO: Include which accounts are conflicting? Security concerns?
+                    responseData.conflictingAccountId = "placeholder"
                 }
             }
 
