@@ -58,7 +58,34 @@ class PlayerController {
         }
 
         //TODO: Validate checksums
-        
+        def validChecksums = true
+        if(ChecksumService.generateMasterChecksum(manifest.entries, manifest.identity.installId) != manifest.checksum) {
+            validChecksums = false
+        } else {
+            manifest.entries.each { entry ->
+                if (validChecksums) {
+                    def cs = ChecksumService.generateComponentChecksum(params.get(entry.name), manifest.identity.installId)
+                    if (entry.checksum != cs) {
+                        validChecksums = false
+                    }
+                }
+            }
+        }
+
+        if(!validChecksums) {
+            responseData.success = false
+            responseData.errorCode = "invalidData"
+            out.write(JsonOutput.toJson(responseData))
+            out.write('\r\n')
+            out.write('--')
+            out.write(boundary)
+            out.write('--')
+            if(mongoService.hasClient()) {
+                mongoService.client().close()
+            }
+            return false
+        }
+
         def channel = manifest.identity.channel ?: ""
         def channelScope = "channel:${channel}"
         def channelConfig = dynamicConfigService.getConfig(channelScope)
@@ -152,7 +179,7 @@ class PlayerController {
                     //TODO: Generate new checksums
                     def cs = [
                             "name": component.name,
-                            "checksum": "placeholder"
+                            "checksum": ChecksumService.generateComponentChecksum(component, manifest.identity.installId) ?: "placeholder"
                     ]
                     entriesChecksums.add(cs)
                 }
@@ -162,7 +189,7 @@ class PlayerController {
                         "identity": manifest.identity,
                         "entries": entriesChecksums,
                         "manifestVersion": "placeholder", //TODO: Save manifestVersion
-                        "checksum": "placeholder" //TODO: master checksum
+                        "checksum": ChecksumService.generateMasterChecksum(entriesChecksums, manifest.identity.installId) ?: "placeholder" //TODO: master checksum
                 ]
 
                 sendFile(out, boundary, "manifest", JsonOutput.toJson(mani))
@@ -251,7 +278,7 @@ class PlayerController {
                 //TODO: Generate checksums
                 def cs = [
                         "name": component.name,
-                        "checksum": "placeholder"
+                        "checksum": ChecksumService.generateComponentChecksum(component, manifest.identity.installId) ?: "placeholder"
                 ]
                 entriesChecksums.add(cs)
             }
@@ -261,7 +288,7 @@ class PlayerController {
                     "identity": manifest.identity,
                     "entries": entriesChecksums,
                     "manifestVersion": "placeholder", //TODO: Save manifestVersion
-                    "checksum": "placeholder" //TODO: master checksum
+                    "checksum": ChecksumService.generateMasterChecksum(entriesChecksums, manifest.identity.installId) ?: "placeholder" //TODO: master checksum
             ]
 
             sendFile(out, boundary, "manifest", JsonOutput.toJson(mani))
