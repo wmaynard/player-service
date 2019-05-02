@@ -6,8 +6,11 @@ import org.springframework.util.MimeTypeUtils
 
 class PlayerController {
     def accountService
+    def dynamicConfigService = new DynamicConfigService()
     def mongoService
     def profileService
+
+    def game = System.getProperty("GAME_GUKEY") ?: System.getenv('GAME_GUKEY')
 
     def index() {
         def manifest
@@ -55,6 +58,41 @@ class PlayerController {
         }
 
         //TODO: Validate checksums
+        
+        def channel = manifest.identity.channel ?: ""
+        def channelScope = "channel:${channel}"
+        def channelConfig = dynamicConfigService.getConfig(channelScope)
+
+        //Map channel-specific game identifier to game gukey
+        if(manifest.identity.gameGukey) {
+            game = manifest.identity.gameGukey
+        }
+        String gameGukey = channelConfig["game.${game}.gukey"] ?: game
+        def gameScope = "game:${gameGukey}"
+        def gameConfig = dynamicConfigService.getGameConfig(gameGukey)
+
+        //This looks for variables with a certain prefix (eg_ kr:clientvars:) and puts them in the client_vars structure
+        //The prefixes are in a json list, and will be applied in order, overlaying any variable that collides
+        def clientVarPrefixes = gameConfig.list("clientVarPrefixes")
+        def clientvars = [:]
+        clientVarPrefixes.each {
+            l ->
+                def defaultVar = l + "default:"
+                def versionVar = l + manifest.identity.clientVersion + ":"
+                channelConfig.each {
+                    k, v ->
+                        if (k.startsWith(defaultVar)) clientvars.put(k.replace(defaultVar, ''), v)
+                        if (k.startsWith(versionVar)) clientvars.put(k.replace(versionVar, ''), v)
+                }
+                gameConfig.each {
+                    k, v ->
+                        if (k.startsWith(defaultVar)) clientvars.put(k.replace(defaultVar, ''), v)
+                        if (k.startsWith(versionVar)) clientvars.put(k.replace(versionVar, ''), v)
+                }
+        }
+        if(clientvars) {
+            responseData.clientvars = clientvars
+        }
 
         def player = accountService.exists(manifest.identity.installId, manifest.identity)
         if(!player) {
