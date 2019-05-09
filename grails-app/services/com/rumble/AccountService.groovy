@@ -105,7 +105,7 @@ class AccountService {
     def getComponentData(accountId, String component) {
         System.out.println("getComponentData")
         def coll = mongoService.collection(getComponentCollectionName(component))
-        DBObject query = new BasicDBObject("aid", accountId)
+        DBObject query = new BasicDBObject("aid", (accountId instanceof String) ? new ObjectId(accountId) : accountId)
         DBCursor cursor = coll.find(query)
         if (cursor.size() > 0) {
             // There should only be one result
@@ -121,7 +121,7 @@ class AccountService {
         System.out.println("saveComponentData")
         def coll = mongoService.collection(getComponentCollectionName(collection))
         def jsonSlurper = new JsonSlurper()
-        BasicDBObject doc = new BasicDBObject("aid", accountId)
+        BasicDBObject doc = new BasicDBObject("aid", (accountId instanceof String) ? new ObjectId(accountId) : accountId)
                 .append("data", jsonSlurper.parseText(data))
         System.out.println(doc.toString())
         coll.findAndModify(
@@ -137,7 +137,7 @@ class AccountService {
 
     def validateMergeToken(accountId, mergeToken) {
         def coll = mongoService.collection(COLLECTION_NAME)
-        DBCursor cursor = coll.find(new BasicDBObject("_id", accountId)
+        DBCursor cursor = coll.find(new BasicDBObject("_id", (accountId instanceof String) ? new ObjectId(accountId) : accountId)
                 .append("mt", mergeToken)
         )
 
@@ -156,7 +156,7 @@ class AccountService {
         def mergeToken = UUID.randomUUID().toString()
         BasicDBObject doc = new BasicDBObject()
         doc.append('$set', new BasicDBObject().append("mt", mergeToken))
-        BasicDBObject query = new BasicDBObject().append("_id", accountId)
+        BasicDBObject query = new BasicDBObject().append("_id", (accountId instanceof String) ? new ObjectId(accountId) : accountId)
         coll.update(query, doc)
         return mergeToken
     }
