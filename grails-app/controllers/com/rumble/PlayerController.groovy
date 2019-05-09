@@ -165,13 +165,12 @@ class PlayerController {
 
                 def updatedAccount = accountService.updateAccountData(id.toString(), manifest.identity)
 
-
                 def entries = [:]
                 def entriesChecksums = []
 
                 // Send component responses based on entries in manifest
-                manifest.entries.each { component, data ->
-                    accountService.saveComponentData(id, component, request.getParameter(component))
+                manifest.entries.each { component ->
+                    accountService.saveComponentData(id, component.name, request.getParameter(component.name))
 
                     // Don't send anything if successful
                     entries[component.name] = ""
@@ -179,7 +178,7 @@ class PlayerController {
                     //TODO: Generate new checksums
                     def cs = [
                             "name": component.name,
-                            "checksum": ChecksumService.generateComponentChecksum(component, manifest.identity.installId) ?: "placeholder"
+                            "checksum": ChecksumService.generateComponentChecksum(component.name, manifest.identity.installId) ?: "placeholder"
                     ]
                     entriesChecksums.add(cs)
                 }
