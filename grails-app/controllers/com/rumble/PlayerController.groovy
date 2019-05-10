@@ -9,6 +9,7 @@ class PlayerController {
     def dynamicConfigService = new DynamicConfigService()
     def mongoService
     def profileService
+    def accessTokenService
 
     def game = System.getProperty("GAME_GUKEY") ?: System.getenv('GAME_GUKEY')
 
@@ -20,7 +21,6 @@ class PlayerController {
                 geoipAddr: request.remoteAddr,
                 country: 'US',
                 dateCreated: '\'' + System.currentTimeMillis() + '\'',
-                accessToken: UUID.randomUUID().toString(),
                 assetPath: 'https://rumble-game-alliance-dist.s3.amazonaws.com/client/',
                 clientvars: [:]
         ]
@@ -139,7 +139,8 @@ class PlayerController {
 
         def conflict = false
         def id = player.getObjectId("_id")
-        responseData.accessToken = id.toString()
+
+        responseData.accessToken = accessTokenService.generateAccessToken(gameGukey, id.toString())
 
         //TODO: Validate account
         def validProfiles = profileService.validateProfile(manifest.identity)
@@ -321,5 +322,9 @@ class PlayerController {
         out.write('\r\n')
         out.write('\r\n')
         out.write(content.toString())
+    }
+
+    def test() {
+        render accessTokenService.generateAccessToken('713cf4a3ac0e4c219240ecbe676eaa8a', 'deadbeef')
     }
 }
