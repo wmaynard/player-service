@@ -1,11 +1,10 @@
-package com.rumble.platform.common
+package com.rumble.platform.controller
 
 import com.rumble.platform.exception.ApplicationException
 import com.rumble.platform.exception.AuthException
 import com.rumble.platform.exception.BadRequestException
 import com.rumble.platform.exception.PlatformException
 import grails.converters.JSON
-import org.springframework.web.context.request.RequestContextHolder
 
 class PlatformErrorController {
     def mongoService

@@ -1,4 +1,4 @@
-package com.rumble.platform.common
+package com.rumble.platform.services
 
 import com.nimbusds.jose.JWSAlgorithm
 import com.nimbusds.jose.JWSHeader

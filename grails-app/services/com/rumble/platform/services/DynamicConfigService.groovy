@@ -1,4 +1,4 @@
-package com.rumble
+package com.rumble.platform.services
 
 import com.rumble.platform.DynamicConfigMap
 import com.rumble.platform.RumblePath
