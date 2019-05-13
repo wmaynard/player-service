@@ -1,9 +1,7 @@
-package com.rumble
+package com.rumble.platform.common
 
 import com.nimbusds.jose.JWSAlgorithm
 import com.nimbusds.jose.JWSHeader
-import com.nimbusds.jose.JWSSigner
-import com.nimbusds.jose.JWSVerifier
 import com.nimbusds.jose.crypto.RSASSASigner
 import com.nimbusds.jose.crypto.RSASSAVerifier
 import com.nimbusds.jose.jwk.JWKSet
@@ -54,7 +52,7 @@ class AccessTokenService {
         return signedJWT.serialize()
 
         } catch (Exception e) {
-            log.error(e)
+            e.printStackTrace()
             return accountId
         }
     }
