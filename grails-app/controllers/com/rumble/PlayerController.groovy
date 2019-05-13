@@ -324,8 +324,4 @@ class PlayerController {
         out.write('\r\n')
         out.write(content.toString())
     }
-
-    def test() {
-        render accessTokenService.generateAccessToken('713cf4a3ac0e4c219240ecbe676eaa8a', 'deadbeef')
-    }
 }
