@@ -57,7 +57,7 @@ class AccessTokenService {
         }
     }
 
-    def validateAccessToken(accessToken) {
+    def validateAccessToken(String accessToken) {
 
         def signedJWT = SignedJWT.parse(accessToken);
 
@@ -69,8 +69,8 @@ class AccessTokenService {
 
         if (signedJWT.verify(verifier) && signedJWT.getJWTClaimsSet().getExpirationTime().compareTo(new Date()) > 0) {
             return [
-                    gameId: signedJWT.getJWTClaimsSet().getAudience(),
-                    accountId: signedJWT.getJWTClaimsSet().getSubject()
+                    gameId: claims.getAudience().getAt(0),
+                    accountId: claims.getSubject()
             ]
         } else {
             return [:]
