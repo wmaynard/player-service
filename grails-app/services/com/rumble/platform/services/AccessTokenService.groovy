@@ -39,7 +39,7 @@ class AccessTokenService {
                 .subject(accountId)
                 .audience(gameId)
                 .issueTime(now)
-                .expirationTime(new Date(now.getTime() + 60 * 1000))
+                .expirationTime(new Date(now.getTime() + 60L * 60L * 1000L))
                 .claim("key", keyId)
                 .build();
 
