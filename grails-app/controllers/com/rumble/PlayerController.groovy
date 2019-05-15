@@ -14,7 +14,11 @@ class PlayerController {
 
     def game = System.getProperty("GAME_GUKEY") ?: System.getenv('GAME_GUKEY')
 
-    def index() {
+    def index(){
+        redirect(action: "save", params: params)
+    }
+
+    def save() {
         def manifest
         def responseData = [
                 success: true,
