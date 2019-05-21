@@ -2,6 +2,7 @@ package com.rumble
 
 import com.mongodb.BasicDBObject
 import com.mongodb.DBObject
+import org.bson.types.ObjectId
 
 class ProfileService {
     def appleService
@@ -42,11 +43,11 @@ class ProfileService {
         def coll = mongoService.collection(PROFILE_COLLECTION_NAME)
         def now = System.currentTimeMillis()
         def query = new BasicDBObject("type", type)
-                .append("aid",accountId)
+                .append("aid",(accountId instanceof String) ? new ObjectId(accountId) : accountId)
                 .append("pid", profileId)
 
         DBObject upsertDoc = new BasicDBObject("type", type)
-                .append("aid",accountId)
+                .append("aid",(accountId instanceof String) ? new ObjectId(accountId) : accountId)
                 .append("pid", profileId)
                 .append("cd", now)
 
@@ -81,10 +82,18 @@ class ProfileService {
 
     def getProfile(type, accountId, profileId) {}
 
-    def getProfiles(accountId) {
+    /* profiles = {
+    *   "facebook" : "1234567890"
+    *  } */
+    def getAccountsFromProfiles(profiles) {
+        def results = []
         def coll = mongoService.collection(PROFILE_COLLECTION_NAME)
-        DBObject query = new BasicDBObject("aid", accountId)
-        def result = coll.find(query)
-        return result.toArray()
+        profiles.each { type, profile ->
+            DBObject query = new BasicDBObject("type", type).append("pid", profile)
+            def result = coll.find(query)
+            results += result.toArray()
+        }
+
+        return results
     }
 }

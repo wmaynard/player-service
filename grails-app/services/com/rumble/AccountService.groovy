@@ -118,13 +118,12 @@ class AccountService {
     }
 
     def saveComponentData(accountId, String collection, data) {
-        System.out.println("saveComponentData")
         def coll = mongoService.collection(getComponentCollectionName(collection))
         DBObject query = new BasicDBObject("aid", (accountId instanceof String) ? new ObjectId(accountId) : accountId)
         def jsonSlurper = new JsonSlurper()
         BasicDBObject doc = new BasicDBObject("aid", (accountId instanceof String) ? new ObjectId(accountId) : accountId)
                 .append("data", jsonSlurper.parseText(data))
-        System.out.println(doc.toString())
+        System.out.println("saveComponentData" + doc.toString())
         coll.findAndModify(
                 query,            // query
                 new BasicDBObject(),            // fields

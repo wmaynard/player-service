@@ -207,16 +207,18 @@ class PlayerController {
             }
         } else {
             if (validProfiles) {
-                def conflictProfiles = [:]
+                def conflictProfiles = []
                 // Get profiles attached to player we found
-                def playerProfiles = profileService.getProfiles(player.getObjectId("_id"))
+                def playerProfiles = profileService.getAccountsFromProfiles(validProfiles)
 
                 if (playerProfiles) {
                     // Assuming there is only one type of profile for each account, check to see if they conflict
-                    validProfiles.each { profile, profileData ->
+                    // For each valid profile, we need to grab all the accounts that are attached to it
+                    // and then compare those Account IDs with the Account ID that matches the Install ID
+                    playerProfiles.each { profile ->
                         //TODO: Check for profile conflict
-                        if (profileData != playerProfiles[profile]) {
-                            conflictProfiles[profile] = profileData
+                        if (id.toString() != profile.aid.toString()) {
+                            conflictProfiles << profile
                         }
                     }
                 }
@@ -226,7 +228,12 @@ class PlayerController {
                     responseData.success = false
                     responseData.errorCode = "accountConflict"
                     //TODO: Include which accounts are conflicting? Security concerns?
-                    responseData.conflictingAccountId = "placeholder"
+                    def conflictingAccountIds = conflictProfiles.collect{
+                        if(it.aid != id) { return it.aid }
+                    } ?:"placeholder"
+                    if(conflictingAccountIds.size() > 0) {
+                        responseData.conflictingAccountId = conflictingAccountIds.first()
+                    }
                 }
             }
 
@@ -271,7 +278,7 @@ class PlayerController {
                 def content = ""
                 if (responseData.errorCode) {
                     // Return the data in the format that the client expects it (which is really just the embedded data field)
-                    def c = accountService.getComponentData(id, component.name)
+                    def c = accountService.getComponentData(responseData.conflictingAccountId ?: id, component.name)
                     content = (c) ? c.data ?: c : false
                 } else {
                     accountService.saveComponentData(id, component.name, request.getParameter(component.name))

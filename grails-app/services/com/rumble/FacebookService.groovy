@@ -8,13 +8,19 @@ class FacebookService {
     static private FB_VALIDATE_TOKEN_URL = System.getProperty("FB_VALIDATE_TOKEN_URL") ?: System.getenv("FB_VALIDATE_TOKEN_URL")
 
     def validateAccount(token) {
+        def accessToken = token.accessToken
+        if(!accessToken){
+            System.println("Invalid Facebook Access Token")
+            return false
+        }
+
         def http = new HTTPBuilder(FB_VALIDATE_TOKEN_URL)
         http.client.params.setParameter("http.connection.timeout", 5000)
         http.client.params.setParameter("http.socket.timeout", 5000)
-        http.request(Method.GET, ContentType.JSON) {
+        http.request(Method.GET, ContentType.JSON) { req ->
             uri.query = [
                     fields: "id",
-                    access_token: token,
+                    access_token: accessToken
             ]
 
             /*  Facebook Response:
@@ -28,6 +34,7 @@ class FacebookService {
 
             response.failure = { resp, reader ->
                 // TODO: Log error
+                System.println("Error validating Facebook access token: ${reader?.error?.message}")
                 return false
             }
         }
