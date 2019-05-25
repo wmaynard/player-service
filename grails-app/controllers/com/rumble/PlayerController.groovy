@@ -193,8 +193,8 @@ class PlayerController {
                 def mani = [
                         "identity": manifest.identity,
                         "entries": entriesChecksums,
-                        "manifestVersion": "placeholder", //TODO: Save manifestVersion
-                        "checksum": ChecksumService.generateMasterChecksum(entriesChecksums, manifest.identity.installId) ?: "placeholder" //TODO: master checksum
+                        "manifestVersion": updatedAccount?.mv ?: "placeholder", //TODO: Save manifestVersion
+                        "checksum": ChecksumService.generateMasterChecksum(entriesChecksums, manifest.identity.installId) ?: "placeholder"
                 ]
 
                 sendFile(out, boundary, "manifest", JsonOutput.toJson(mani))
@@ -299,8 +299,8 @@ class PlayerController {
             def mani = [
                     "identity": manifest.identity,
                     "entries": entriesChecksums,
-                    "manifestVersion": "placeholder", //TODO: Save manifestVersion
-                    "checksum": ChecksumService.generateMasterChecksum(entriesChecksums, manifest.identity.installId) ?: "placeholder" //TODO: master checksum
+                    "manifestVersion": updatedAccount?.mv ?: "placeholder",
+                    "checksum": ChecksumService.generateMasterChecksum(entriesChecksums, manifest.identity.installId) ?: "placeholder"
             ]
 
             sendFile(out, boundary, "manifest", JsonOutput.toJson(mani))

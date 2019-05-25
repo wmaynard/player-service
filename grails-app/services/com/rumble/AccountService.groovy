@@ -21,6 +21,8 @@ class AccountService {
             def setOnInsertObj = new BasicDBObject()
                     .append("cv", upsertData.clientVersion) // client version
                     .append("dv", upsertData.dataVersion ?: 0)  // data version
+                    .append("ldv", upsertData.localDataVersion ?: 0)  // local data version
+                    .append("mv", upsertData.manifestVersion ?: 0)  // manifest version
                     .append("lsi", installId)                   // last saved install ID
                     .append("dt", upsertData.deviceType ?: "n/a") // last device type
                     .append("cd", now)                      // created date
@@ -57,13 +59,14 @@ class AccountService {
         BasicDBObject doc = new BasicDBObject()
                 .append("cv", identity.clientVersion)   // client version
                 .append("dv", 0)                        // data version
+                .append("ldv", 0)                        // data version
                 .append("lsi", installId)               // install id
                 .append("cd", now)                      // created date
         coll.insert(doc)
         return doc
     }
 
-    def updateAccountData(accountId, identityData) {
+    def updateAccountData(accountId, identityData, manifestVersion = null, isMerge = false) {
         def now = System.currentTimeMillis()
         def coll = mongoService.collection(COLLECTION_NAME)
         BasicDBObject updateDoc = new BasicDBObject("lu", now)
@@ -76,7 +79,11 @@ class AccountService {
             updateDoc.append("dv", identityData.dataVersion)
         }
 
-        if(identityData.dataVersion) {
+        if(identityData.localDataVersion) {
+            updateDoc.append("ldv", identityData.localDataVersion)
+        }
+
+        if(identityData.deviceType) {
             updateDoc.append("dt", identityData.deviceType)
         }
 
@@ -84,6 +91,9 @@ class AccountService {
             updateDoc.append("lsi", identityData.installId)
         }
 
+        if(manifestVersion) {
+            updateDoc.append("mv", manifestVersion)
+        }
         System.out.println(updateDoc.toString())
         def account = coll.findAndModify(
                 new BasicDBObject("_id", (accountId instanceof String) ? new ObjectId(accountId) : accountId),    // query
@@ -103,7 +113,6 @@ class AccountService {
     }
 
     def getComponentData(accountId, String component) {
-        System.out.println("getComponentData")
         def coll = mongoService.collection(getComponentCollectionName(component))
         DBObject query = new BasicDBObject("aid", (accountId instanceof String) ? new ObjectId(accountId) : accountId)
         DBCursor cursor = coll.find(query)
