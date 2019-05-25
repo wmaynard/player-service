@@ -94,6 +94,12 @@ class AccountService {
         if(manifestVersion) {
             updateDoc.append("mv", manifestVersion)
         }
+
+        if(isMerge) {
+            // Remove merge token
+            updateDoc = new BasicDBObject('$set', updateDoc).append('$unset', new BasicDBObject("mt", ""))
+        }
+
         System.out.println(updateDoc.toString())
         def account = coll.findAndModify(
                 new BasicDBObject("_id", (accountId instanceof String) ? new ObjectId(accountId) : accountId),    // query

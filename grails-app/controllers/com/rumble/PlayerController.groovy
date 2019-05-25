@@ -166,10 +166,10 @@ class PlayerController {
 
                 // Save over data
                 validProfiles.each { profile, profileData ->
-                    profileService.saveProfile(profile, id.toString(), profileData)
+                    profileService.mergeProfile(profile, id.toString(), profileData)
                 }
 
-                def updatedAccount = accountService.updateAccountData(id.toString(), manifest.identity)
+                def updatedAccount = accountService.updateAccountData(id.toString(), manifest.identity, manifest.manifestVersion, true)
 
                 def entries = [:]
                 def entriesChecksums = []
@@ -229,8 +229,8 @@ class PlayerController {
                     responseData.errorCode = "accountConflict"
                     //TODO: Include which accounts are conflicting? Security concerns?
                     def conflictingAccountIds = conflictProfiles.collect{
-                        if(it.aid != id) { return it.aid }
-                    } ?:"placeholder"
+                        if(it.aid.toString() != id.toString()) { return it.aid }
+                    } ?: "placeholder"
                     if(conflictingAccountIds.size() > 0) {
                         responseData.conflictingAccountId = conflictingAccountIds.first()
                     }
@@ -251,6 +251,7 @@ class PlayerController {
                 responseData.errorCode = "versionConflict"
             }
 
+            def updatedAccount
             if (conflict) {
                 //TODO: Generate merge token
                 responseData.mergeToken = accountService.generateMergeToken(id)
@@ -264,7 +265,7 @@ class PlayerController {
                     profileService.saveProfile(profile, id.toString(), profileData)
                 }
 
-                def updatedAccount = accountService.updateAccountData(id.toString(), manifest.identity)
+                updatedAccount = accountService.updateAccountData(id.toString(), manifest.identity, manifest.manifestVersion)
                 responseData.createdDate = updatedAccount.cd?.toString() ?: null
             }
 
@@ -287,7 +288,6 @@ class PlayerController {
                 // Don't send anything if successful
                 entries[component.name] = content
 
-                //TODO: Generate checksums
                 def cs = [
                         "name": component.name,
                         "checksum": ChecksumService.generateComponentChecksum(content.toString(), manifest.identity.installId) ?: "placeholder"

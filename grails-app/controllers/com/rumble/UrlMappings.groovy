@@ -5,6 +5,7 @@ class UrlMappings {
     static mappings = {
         "/health"(controller:'health')
         "/player"(controller: 'player', action: 'save')
+        "/admin/player/$action"(controller: 'adminPlayer')
 
 
         "/$controller/$action?/$id?(.$format)?"{

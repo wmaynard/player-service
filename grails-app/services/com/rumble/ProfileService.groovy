@@ -73,6 +73,39 @@ class ProfileService {
         return profile
     }
 
+    def mergeProfile(type, accountId, profileId, updateData = null) {
+        def coll = mongoService.collection(PROFILE_COLLECTION_NAME)
+        def now = System.currentTimeMillis()
+        def query = new BasicDBObject("type", type)
+                .append("pid", profileId)
+
+        DBObject upsertDoc = new BasicDBObject("type", type)
+                .append("pid", profileId)
+                .append("cd", now)
+
+        DBObject updateDoc = new BasicDBObject("lu", now)
+                .append("aid",(accountId instanceof String) ? new ObjectId(accountId) : accountId)
+
+        if(updateData) {
+            updateData.each { k, v ->
+                updateDoc.append(k, v)
+            }
+        }
+
+        def profile = coll.findAndModify(
+                query, // query
+                new BasicDBObject(), // fields
+                new BasicDBObject(), // sort
+                false, // remove
+                new BasicDBObject('$setOnInsert', upsertDoc)
+                        .append('$set', updateDoc), // update
+                true, // returnNew
+                true // upsert
+        )
+
+        return profile
+    }
+
     def saveInstallIdProfile(accountId, installId, identityData) {
         // Extract data to save with the Install ID
         def data = AccountService.extractInstallData(identityData)
