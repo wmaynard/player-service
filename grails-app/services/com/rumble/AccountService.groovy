@@ -121,11 +121,17 @@ class AccountService {
     def getComponentData(accountId, String component) {
         def coll = mongoService.collection(getComponentCollectionName(component))
         DBObject query = new BasicDBObject("aid", (accountId instanceof String) ? new ObjectId(accountId) : accountId)
+
+        if(accountId instanceof String) {
+            query.append('aid', new ObjectId(accountId))
+        } else if(accountId instanceof Collection || accountId instanceof List) {
+            def aIds = accountId.collect{ (it instanceof String) ? new ObjectId(it) : it }
+            query.append('aid', new BasicDBObject('$in', aIds))
+        }
+
         DBCursor cursor = coll.find(query)
         if (cursor.size() > 0) {
-            // There should only be one result
-            //TODO: Log if there are more than one result because something is wrong
-            def result = cursor.first()
+            def result = cursor.toArray()
             cursor.close()
              return result
         }

@@ -110,10 +110,16 @@ class ProfileService {
         // Extract data to save with the Install ID
         def data = AccountService.extractInstallData(identityData)
 
-        return saveProfile("installId", accountId, installId, data)
+        return saveProfile(ProfileTypes.INSTALL_ID, accountId, installId, data)
     }
 
-    def getProfile(type, accountId, profileId) {}
+    def getProfilesForAccount(accountId) {
+        def coll = mongoService.collection(PROFILE_COLLECTION_NAME)
+        DBObject query = new BasicDBObject("aid", (accountId instanceof String) ? new ObjectId(accountId): accountId)
+        def results = coll.find(query)
+
+        return results.toArray()
+    }
 
     /* profiles = {
     *   "facebook" : "1234567890"
@@ -129,4 +135,18 @@ class ProfileService {
 
         return results
     }
+
+    def getProfilesFromList(String type, profileIds){
+        def coll = mongoService.collection(PROFILE_COLLECTION_NAME)
+        DBObject query = new BasicDBObject("type", type)
+                .append("pid", new BasicDBObject('$in', profileIds))
+
+        def results = coll.find(query)
+        return results.toArray()
+    }
+}
+
+final class ProfileTypes{
+    static final String FACEBOOK = "facebook"
+    static final String INSTALL_ID = "installId"
 }

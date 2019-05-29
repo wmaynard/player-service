@@ -1,6 +1,7 @@
 package com.rumble
 
 import com.rumble.platform.services.DynamicConfigService
+import grails.converters.JSON
 import groovy.json.JsonOutput
 import groovy.json.JsonSlurper
 import org.springframework.util.MimeTypeUtils
@@ -279,7 +280,7 @@ class PlayerController {
                 def content = ""
                 if (responseData.errorCode) {
                     // Return the data in the format that the client expects it (which is really just the embedded data field)
-                    def c = accountService.getComponentData(responseData.conflictingAccountId ?: id, component.name)
+                    def c = accountService.getComponentData(responseData.conflictingAccountId ?: id, component.name)?.first()
                     content = (c) ? c.data ?: c : false
                 } else {
                     accountService.saveComponentData(id, component.name, request.getParameter(component.name))
@@ -317,6 +318,38 @@ class PlayerController {
             mongoService.client().close()
         }
         return false
+    }
+
+    def summary(){
+        def responseData = [
+                success: true
+        ]
+
+        if(!params.accounts && !params.facebook) {
+            responseData = [
+                    success: false,
+                    errorCode: "invalidRequest"
+            ]
+        }
+
+        def accounts = []
+        def slurper = new JsonSlurper()
+        if(params.accounts) {
+            accounts = slurper.parseText(params.accounts)
+        }
+
+
+        if(params.facebook) {
+            def facebookIds = slurper.parseText(params.facebook)
+            def profiles = profileService.getProfilesFromList(ProfileTypes.FACEBOOK, facebookIds)
+            accounts += profiles.collect{ it.aid.toString() }
+        }
+
+        def uniqueAccountIds = accounts.unique()
+        def summaries = accountService.getComponentData(uniqueAccountIds, "summary")
+        responseData.accounts = summaries
+
+        render responseData as JSON
     }
 
     def sendFile(out, boundary, name, content) {
