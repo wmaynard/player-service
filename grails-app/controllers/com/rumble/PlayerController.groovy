@@ -1,8 +1,6 @@
 package com.rumble
 
 import com.rumble.platform.services.DynamicConfigService
-import grails.converters.JSON
-import groovy.json.JsonOutput
 import groovy.json.JsonSlurper
 import org.springframework.util.MimeTypeUtils
 
@@ -46,7 +44,7 @@ class PlayerController {
         if(!params.manifest) {
             responseData.success = false
             responseData.errorCode = "authError"
-            out.write(JsonOutput.toJson(responseData))
+            out.write(JsonService.toJson(responseData))
             out.write('\r\n')
             out.write('--')
             out.write(boundary)
@@ -81,7 +79,7 @@ class PlayerController {
         if(!validChecksums) {
             responseData.success = false
             responseData.errorCode = "invalidData"
-            out.write(JsonOutput.toJson(responseData))
+            out.write(JsonService.toJson(responseData))
             out.write('\r\n')
             out.write('--')
             out.write(boundary)
@@ -132,7 +130,7 @@ class PlayerController {
             //TODO: Error 'cause upsert failed
             responseData.success = false
             responseData.errorCode = "dbError"
-            out.write(JsonOutput.toJson(responseData))
+            out.write(JsonService.toJson(responseData))
             out.write('\r\n')
             out.write('--')
             out.write(boundary)
@@ -161,7 +159,7 @@ class PlayerController {
             if(accountService.validateMergeToken(id, params.mergeToken)) {
                 responseData.accountId = id.toString()
                 responseData.createdDate = player.cd.toString()
-                out.write(JsonOutput.toJson(responseData))
+                out.write(JsonService.toJson(responseData))
 
                 profileService.saveInstallIdProfile(id.toString(), manifest.identity.installId, manifest.identity)
 
@@ -198,7 +196,7 @@ class PlayerController {
                         "checksum": ChecksumService.generateMasterChecksum(entriesChecksums, manifest.identity.installId) ?: "placeholder"
                 ]
 
-                sendFile(out, boundary, "manifest", JsonOutput.toJson(mani))
+                sendFile(out, boundary, "manifest", JsonService.toJson(mani))
                 entries.each { name, data ->
                     sendFile(out, boundary, name, data)
                 }
@@ -271,7 +269,7 @@ class PlayerController {
             }
 
             responseData.accountId = id.toString()
-            out.write(JsonOutput.toJson(responseData)) // actual response
+            out.write(JsonService.toJson(responseData)) // actual response
 
             def entries = [:]
             def entriesChecksums = []
@@ -304,7 +302,7 @@ class PlayerController {
                     "checksum": ChecksumService.generateMasterChecksum(entriesChecksums, manifest.identity.installId) ?: "placeholder"
             ]
 
-            sendFile(out, boundary, "manifest", JsonOutput.toJson(mani))
+            sendFile(out, boundary, "manifest", JsonService.toJson(mani))
             entries.each { name, data ->
                 sendFile(out, boundary, name, data)
             }
@@ -349,7 +347,7 @@ class PlayerController {
         def summaries = accountService.getComponentData(uniqueAccountIds, "summary")
         responseData.accounts = summaries
 
-        render responseData as JSON
+        render JsonService.toJson(responseData)
     }
 
     def sendFile(out, boundary, name, content) {
