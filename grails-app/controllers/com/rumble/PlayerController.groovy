@@ -222,7 +222,7 @@ class PlayerController {
                     }
                 }
 
-                if (conflictProfiles.size() > 0) {
+                if (conflictProfiles && conflictProfiles.size() > 0) {
                     conflict = true
                     responseData.success = false
                     responseData.errorCode = "accountConflict"
@@ -298,7 +298,7 @@ class PlayerController {
             def mani = [
                     "identity": manifest.identity,
                     "entries": entriesChecksums,
-                    "manifestVersion": updatedAccount?.mv ?: "placeholder",
+                    "manifestVersion": updatedAccount?.mv.toString() ?: "placeholder",
                     "checksum": ChecksumService.generateMasterChecksum(entriesChecksums, manifest.identity.installId) ?: "placeholder"
             ]
 
@@ -333,7 +333,8 @@ class PlayerController {
         def accounts = []
         def slurper = new JsonSlurper()
         if(params.accounts) {
-            accounts = slurper.parseText(params.accounts)
+            def a = slurper.parseText(params.accounts)
+            accounts = AccountService.validateAccountId(a)
         }
 
 

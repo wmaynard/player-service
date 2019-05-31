@@ -13,6 +13,39 @@ class AccountService {
     private static def COMPONENT_COLLECTION_NAME_PREFIX = "c_"
     private static def COLLECTION_NAME = "player"
 
+    static def validateAccountId(accountId){
+        if(accountId instanceof String) {
+            try {
+                def test = new ObjectId(accountId)
+            } catch(all) {
+                System.println("Invalid Account ID: ${accountId}")
+                return null
+            }
+        } else if(accountId instanceof Collection || accountId instanceof List) {
+            def aIds = accountId.findAll{
+                try {
+                    if (it instanceof String) {
+                        def test = new ObjectId(it)
+                    } else if(it instanceof ObjectId){
+                        return true
+                    }
+
+                    return true
+                } catch(all) {
+                    System.println("Invalid Account ID: ${it}")
+                    return false
+                }
+            }.collect{
+                return (it instanceof String) ? new ObjectId(it) : it
+            }
+
+            if(aIds.size()) {
+                return aIds
+            }
+        }
+
+        return null
+    }
     def exists(String installId, upsertData = null) {
         def coll = mongoService.collection(COLLECTION_NAME)
         DBObject query = new BasicDBObject("lsi", installId)
@@ -120,21 +153,27 @@ class AccountService {
 
     def getComponentData(accountId, String component) {
         def coll = mongoService.collection(getComponentCollectionName(component))
-        DBObject query = new BasicDBObject("aid", (accountId instanceof String) ? new ObjectId(accountId) : accountId)
+        DBObject query = new BasicDBObject()
 
         if(accountId instanceof String) {
             query.append('aid', new ObjectId(accountId))
         } else if(accountId instanceof Collection || accountId instanceof List) {
-            def aIds = accountId.collect{ (it instanceof String) ? new ObjectId(it) : it }
-            query.append('aid', new BasicDBObject('$in', aIds))
+            if(accountId.size()) {
+                query.append('aid', new BasicDBObject('$in', accountId))
+            }
         }
 
+        if(query.size()) {
         DBCursor cursor = coll.find(query)
         if (cursor.size() > 0) {
             def result = cursor.toArray()
             cursor.close()
              return result
         }
+
+            return []
+        }
+
         return false
     }
 
