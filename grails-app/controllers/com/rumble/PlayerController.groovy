@@ -321,6 +321,7 @@ class PlayerController {
     }
 
     def summary(){
+        def facebookProfiles
         def responseData = [
                 success: true
         ]
@@ -342,13 +343,23 @@ class PlayerController {
 
         if(params.facebook) {
             def facebookIds = slurper.parseText(params.facebook)
-            def profiles = profileService.getProfilesFromList(ProfileTypes.FACEBOOK, facebookIds)
-            accounts += profiles.collect{ it.aid.toString() }
+            facebookProfiles = profileService.getProfilesFromList(ProfileTypes.FACEBOOK, facebookIds)
+            accounts += AccountService.validateAccountId(facebookProfiles.collect{ it.aid })
         }
 
         def uniqueAccountIds = accounts.unique()
         def summaries = accountService.getComponentData(uniqueAccountIds, "summary")
-        responseData.accounts = summaries
+
+        // Format summary data and map with fb ids
+        def formattedSummaries = summaries.collect{ s ->
+            def f = [
+                    id: s.aid,
+                    fb: (facebookProfiles.find{ s.aid == it.aid })?.pid ?: "",
+                    data: s.data
+            ]
+            return f
+        }
+        responseData.accounts = formattedSummaries
 
         render responseData as JSON
     }
