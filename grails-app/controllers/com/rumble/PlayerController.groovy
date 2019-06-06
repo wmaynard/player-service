@@ -280,7 +280,10 @@ class PlayerController {
                 def content = ""
                 if (responseData.errorCode) {
                     // Return the data in the format that the client expects it (which is really just the embedded data field)
-                    def c = accountService.getComponentData(responseData.conflictingAccountId ?: id, component.name)?.first()
+                    def c = accountService.getComponentData(responseData.conflictingAccountId ?: id, component.name)
+                    if(c && c.size() > 0) {
+                        c = c.first()
+                    }
                     content = (c) ? c.data ?: c : false
                 } else {
                     accountService.saveComponentData(id, component.name, request.getParameter(component.name))

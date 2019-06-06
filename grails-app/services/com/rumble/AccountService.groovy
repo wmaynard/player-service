@@ -155,7 +155,9 @@ class AccountService {
         def coll = mongoService.collection(getComponentCollectionName(component))
         DBObject query = new BasicDBObject()
 
-        if(accountId instanceof String) {
+        if(accountId instanceof ObjectId) {
+            query.append('aid', accountId)
+        } else if(accountId instanceof String) {
             query.append('aid', new ObjectId(accountId))
         } else if(accountId instanceof Collection || accountId instanceof List) {
             if(accountId.size()) {
