@@ -46,6 +46,49 @@ class AccountService {
 
         return null
     }
+
+    def find(String searchStr) {
+        DBObject query
+        def coll = mongoService.collection(COLLECTION_NAME)
+        DBObject baseQuery = new BasicDBObject("lsi", searchStr)
+
+        try {
+            def id = new ObjectId(searchStr)
+            query = new BasicDBObject('$or', [
+                    baseQuery,
+                    new BasicDBObject('_id', id)
+            ])
+        } catch(all) {
+            System.println("Not an Object ID")
+            query = baseQuery
+        }
+
+        DBCursor cursor = coll.find(query)
+        return cursor.toArray()
+    }
+
+    def getDetails(String accountId) {
+        def details = [:]
+
+        // TODO: Do not hardcode components
+        def components = [
+                "account",
+                "chests",
+                "heroes",
+                "store",
+                "summary",
+                "tutorials",
+                "wallet"
+        ]
+
+        components.each{ c ->
+            def d = getComponentData(accountId, c)
+            details[c] = (d.size() == 1) ? d.first() : d
+        }
+
+        return details
+    }
+
     def exists(String installId, upsertData = null) {
         def coll = mongoService.collection(COLLECTION_NAME)
         DBObject query = new BasicDBObject("lsi", installId)
@@ -166,12 +209,13 @@ class AccountService {
         }
 
         if(query.size()) {
-        DBCursor cursor = coll.find(query)
-        if (cursor.size() > 0) {
-            def result = cursor.toArray()
-            cursor.close()
-             return result
-        }
+            DBCursor cursor = coll.find(query)
+            if (cursor.size() > 0) {
+                def result = cursor.toArray()
+                cursor.close()
+                System.println("getComponentData(${accountId}, ${component}): ${result.toString()}")
+                return result
+            }
 
             return []
         }
