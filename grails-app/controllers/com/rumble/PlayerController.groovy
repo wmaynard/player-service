@@ -284,7 +284,7 @@ class PlayerController {
                     if(c && c.size() > 0) {
                         c = c.first()
                     }
-                    content = (c) ? c.data ?: c : false
+                    content = (c) ? c.data ?: c : ""
                 } else {
                     accountService.saveComponentData(id, component.name, request.getParameter(component.name))
                 }
