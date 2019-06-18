@@ -1,4 +1,4 @@
-package com.rumble.platform.controller
+package com.rumble.platform.controllers
 
 import grails.converters.JSON
 

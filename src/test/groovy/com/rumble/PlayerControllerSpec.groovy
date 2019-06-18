@@ -1,5 +1,6 @@
 package com.rumble
 
+import com.rumble.api.controllers.PlayerController
 import grails.testing.web.controllers.ControllerUnitTest
 import spock.lang.Specification
 

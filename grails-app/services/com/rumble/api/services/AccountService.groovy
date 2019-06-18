@@ -1,4 +1,4 @@
-package com.rumble
+package com.rumble.api.services
 
 import com.mongodb.BasicDBObject
 import com.mongodb.DBCursor

@@ -1,4 +1,4 @@
-package com.rumble
+package com.rumble.platform.services
 
 import com.mongodb.DB
 import com.mongodb.DBCollection

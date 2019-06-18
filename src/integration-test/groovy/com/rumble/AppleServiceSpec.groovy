@@ -1,5 +1,6 @@
 package com.rumble
 
+import com.rumble.api.services.AppleService
 import grails.testing.mixin.integration.Integration
 import org.springframework.beans.factory.annotation.Autowired
 import spock.lang.Specification

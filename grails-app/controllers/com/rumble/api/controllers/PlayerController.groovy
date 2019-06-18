@@ -1,5 +1,8 @@
-package com.rumble
+package com.rumble.api.controllers
 
+import com.rumble.api.services.AccountService
+import com.rumble.api.services.ChecksumService
+import com.rumble.api.services.ProfileTypes
 import com.rumble.platform.services.DynamicConfigService
 import grails.converters.JSON
 import groovy.json.JsonSlurper
@@ -91,6 +94,9 @@ class PlayerController {
             }
             return false
         }
+
+        //TODO: Remove, for testing only
+        //manifest.identity.facebook.accessToken = "EAAGfjfXqzCIBAG57lgP2LHg91j96mw1a0kXWXWo9OqzqKGB0VDqQLkOFibrt86fRybpZBHuMZCJ6P7h03KT75wnwLUQPROjyE98iLincC0ZCRAfCvubC77cPoBtE0PGV2gsFjKnMMHKBDrwhGfeN3FZAoiZCEeNWlg91UR6njFZALQOEab7EAuyyH6WkKevYrCIiN5hnOtcGVZCEC82nGH4"
 
         def channel = manifest.identity.channel ?: ""
         def channelScope = "channel:${channel}"
@@ -228,12 +234,14 @@ class PlayerController {
                     conflict = true
                     responseData.success = false
                     responseData.errorCode = "accountConflict"
+                    System.println("Account conflict: ${id.toString()}")
                     //TODO: Include which accounts are conflicting? Security concerns?
                     def conflictingAccountIds = conflictProfiles.collect{
                         if(it.aid.toString() != id.toString()) { return it.aid }
                     } ?: "placeholder"
                     if(conflictingAccountIds.size() > 0) {
                         responseData.conflictingAccountId = conflictingAccountIds.first()
+                        System.println("Conflicting Account ID: ${responseData.conflictingAccountId}")
                     }
                 }
             }

@@ -1,4 +1,4 @@
-package com.rumble
+package com.rumble.api.services
 
 import java.security.InvalidKeyException
 import java.security.NoSuchAlgorithmException

@@ -1,4 +1,4 @@
-package com.rumble
+package com.rumble.api.services
 
 import groovyx.net.http.ContentType
 import groovyx.net.http.HTTPBuilder
@@ -28,6 +28,7 @@ class FacebookService {
                     "id": ""
                 }
             * */
+            //System.println("URI: ${uri}")
             response.success = { resp, reader ->
                 return reader.id
             }

@@ -1,10 +1,8 @@
-package com.rumble
+package com.rumble.platform.controllers
 
 class UrlMappings {
 
     static mappings = {
-        "/health"(controller:'health')
-        "/player"(controller: 'player', action: 'save')
         "/admin/player/$action"(controller: 'adminPlayer')
 
 

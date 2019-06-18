@@ -1,4 +1,4 @@
-package com.rumble
+package com.rumble.api.services
 
 import groovyx.net.http.ContentType
 import groovyx.net.http.HTTPBuilder

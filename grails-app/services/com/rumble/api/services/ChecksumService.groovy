@@ -1,4 +1,4 @@
-package com.rumble
+package com.rumble.api.services
 
 import javax.crypto.Mac
 import javax.crypto.spec.SecretKeySpec

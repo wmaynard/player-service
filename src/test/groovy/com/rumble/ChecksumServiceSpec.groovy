@@ -1,5 +1,6 @@
 package com.rumble
 
+import com.rumble.api.services.ChecksumService
 import grails.testing.services.ServiceUnitTest
 import spock.lang.Specification
 
