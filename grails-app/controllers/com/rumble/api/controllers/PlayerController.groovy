@@ -13,6 +13,7 @@ class PlayerController {
     def accountService
     def dynamicConfigService = new DynamicConfigService()
     def mongoService
+    def paramsService
     def profileService
     def accessTokenService
 
@@ -45,6 +46,8 @@ class PlayerController {
         out.write('Content-Disposition: inline')
         out.write('\r\n')
         out.write('\r\n')
+
+        paramsService.require(params, 'manifest')
 
         if(!params.manifest) {
             responseData.success = false

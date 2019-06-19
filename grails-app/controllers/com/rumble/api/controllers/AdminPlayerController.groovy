@@ -4,9 +4,12 @@ import grails.converters.JSON
 
 class AdminPlayerController {
     def accountService
+    def paramsService
     def profileService
 
     def search() {
+        paramsService.require(params, 's')
+
         def results = accountService.find(params.s)
         def responseData = [
                 'results': results
@@ -15,6 +18,8 @@ class AdminPlayerController {
     }
 
     def details(){
+        paramsService.require(params, 'id')
+
         def account = accountService.find(params.id)?.first()
         def components = accountService.getDetails(params.id)
         def profiles = profileService.getProfilesForAccount(params.id)
