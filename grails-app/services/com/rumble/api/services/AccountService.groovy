@@ -74,6 +74,7 @@ class AccountService {
         def components = [
                 "account",
                 "chests",
+                "challenges",
                 "heroes",
                 "store",
                 "summary",
