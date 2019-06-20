@@ -50,19 +50,19 @@ class AccountService {
     def find(String searchStr) {
         DBObject query
         def coll = mongoService.collection(COLLECTION_NAME)
-        DBObject baseQuery = new BasicDBObject("lsi", searchStr)
+        DBObject baseQuery = [
+                new BasicDBObject("lsi", searchStr),
+                new BasicDBObject('sn', searchStr)
+        ]
 
         try {
             def id = new ObjectId(searchStr)
-            query = new BasicDBObject('$or', [
-                    baseQuery,
-                    new BasicDBObject('_id', id)
-            ])
+            baseQuery << new BasicDBObject('_id', id)
         } catch(all) {
             System.println("Not an Object ID")
-            query = baseQuery
         }
 
+        query = new BasicDBObject('$or', baseQuery)
         DBCursor cursor = coll.find(query)
         return cursor.toArray()
     }
@@ -103,6 +103,10 @@ class AccountService {
                     .append("lsi", installId)                   // last saved install ID
                     .append("dt", upsertData.deviceType ?: "n/a") // last device type
                     .append("cd", now)                      // created date
+
+            if(upsertData.screenName){
+                setOnInsertObj.append('sn', upsertData.screenName)
+            }
 
             def player = coll.findAndModify(
                     query, // query
@@ -166,6 +170,10 @@ class AccountService {
 
         if(identityData.installId) {
             updateDoc.append("lsi", identityData.installId)
+        }
+
+        if(identityData.screenName) {
+            updateDoc.append("sn", identityData.screenName)
         }
 
         if(manifestVersion) {
