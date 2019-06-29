@@ -1,8 +1,16 @@
 package com.rumble.api.controllers
 
+import com.amazonaws.AmazonServiceException
+import com.amazonaws.SdkClientException
+import com.amazonaws.services.s3.AmazonS3
+import com.amazonaws.services.s3.AmazonS3ClientBuilder
+import com.amazonaws.services.s3.model.GetObjectRequest
+import com.amazonaws.services.s3.model.ObjectMetadata
 import com.rumble.api.services.AccountService
 import com.rumble.api.services.ChecksumService
 import com.rumble.api.services.ProfileTypes
+import com.rumble.geoip.GeoLookupService
+import com.rumble.platform.exception.ApplicationException
 import com.rumble.platform.services.DynamicConfigService
 import grails.converters.JSON
 import groovy.json.JsonSlurper
@@ -10,12 +18,14 @@ import groovy.json.JsonOutput
 import org.springframework.util.MimeTypeUtils
 
 class PlayerController {
+    def accessTokenService
     def accountService
+    def authService
     def dynamicConfigService = new DynamicConfigService()
+    def geoLookupService
     def mongoService
     def paramsService
     def profileService
-    def accessTokenService
 
     def game = System.getProperty("GAME_GUKEY") ?: System.getenv('GAME_GUKEY')
 
@@ -98,6 +108,33 @@ class PlayerController {
             return false
         }
 
+        initGeoIpDb()
+
+        def ipAddr = geoLookupService.getIpAddress(request)
+
+        if (ipAddr.contains(':')) {
+            ipAddr = ipAddr.substring(0, ipAddr.indexOf(':')) // remove port
+        }
+
+        if(ipAddr) {
+            responseData.remoteAddr = ipAddr
+            responseData.geoipAddr = ipAddr
+
+            def loc
+            try {
+                loc = geoLookupService.getLocation(ipAddr)
+                if (loc) {
+                    responseData.country = loc.getCountry()?.getIsoCode()
+                } else {
+                    //TODO: log.warn("Failed to look up geo location for IP Address", [ipAddr: ipAddr])
+                    //TODO: log.sharedInfo.put('country', 'unknown')
+                }
+            } catch (all) {
+                //TODO: log.error("Exception looking up geo location for IP Address", [ipAddr: ipAddr], all)
+                //TODO: log.sharedInfo.put('country', 'unknown')
+            }
+        }
+
         //TODO: Remove, for testing only
         //manifest.identity.facebook.accessToken = "EAAGfjfXqzCIBAG57lgP2LHg91j96mw1a0kXWXWo9OqzqKGB0VDqQLkOFibrt86fRybpZBHuMZCJ6P7h03KT75wnwLUQPROjyE98iLincC0ZCRAfCvubC77cPoBtE0PGV2gsFjKnMMHKBDrwhGfeN3FZAoiZCEeNWlg91UR6njFZALQOEab7EAuyyH6WkKevYrCIiN5hnOtcGVZCEC82nGH4"
 
@@ -134,6 +171,22 @@ class PlayerController {
         }
         if(clientvars) {
             responseData.clientvars = clientvars
+        }
+
+        // Blacklist countries
+        if (dynamicConfigService.getConfig('canvas').list('blacklistCountries').contains(responseData.country as String)) {
+            responseData.success = false
+            responseData.errorCode = "geoblocked"
+            responseData.supportUrl = gameConfig['supportUrl']
+            out.write(JsonOutput.toJson(responseData))
+            out.write('\r\n')
+            out.write('--')
+            out.write(boundary)
+            out.write('--')
+            if(mongoService.hasClient()) {
+                mongoService.client().close()
+            }
+            return false
         }
 
         def player = accountService.exists(manifest.identity.installId, manifest.identity)
@@ -378,7 +431,7 @@ class PlayerController {
         render responseData as JSON
     }
 
-    def sendFile(out, boundary, name, content) {
+    private def sendFile(out, boundary, name, content) {
         out.write('\r\n')
         out.write('--')
         out.write(boundary)
@@ -393,5 +446,89 @@ class PlayerController {
         out.write('\r\n')
         out.write('\r\n')
         out.write(content.toString())
+    }
+
+    private void initGeoIpDb() {
+        String clientRegion = System.getProperty("GEO_IP_S3_REGION") ?: System.getenv("GEO_IP_S3_REGION")
+        String bucketName = System.getProperty("GEO_IP_S3_BUCKET") ?: System.getenv("GEO_IP_S3_BUCKET")
+        String s3Key = System.getProperty("GEO_IP_S3_KEY") ?: System.getenv("GEO_IP_S3_KEY")
+
+        if (!clientRegion || !bucketName || !s3Key) {
+            throw new ApplicationException(null, "Missing environment variable(s)", null, [
+                    clientRegion: clientRegion ?: null,
+                    bucketName  : bucketName ?: null,
+                    s3Key       : s3Key ?: null
+            ])
+        }
+
+        // Sometimes an existing Lambda instance is being used so check if geo file already exists
+        File geoIpDbFile = new File("/tmp/geo-ip.mmdb")
+        AmazonS3 s3Client = AmazonS3ClientBuilder.standard()
+                .withRegion(clientRegion)
+                //.withCredentials(new ProfileCredentialsProvider())
+                .build()
+
+        File folder = new File("/tmp");
+        File[] listOfFiles = folder.listFiles(new FilenameFilter() {
+            @Override
+            boolean accept(File dir, String name) {
+                return name.startsWith("geo-ip") && name.endsWith(".mmdb")
+            }
+        });
+
+        try {
+            if (listOfFiles.length > 0) {
+                listOfFiles = (LastModifiedFileComparator.LASTMODIFIED_COMPARATOR).sort(listOfFiles);
+
+                // Check if file on S3 is newer
+                ObjectMetadata s3MetaData = s3Client.getObjectMetadata(bucketName, s3Key)
+                Date s3LastModified = s3MetaData.getLastModified()
+                boolean newer = false;
+                for (int i = 0; i < listOfFiles.length; i++) {
+                    Date geoLastModified = new Date(listOfFiles[i].lastModified())
+                    if (i == 0 && geoLastModified.after(s3LastModified)) {
+                        geoIpDbFile = listOfFiles[i];
+                        newer = true;
+                    } else {
+                        listOfFiles[i].delete()
+                    }
+                }
+
+                if (!newer) {
+                    // Lambda only has permissions to create files in the /tmp folder
+                    geoIpDbFile = File.createTempFile("geo-ip", ".mmdb")
+                    ObjectMetadata metadataObj = s3Client.getObject(new GetObjectRequest(bucketName, s3Key), geoIpDbFile)
+                }
+            } else {
+                // Lambda only has permissions to create files in the /tmp folder
+                geoIpDbFile = File.createTempFile("geo-ip", ".mmdb")
+                ObjectMetadata metadataObj = s3Client.getObject(new GetObjectRequest(bucketName, s3Key), geoIpDbFile)
+            }
+        } catch (AmazonServiceException e) {
+            // The call was transmitted successfully, but Amazon S3 couldn't process
+            // it, so it returned an error response.
+            throw new ApplicationException(null, "Failed downloading Geo IP DB", e, [
+                    bucketName : bucketName,
+                    s3Key      : s3Key,
+                    geoIpDbFile: geoIpDbFile
+            ])
+        } catch (SdkClientException e) {
+            // Amazon S3 couldn't be contacted for a response, or the client
+            // couldn't parse the response from Amazon S3.
+            throw new ApplicationException(null, "Failed connecting to Geo IP DB", e, [
+                    bucketName : bucketName,
+                    s3Key      : s3Key,
+                    geoIpDbFile: geoIpDbFile
+            ])
+        } catch (all) {
+            throw new ApplicationException(null, all.getMessage(), all, [
+                    bucketName : bucketName,
+                    s3Key      : s3Key,
+                    geoIpDbFile: geoIpDbFile
+            ])
+        }
+
+        geoLookupService = new GeoLookupService()
+        geoLookupService.init(geoIpDbFile)
     }
 }
