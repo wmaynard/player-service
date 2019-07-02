@@ -60,6 +60,7 @@ dependencies {
     // geo-ip
     compile group: 'com.maxmind.geoip2', name: 'geoip2', version: '2.12.0'
     compile group: 'org.apache.commons', name: 'commons-vfs2', version: '2.0'
+    compile group: 'commons-io', name: 'commons-io', version: '2.6'
     compile group: 'com.amazonaws', name: 'aws-java-sdk-s3', version: '1.11.320'
 
     console "org.grails:grails-console"

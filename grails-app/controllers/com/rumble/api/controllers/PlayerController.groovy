@@ -15,6 +15,7 @@ import com.rumble.platform.services.DynamicConfigService
 import grails.converters.JSON
 import groovy.json.JsonSlurper
 import groovy.json.JsonOutput
+import org.apache.commons.io.comparator.LastModifiedFileComparator
 import org.springframework.util.MimeTypeUtils
 
 class PlayerController {
@@ -462,22 +463,27 @@ class PlayerController {
         }
 
         // Sometimes an existing Lambda instance is being used so check if geo file already exists
-        File geoIpDbFile = new File("/tmp/geo-ip.mmdb")
+        File geoIpDbFile = new File("/var/cache/tomcat8/temp/geo-ip.mmdb")
         AmazonS3 s3Client = AmazonS3ClientBuilder.standard()
                 .withRegion(clientRegion)
                 //.withCredentials(new ProfileCredentialsProvider())
                 .build()
 
-        File folder = new File("/tmp");
+        File folder = new File("/var/cache/tomcat8/temp");
         File[] listOfFiles = folder.listFiles(new FilenameFilter() {
             @Override
             boolean accept(File dir, String name) {
                 return name.startsWith("geo-ip") && name.endsWith(".mmdb")
             }
         });
+        log.trace("listOfFiles", [files: listOfFiles])
+        System.out.println("listOfFiles" + [files: listOfFiles])
 
         try {
             if (listOfFiles.length > 0) {
+                log.info("Geo IP DB File(s) exists")
+                System.out.println("Geo IP DB File(s) exists")
+
                 listOfFiles = (LastModifiedFileComparator.LASTMODIFIED_COMPARATOR).sort(listOfFiles);
 
                 // Check if file on S3 is newer
@@ -488,8 +494,20 @@ class PlayerController {
                     Date geoLastModified = new Date(listOfFiles[i].lastModified())
                     if (i == 0 && geoLastModified.after(s3LastModified)) {
                         geoIpDbFile = listOfFiles[i];
+                        log.info("Using existing db file", [
+                                geoIpDbFile: geoIpDbFile
+                        ])
+                        System.out.println("Using existing db file" + [
+                                geoIpDbFile: geoIpDbFile
+                        ])
                         newer = true;
                     } else {
+                        log.info("Geo IP DB File is newer on S3", [
+                                delete: listOfFiles[i].name
+                        ])
+                        System.out.println("Geo IP DB File is newer on S3" + [
+                                delete: listOfFiles[i].name
+                        ])
                         listOfFiles[i].delete()
                     }
                 }
@@ -497,11 +515,26 @@ class PlayerController {
                 if (!newer) {
                     // Lambda only has permissions to create files in the /tmp folder
                     geoIpDbFile = File.createTempFile("geo-ip", ".mmdb")
+                    log.info("Created temp geoIpDbFile", [
+                            geoIpDbFile: geoIpDbFile
+                    ])
+                    System.out.println("Created temp geoIpDbFile" + [
+                            geoIpDbFile: geoIpDbFile
+                    ])
                     ObjectMetadata metadataObj = s3Client.getObject(new GetObjectRequest(bucketName, s3Key), geoIpDbFile)
                 }
             } else {
+                log.info("Geo IP DB File does not exist. Attempting download.")
+                System.out.print("Geo IP DB File does not exist. Attempting download.")
+
                 // Lambda only has permissions to create files in the /tmp folder
                 geoIpDbFile = File.createTempFile("geo-ip", ".mmdb")
+                log.info("Created temp geoIpDbFile", [
+                        geoIpDbFile: geoIpDbFile
+                ])
+                System.out.println("Created temp geoIpDbFile" + [
+                        geoIpDbFile: geoIpDbFile
+                ])
                 ObjectMetadata metadataObj = s3Client.getObject(new GetObjectRequest(bucketName, s3Key), geoIpDbFile)
             }
         } catch (AmazonServiceException e) {
