@@ -35,6 +35,7 @@ class PlayerController {
     }
 
     def save() {
+        log.trace("PlayerController:save()")
         def manifest
         def responseData = [
                 success: true,
@@ -112,6 +113,7 @@ class PlayerController {
         initGeoIpDb()
 
         def ipAddr = geoLookupService.getIpAddress(request)
+        log.info("clientIp: ${ipAddr}")
 
         if (ipAddr.contains(':')) {
             ipAddr = ipAddr.substring(0, ipAddr.indexOf(':')) // remove port

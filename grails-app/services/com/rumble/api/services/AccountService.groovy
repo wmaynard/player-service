@@ -185,7 +185,7 @@ class AccountService {
             updateDoc = new BasicDBObject('$set', updateDoc).append('$unset', new BasicDBObject("mt", ""))
         }
 
-        System.out.println(updateDoc.toString())
+        log.info("updateAccountData: ${updateDoc.toString()}")
         def account = coll.findAndModify(
                 new BasicDBObject("_id", (accountId instanceof String) ? new ObjectId(accountId) : accountId),    // query
                 new BasicDBObject(),                    // fields
@@ -238,7 +238,7 @@ class AccountService {
         def jsonSlurper = new JsonSlurper()
         BasicDBObject doc = new BasicDBObject("aid", (accountId instanceof String) ? new ObjectId(accountId) : accountId)
                 .append("data", jsonSlurper.parseText(data))
-        System.out.println("saveComponentData" + doc.toString())
+        log.info("saveComponentData" + doc.toString())
         coll.findAndModify(
                 query,            // query
                 new BasicDBObject(),            // fields
@@ -266,7 +266,7 @@ class AccountService {
     }
 
     def generateMergeToken(accountId) {
-        System.out.println("generateMergeToken")
+        log.trace("AccountService:generateMergeToken()")
         def coll = mongoService.collection(COLLECTION_NAME)
         def mergeToken = UUID.randomUUID().toString()
         BasicDBObject doc = new BasicDBObject()

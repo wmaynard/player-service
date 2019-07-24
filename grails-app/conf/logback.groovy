@@ -1,3 +1,5 @@
+import ch.qos.logback.ext.loggly.LogglyAppender
+import com.rumble.platform.common.JsonLayout
 import grails.util.BuildSettings
 import grails.util.Environment
 import org.springframework.boot.logging.logback.ColorConverter
@@ -5,6 +7,7 @@ import org.springframework.boot.logging.logback.WhitespaceThrowableProxyConverte
 
 import java.nio.charset.Charset
 
+def TESTING_LOGGLY = false
 conversionRule 'clr', ColorConverter
 conversionRule 'wex', WhitespaceThrowableProxyConverter
 
@@ -22,6 +25,26 @@ appender('STDOUT', ConsoleAppender) {
     }
 }
 
+def rootErrorLogOutput = ['STDOUT']
+
+if (!Environment.isDevelopmentMode() || TESTING_LOGGLY) {
+    def deployment = System.getProperty('RUMBLE_DEPLOYMENT')
+    if(deployment != null) {
+        appender("loggly", LogglyAppender) {
+            def epu = "${System.getProperty('LOGGLY_URL')}tag/player-service-${deployment}/"
+            endpointUrl = epu
+            System.out.println("Setting Loggly endpoint to: ${epu}")
+            pattern = '%d{"ISO8601", UTC} %p %t %c{0}.%M - %m%n'
+            layout(JsonLayout)
+        }
+
+        rootErrorLogOutput.add('loggly')
+        logger("com.rumble", INFO, ['loggly'])
+    }
+} else if(Environment.isDevelopmentMode()) {
+    logger("com.rumble", INFO)
+}
+
 def targetDir = BuildSettings.TARGET_DIR
 if (Environment.isDevelopmentMode() && targetDir != null) {
     appender("FULL_STACKTRACE", FileAppender) {
@@ -33,4 +56,4 @@ if (Environment.isDevelopmentMode() && targetDir != null) {
     }
     logger("StackTrace", ERROR, ['FULL_STACKTRACE'], false)
 }
-root(ERROR, ['STDOUT'])
+root(ERROR, rootErrorLogOutput)

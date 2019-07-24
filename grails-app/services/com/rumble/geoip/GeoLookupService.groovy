@@ -18,7 +18,7 @@ class GeoLookupService {
     static GeoIp2Provider dbReader // DatabaseReader that reads an IMDB
     //TODO: static RumbleLambdaLogger log = RumbleLambdaLogger.getInstance()
 
-    static Map countryToContinent = [
+    Map countryToContinent = [
             A1: null, A2: null, AD: "EU", AE: "AS", AF: "AS", AG: "NA",
             AI: "NA", AL: "EU", AM: "AS", AN: "NA", AO: "AF", AP: "AS",
             AQ: "AN", AR: "SA", AS: "OC", AT: "EU", AU: "OC", AW: "NA",
@@ -67,7 +67,7 @@ class GeoLookupService {
      *  Method to initialize the GeoLookupService. PluginBootStrap calls this upon startup
      *  Also can be called to reinitialize the Database
      */
-    static void init(String dbPath) {
+    void init(String dbPath) {
         try {
             if(dbReader == null) {
                 //File db = new File(Holders.getGrailsApplication().mergedConfig.dbPath)
@@ -75,9 +75,9 @@ class GeoLookupService {
                 dbReader = new MonitoredDatabaseReader(db);
             }
         } catch (FileNotFoundException e) {
-            //TODO: log.error("${this} :: Database file was not found. $e");
+            log.error("${this} :: Database file was not found. $e");
         } catch (all) {
-            //TODO: log.error("${this} :: ${all.getMessage()}")
+            log.error("${this} :: ${all.getMessage()}")
         }
     }
 
@@ -85,15 +85,15 @@ class GeoLookupService {
      * Method to initialize GeoLookupService given a particular Database file
      * @param dbFile File database
      */
-    static void init(File dbFile) {
+    void init(File dbFile) {
         try {
             if(dbReader == null) {
                 dbReader = new MonitoredDatabaseReader(dbFile);
             }
         } catch (FileNotFoundException e) {
-            //TODO: log.error("${this} :: Database file was not found. $e")
+            log.error("${this} :: Database file was not found. $e")
         } catch (all) {
-            //TODO: og.error("${this} :: ${all.getMessage()}")
+            log.error("${this} :: ${all.getMessage()}")
         }
     }
 
@@ -102,7 +102,7 @@ class GeoLookupService {
      * @param ipAddress a String representing an ip address
      * @return true if ip address is reserved otherwise false
      */
-    static boolean isReservedIp(String ipAddress) {
+    boolean isReservedIp(String ipAddress) {
         ipAddress ? isReservedIp(InetAddress.getByName(ipAddress)) : false
     }
 
@@ -111,7 +111,7 @@ class GeoLookupService {
      * @param inetAddress an InetAddresss
      * @return true if ip address is reserved
      */
-    static boolean isReservedIp(InetAddress inetAddress){
+    boolean isReservedIp(InetAddress inetAddress){
         def i = inetAddress.getAddress()
         return (    i[0] == (byte) 10
                 || (i[0] == (byte) 192 && i[1] == (byte) 168)
@@ -120,8 +120,15 @@ class GeoLookupService {
     }
 
     /* Gets the ip address based on a request*/
-    static String getIpAddress(request) {
+    String getIpAddress(request) {
+        log.trace("GeoLookupService:getIpAddress()")
         //def headers = request.get('headers')
+        def headers = [:]
+        request.getHeaderNames().each{
+            headers[it] = request.getHeader(it)
+        }
+        log.info("headers: ${headers}")
+
         String ipAddress = request.getHeader('X-Real-IP')
         if (!ipAddress) ipAddress = request.getHeader('Client-IP')
         if (!ipAddress){
@@ -143,6 +150,7 @@ class GeoLookupService {
         if (!ipAddress) ipAddress = request.getHeader('HTTP_VIA')
         if (!ipAddress) ipAddress = request.getHeader('REMOTE_ADDR')
         //if (!ipAddress) ipAddress = request.getHeader('requestContext')?.get('identity')?.get('sourceIp')
+        log.info("ipAddress: ${ipAddress}")
         return ipAddress ?: request.remoteAddr
     }
 
@@ -153,21 +161,21 @@ class GeoLookupService {
      * @return CountryResponse MaxMind object that stores data
      * @return null if ipAddress is Loopback Address or is reserved. Or if an exception is thrown.
      */
-    static CountryResponse getLocation(String ipAddress) {
+    CountryResponse getLocation(String ipAddress) {
         def inetAddress = ipAddress ? InetAddress.getByName(ipAddress) : null
 
         if (!inetAddress) {
-            //TODO: log.warn("${this}.getLocation() :: Inet Address is $inetAddress")
+            log.warn("${this}.getLocation() :: Inet Address is $inetAddress")
             return null
         }
 
         if (inetAddress.isLoopbackAddress()) {
-            //TODO: log.warn("${this}.getLocation() :: $inetAddress is Loopback Address")
+            log.warn("${this}.getLocation() :: $inetAddress is Loopback Address")
             return null
         }
 
         if (isReservedIp(inetAddress)) {
-            //TODO: log.warn("${this}.getLocation() :: $inetAddress is Reserved IP")
+            log.warn("${this}.getLocation() :: $inetAddress is Reserved IP")
             return null
         }
 
@@ -175,29 +183,29 @@ class GeoLookupService {
             def attempts = 0
             while (dbReader == null && attempts < 2) {
                 // Database was not inialized
-                //TODO: log.warn("${this}.getLocation() :: Database was not initialized")
-                //TODO: log.warn("${this}.getLocation() :: Attempting to initialize")
+                log.warn("${this}.getLocation() :: Database was not initialized")
+                log.warn("${this}.getLocation() :: Attempting to initialize")
                 init()
                 attempts++
             }
             if (dbReader == null) {
-                //TODO: log.error("${this}.getLocation() :: Unable to initialize Database")
+                log.error("${this}.getLocation() :: Unable to initialize Database")
                 return null
             }
             try {
                 CountryResponse response = dbReader.country(inetAddress)
                 return response
             } catch (IOException e) {
-                //TODO: log.error("${this}.getLocation() :: Caught $e. Check is Database file exists, or the path ${this} is reading.")
+                log.error("${this}.getLocation() :: Caught $e. Check is Database file exists, or the path ${this} is reading.")
             } catch (GeoIp2Exception e) {
-                //TODO: log.error("${this}.getLocation() :: Caught $e. Check if Database is corrupted, or IP address is invalid.")
+                log.error("${this}.getLocation() :: Caught $e. Check if Database is corrupted, or IP address is invalid.")
             } catch (all) {
-                //TODO: log.error(all.getMessage())
+                log.error(all.getMessage())
             }
         } catch (GeoIp2Exception e) {
-            //TODO: log.error("${this}.getLocation() :: $e")
+            log.error("${this}.getLocation() :: $e")
         } catch (all) {
-            //TODO: log.error("${this}.getLocation() :: ${all.getMessage()}")
+            log.error("${this}.getLocation() :: ${all.getMessage()}")
         }
 
         return null
@@ -208,7 +216,7 @@ class GeoLookupService {
      *  @param ipAddress a String representing an ip address
      *  @return a 2 character country code that corresponds to the ip address or empty String if an error occured
      */
-    static String getCountry(String ipAddress) {
+    String getCountry(String ipAddress) {
         def location = getLocation(ipAddress)
         if (location == null) {
             return ""
@@ -216,16 +224,16 @@ class GeoLookupService {
         try {
             def country = location.getCountry()
             if (country == null) {
-                /*TODO: log.warn("""${this}.getCountry($ipAddress) :: Unable to get country.
-                    Database: $dbReader. Result: $country.""")*/
+                log.warn("""${this}.getCountry($ipAddress) :: Unable to get country.
+                    Database: $dbReader. Result: $country.""")
                 return ""
             } else {
                 return country.getIsoCode()
             }
         } catch (IOException e) {
-            //TODO: log.error("${this}.getCountry() :: Caught $e. Check is Database file exists, or the path ${this} is reading.")
+            log.error("${this}.getCountry() :: Caught $e. Check is Database file exists, or the path ${this} is reading.")
         } catch (GeoIp2Exception e) {
-            //TODO: log.error("${this}.getCountry() :: Caught $e. Check if Database is corrupted, or IP address is invalid.")
+            log.error("${this}.getCountry() :: Caught $e. Check if Database is corrupted, or IP address is invalid.")
         }
     }
 
@@ -234,7 +242,7 @@ class GeoLookupService {
      * @param  ipAddress a String representing an ip address
      * @return a 2 character continent code that corresponds to the ip address or empty String if an error occured
      */
-    static String getContinent(String ipAddress) {
+    String getContinent(String ipAddress) {
         def location = getLocation(ipAddress)
         if (location == null) {
             return ""
@@ -242,16 +250,16 @@ class GeoLookupService {
         try {
             def continent = location.getContinent()
             if (continent == null) {
-                /*TODO: log.warn("""${this}.getContinent($ipAddress) :: Unable to get country.
-                    Database: $dbReader. Result: $continent.""")*/
+                log.warn("""${this}.getContinent($ipAddress) :: Unable to get country.
+                    Database: $dbReader. Result: $continent.""")
                 return ""
             } else {
                 return continent.getCode()
             }
         } catch (IOException e) {
-            //TODO: log.error("${this}.getContinent() :: Caught $e. Check is Database file exists, or the path ${this} is reading.")
+            log.error("${this}.getContinent() :: Caught $e. Check is Database file exists, or the path ${this} is reading.")
         } catch (GeoIp2Exception e) {
-            //TODO: log.error("${this}.getContinent() :: Caught $e. Check if Database is corrupted, or IP address is invalid.")
+            log.error("${this}.getContinent() :: Caught $e. Check if Database is corrupted, or IP address is invalid.")
         }
     }
 }

@@ -10,7 +10,7 @@ class FacebookService {
     def validateAccount(token) {
         def accessToken = token.accessToken
         if(!accessToken){
-            System.println("Invalid Facebook Access Token")
+            log.warn("Invalid Facebook Access Token")
             return false
         }
 
