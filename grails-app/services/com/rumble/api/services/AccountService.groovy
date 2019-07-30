@@ -7,18 +7,19 @@ import groovy.json.JsonSlurper
 import org.bson.types.ObjectId
 
 class AccountService {
+    def logger = new com.rumble.Log(this.class)
     def mongoService
     def profileService
 
     private static def COMPONENT_COLLECTION_NAME_PREFIX = "c_"
     private static def COLLECTION_NAME = "player"
 
-    static def validateAccountId(accountId){
+    def validateAccountId(accountId){
         if(accountId instanceof String) {
             try {
                 def test = new ObjectId(accountId)
             } catch(all) {
-                System.println("Invalid Account ID: ${accountId}")
+                logger.warn("Invalid Account ID", all, [accountId:accountId])
                 return null
             }
         } else if(accountId instanceof Collection || accountId instanceof List) {
@@ -32,7 +33,7 @@ class AccountService {
 
                     return true
                 } catch(all) {
-                    System.println("Invalid Account ID: ${it}")
+                    logger.warn("Invalid Account ID", all, [ accountId: it])
                     return false
                 }
             }.collect{
@@ -50,7 +51,7 @@ class AccountService {
     def find(String searchStr) {
         DBObject query
         def coll = mongoService.collection(COLLECTION_NAME)
-        DBObject baseQuery = [
+        def baseQuery = [
                 new BasicDBObject("lsi", searchStr),
                 new BasicDBObject('sn', searchStr)
         ]
@@ -59,10 +60,11 @@ class AccountService {
             def id = new ObjectId(searchStr)
             baseQuery << new BasicDBObject('_id', id)
         } catch(all) {
-            System.println("Not an Object ID")
+            logger.warn("Not an Object ID", all, [searchStr:searchStr])
         }
 
         query = new BasicDBObject('$or', baseQuery)
+        logger.debug("AccountService:find", [query: query])
         DBCursor cursor = coll.find(query)
         return cursor.toArray()
     }
@@ -123,7 +125,9 @@ class AccountService {
             DBCursor cursor = coll.find(query)
             if (cursor.size() > 0) {
                 // There should only be one result
-                //TODO: Log if there are more than one result because something is wrong
+                if(cursor.size() > 1) {
+                    logger.warn("There are more than one account with installId", [installId: installId])
+                }
                 def result = cursor.first()
                 cursor.close()
                 return result
@@ -185,7 +189,7 @@ class AccountService {
             updateDoc = new BasicDBObject('$set', updateDoc).append('$unset', new BasicDBObject("mt", ""))
         }
 
-        log.info("updateAccountData: ${updateDoc.toString()}")
+        logger.info("AccountService:updateAccountData", [updateDoc: updateDoc])
         def account = coll.findAndModify(
                 new BasicDBObject("_id", (accountId instanceof String) ? new ObjectId(accountId) : accountId),    // query
                 new BasicDBObject(),                    // fields
@@ -222,7 +226,7 @@ class AccountService {
             if (cursor.size() > 0) {
                 def result = cursor.toArray()
                 cursor.close()
-                System.println("getComponentData(${accountId}, ${component}): ${result.toString()}")
+                logger.info("AccountService:getComponentData",[accountId: accountId, component: component, result: result])
                 return result
             }
 
@@ -238,7 +242,7 @@ class AccountService {
         def jsonSlurper = new JsonSlurper()
         BasicDBObject doc = new BasicDBObject("aid", (accountId instanceof String) ? new ObjectId(accountId) : accountId)
                 .append("data", jsonSlurper.parseText(data))
-        log.info("saveComponentData" + doc.toString())
+        logger.info("AccountService:saveComponentData", [doc: doc])
         coll.findAndModify(
                 query,            // query
                 new BasicDBObject(),            // fields
@@ -266,7 +270,7 @@ class AccountService {
     }
 
     def generateMergeToken(accountId) {
-        log.trace("AccountService:generateMergeToken()")
+        logger.trace("AccountService:generateMergeToken()")
         def coll = mongoService.collection(COLLECTION_NAME)
         def mergeToken = UUID.randomUUID().toString()
         BasicDBObject doc = new BasicDBObject()

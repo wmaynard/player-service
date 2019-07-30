@@ -5,12 +5,14 @@ import groovyx.net.http.HTTPBuilder
 import groovyx.net.http.Method
 
 class FacebookService {
+    def logger = new com.rumble.Log(this.class)
+
     static private FB_VALIDATE_TOKEN_URL = System.getProperty("FB_VALIDATE_TOKEN_URL") ?: System.getenv("FB_VALIDATE_TOKEN_URL")
 
     def validateAccount(token) {
         def accessToken = token.accessToken
         if(!accessToken){
-            log.warn("Invalid Facebook Access Token")
+            logger.warn("Invalid Facebook Access Token")
             return false
         }
 
@@ -34,8 +36,7 @@ class FacebookService {
             }
 
             response.failure = { resp, reader ->
-                // TODO: Log error
-                System.println("Error validating Facebook access token: ${reader?.error?.message}")
+                logger.error("Error validating Facebook access token: ${reader?.error?.message}")
                 return false
             }
         }

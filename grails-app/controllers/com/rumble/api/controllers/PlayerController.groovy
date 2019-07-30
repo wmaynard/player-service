@@ -24,6 +24,7 @@ class PlayerController {
     def authService
     def dynamicConfigService = new DynamicConfigService()
     def geoLookupService
+    def logger = new com.rumble.Log(this.class)
     def mongoService
     def paramsService
     def profileService
@@ -35,7 +36,7 @@ class PlayerController {
     }
 
     def save() {
-        log.trace("PlayerController:save()")
+        logger.trace("PlayerController:save()")
         def manifest
         def responseData = [
                 success: true,
@@ -113,7 +114,7 @@ class PlayerController {
         initGeoIpDb()
 
         def ipAddr = geoLookupService.getIpAddress(request)
-        log.info("clientIp: ${ipAddr}")
+        logger.info("clientIp", [ipAddr: ipAddr])
 
         if (ipAddr.contains(':')) {
             ipAddr = ipAddr.substring(0, ipAddr.indexOf(':')) // remove port
@@ -128,13 +129,12 @@ class PlayerController {
                 loc = geoLookupService.getLocation(ipAddr)
                 if (loc) {
                     responseData.country = loc.getCountry()?.getIsoCode()
+                    logger.info("getLocation", [loc: loc])
                 } else {
-                    //TODO: log.warn("Failed to look up geo location for IP Address", [ipAddr: ipAddr])
-                    //TODO: log.sharedInfo.put('country', 'unknown')
+                    logger.warn("Failed to look up geo location for IP Address", [ipAddr: ipAddr])
                 }
             } catch (all) {
-                //TODO: log.error("Exception looking up geo location for IP Address", [ipAddr: ipAddr], all)
-                //TODO: log.sharedInfo.put('country', 'unknown')
+                logger.error("Exception looking up geo location for IP Address", all, [ipAddr: ipAddr])
             }
         }
 
@@ -293,14 +293,14 @@ class PlayerController {
                     conflict = true
                     responseData.success = false
                     responseData.errorCode = "accountConflict"
-                    System.println("Account conflict: ${id.toString()}")
+                    logger.warn("Account conflict", [accountId:id.toString()])
                     //TODO: Include which accounts are conflicting? Security concerns?
                     def conflictingAccountIds = conflictProfiles.collect{
                         if(it.aid.toString() != id.toString()) { return it.aid }
                     } ?: "placeholder"
                     if(conflictingAccountIds.size() > 0) {
                         responseData.conflictingAccountId = conflictingAccountIds.first()
-                        System.println("Conflicting Account ID: ${responseData.conflictingAccountId}")
+                        logger.warn("Conflicting Account ID", [conflictingAccountId:responseData.conflictingAccountId])
                     }
                 }
             }
@@ -391,6 +391,8 @@ class PlayerController {
     }
 
     def summary(){
+        //TODO: authService.checkClientAuth(request)
+
         def facebookProfiles
         def responseData = [
                 success: true
@@ -407,14 +409,14 @@ class PlayerController {
         def slurper = new JsonSlurper()
         if(params.accounts) {
             def a = slurper.parseText(params.accounts)
-            accounts = AccountService.validateAccountId(a)
+            accounts = accountService.validateAccountId(a)
         }
 
 
         if(params.facebook) {
             def facebookIds = slurper.parseText(params.facebook)
             facebookProfiles = profileService.getProfilesFromList(ProfileTypes.FACEBOOK, facebookIds)
-            accounts += AccountService.validateAccountId(facebookProfiles.collect{ it.aid })
+            accounts += accountService.validateAccountId(facebookProfiles.collect{ it.aid })
         }
 
         def uniqueAccountIds = accounts.unique()
@@ -478,13 +480,11 @@ class PlayerController {
                 return name.startsWith("geo-ip") && name.endsWith(".mmdb")
             }
         });
-        log.trace("listOfFiles", [files: listOfFiles])
-        System.out.println("listOfFiles" + [files: listOfFiles])
+        logger.trace("listOfFiles", [files: listOfFiles])
 
         try {
-            if (listOfFiles.length > 0) {
-                log.info("Geo IP DB File(s) exists")
-                System.out.println("Geo IP DB File(s) exists")
+            if (listOfFiles?.length > 0) {
+                logger.info("Geo IP DB File(s) exists")
 
                 listOfFiles = (LastModifiedFileComparator.LASTMODIFIED_COMPARATOR).sort(listOfFiles);
 
@@ -496,18 +496,12 @@ class PlayerController {
                     Date geoLastModified = new Date(listOfFiles[i].lastModified())
                     if (i == 0 && geoLastModified.after(s3LastModified)) {
                         geoIpDbFile = listOfFiles[i];
-                        log.info("Using existing db file", [
-                                geoIpDbFile: geoIpDbFile
-                        ])
-                        System.out.println("Using existing db file" + [
+                        logger.info("Using existing db file", [
                                 geoIpDbFile: geoIpDbFile
                         ])
                         newer = true;
                     } else {
-                        log.info("Geo IP DB File is newer on S3", [
-                                delete: listOfFiles[i].name
-                        ])
-                        System.out.println("Geo IP DB File is newer on S3" + [
+                        logger.info("Geo IP DB File is newer on S3", [
                                 delete: listOfFiles[i].name
                         ])
                         listOfFiles[i].delete()
@@ -517,24 +511,17 @@ class PlayerController {
                 if (!newer) {
                     // Lambda only has permissions to create files in the /tmp folder
                     geoIpDbFile = File.createTempFile("geo-ip", ".mmdb")
-                    log.info("Created temp geoIpDbFile", [
-                            geoIpDbFile: geoIpDbFile
-                    ])
-                    System.out.println("Created temp geoIpDbFile" + [
+                    logger.info("Created temp geoIpDbFile", [
                             geoIpDbFile: geoIpDbFile
                     ])
                     ObjectMetadata metadataObj = s3Client.getObject(new GetObjectRequest(bucketName, s3Key), geoIpDbFile)
                 }
             } else {
-                log.info("Geo IP DB File does not exist. Attempting download.")
-                System.out.print("Geo IP DB File does not exist. Attempting download.")
+                logger.info("Geo IP DB File does not exist. Attempting download.")
 
                 // Lambda only has permissions to create files in the /tmp folder
                 geoIpDbFile = File.createTempFile("geo-ip", ".mmdb")
-                log.info("Created temp geoIpDbFile", [
-                        geoIpDbFile: geoIpDbFile
-                ])
-                System.out.println("Created temp geoIpDbFile" + [
+                logger.info("Created temp geoIpDbFile", [
                         geoIpDbFile: geoIpDbFile
                 ])
                 ObjectMetadata metadataObj = s3Client.getObject(new GetObjectRequest(bucketName, s3Key), geoIpDbFile)
@@ -542,6 +529,11 @@ class PlayerController {
         } catch (AmazonServiceException e) {
             // The call was transmitted successfully, but Amazon S3 couldn't process
             // it, so it returned an error response.
+            logger.error("Failed downloading Geo IP DB", e,[
+                    bucketName : bucketName,
+                    s3Key      : s3Key,
+                    geoIpDbFile: geoIpDbFile
+            ])
             throw new ApplicationException(null, "Failed downloading Geo IP DB", e, [
                     bucketName : bucketName,
                     s3Key      : s3Key,
@@ -550,12 +542,22 @@ class PlayerController {
         } catch (SdkClientException e) {
             // Amazon S3 couldn't be contacted for a response, or the client
             // couldn't parse the response from Amazon S3.
+            logger.error("Failed downloading Geo IP DB", e,[
+                    bucketName : bucketName,
+                    s3Key      : s3Key,
+                    geoIpDbFile: geoIpDbFile
+            ])
             throw new ApplicationException(null, "Failed connecting to Geo IP DB", e, [
                     bucketName : bucketName,
                     s3Key      : s3Key,
                     geoIpDbFile: geoIpDbFile
             ])
         } catch (all) {
+            logger.error(all.getMessage(), all,[
+                    bucketName : bucketName,
+                    s3Key      : s3Key,
+                    geoIpDbFile: geoIpDbFile
+            ])
             throw new ApplicationException(null, all.getMessage(), all, [
                     bucketName : bucketName,
                     s3Key      : s3Key,
