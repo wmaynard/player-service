@@ -28,10 +28,8 @@ appender('STDOUT', ConsoleAppender) {
 def rootErrorLogOutput = ['STDOUT']
 
 if (!Environment.isDevelopmentMode() || TESTING_LOGGLY) {
-    def deployment = System.getProperty('RUMBLE_DEPLOYMENT')
-    if(deployment != null) {
         appender("loggly", LogglyAppender) {
-            def epu = "${System.getProperty('LOGGLY_URL')}tag/player-service-${deployment}/"
+        def epu = "${System.getProperty('LOGGLY_URL')}tag/player-service/"
             endpointUrl = epu
             System.out.println("Setting Loggly endpoint to: ${epu}")
             pattern = '%d{"ISO8601", UTC} %p %t %c{0}.%M - %m%n'
@@ -40,7 +38,6 @@ if (!Environment.isDevelopmentMode() || TESTING_LOGGLY) {
 
         rootErrorLogOutput.add('loggly')
         logger("com.rumble", INFO, ['loggly'])
-    }
 } else if(Environment.isDevelopmentMode()) {
     logger("com.rumble", INFO)
 }

@@ -52,6 +52,12 @@ class JsonLayout extends LayoutBase<ILoggingEvent> {
 
             json.object();
 
+            def deployment = System.getProperty('RUMBLE_DEPLOYMENT') ?: System.getenv('RUMBLE_DEPLOYMENT')
+            if(deployment) {
+                json.key('env')
+                json.value(deployment)
+            }
+
             json.key("time_ms");
             json.value(now.getTime());
             json.key("time");
