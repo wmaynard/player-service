@@ -49,8 +49,18 @@ class JsonLayout extends LayoutBase<ILoggingEvent> {
             Date now = new Date();
 
             JSONWriter json = new JSONWriter(sw);
+            json.object()
 
-            json.object();
+            Map mdc = MDC.getContext()
+
+            if (mdc != null) {
+                mdc.each { k, v ->
+                    json.key(k)
+                    json.value(v)
+                }
+            }
+
+            MDC.remove("data")
 
             def deployment = System.getProperty('RUMBLE_DEPLOYMENT') ?: System.getenv('RUMBLE_DEPLOYMENT')
             if(deployment) {
