@@ -150,28 +150,14 @@ class PlayerController {
             game = manifest.identity.gameGukey
         }
         String gameGukey = channelConfig["game.${game}.gukey"] ?: game
-        def gameScope = "game:${gameGukey}"
         def gameConfig = dynamicConfigService.getGameConfig(gameGukey)
 
         //This looks for variables with a certain prefix (eg_ kr:clientvars:) and puts them in the client_vars structure
         //The prefixes are in a json list, and will be applied in order, overlaying any variable that collides
-        def clientVarPrefixes = gameConfig.list("clientVarPrefixes")
-        def clientvars = [:]
-        clientVarPrefixes.each {
-            l ->
-                def defaultVar = l + "default:"
-                def versionVar = l + manifest.identity.clientVersion + ":"
-                channelConfig.each {
-                    k, v ->
-                        if (k.startsWith(defaultVar)) clientvars.put(k.replace(defaultVar, ''), v)
-                        if (k.startsWith(versionVar)) clientvars.put(k.replace(versionVar, ''), v)
-                }
-                gameConfig.each {
-                    k, v ->
-                        if (k.startsWith(defaultVar)) clientvars.put(k.replace(defaultVar, ''), v)
-                        if (k.startsWith(versionVar)) clientvars.put(k.replace(versionVar, ''), v)
-                }
-        }
+        def clientVersion = manifest.identity.clientVersion
+        def prefixes = gameConfig.list("clientVarPrefixes")
+        def configs = [channelConfig, gameConfig]
+        def clientvars = extractClientVars(clientVersion, prefixes, configs)
         if(clientvars) {
             responseData.clientvars = clientvars
         }
@@ -388,6 +374,28 @@ class PlayerController {
             mongoService.client().close()
         }
         return false
+    }
+
+    static extractClientVars(clientVersion, List<String> prefixes, configs) {
+        def clientVersions = [clientVersion]
+        while (clientVersion.lastIndexOf('.') > 0) {
+            clientVersions += clientVersion = clientVersion.substring(0, clientVersion.lastIndexOf('.'))
+        }
+        def clientvars = [:]
+        prefixes.each { prefix ->
+            def defaultVar = prefix + "default:"
+            def versionVars = clientVersions.collect { prefix + it + ":" }
+            configs.each { config ->
+                config.each {
+                    k, v ->
+                        if (k.startsWith(defaultVar)) clientvars.put(k.replace(defaultVar, ''), v)
+                        versionVars.each {
+                            if (k.startsWith(it)) clientvars.put(k.replace(it, ''), v)
+                        }
+                }
+            }
+        }
+        return clientvars
     }
 
     def summary(){
