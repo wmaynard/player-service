@@ -53,7 +53,7 @@ class AccountService {
         def coll = mongoService.collection(COLLECTION_NAME)
         def baseQuery = [
                 new BasicDBObject("lsi", searchStr),
-                new BasicDBObject('sn', searchStr)
+                new BasicDBObject('sn', new BasicDBObject('$regex', searchStr).append('$options', 'i'))
         ]
 
         try {
