@@ -12,7 +12,6 @@ class UrlMappings {
             }
         }
 
-        "/"(view:"/index")
         "404"(controller: 'platformError', action: 'notFound')
         "500"(controller: 'platformError', action: 'uncaughtException')
     }
