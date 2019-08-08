@@ -56,7 +56,11 @@ class JsonLayout extends LayoutBase<ILoggingEvent> {
             if (mdc != null) {
                 mdc.each { k, v ->
                     json.key(k)
-                    json.value(v)
+                    try {
+                        json.value(v)
+                    } catch(all) {
+                        json.value(v.toString())
+                    }
                 }
             }
 
