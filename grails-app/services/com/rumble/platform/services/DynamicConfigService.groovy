@@ -1,7 +1,7 @@
 package com.rumble.platform.services
 
-import com.rumble.platform.DynamicConfigMap
 import com.rumble.platform.RumblePath
+import com.rumble.platform.common.DynamicConfigMap
 import groovyx.net.http.HttpResponseException
 import groovyx.net.http.RESTClient
 import org.json.JSONException

@@ -1,5 +1,6 @@
-package com.rumble.platform
+package com.rumble.platform.common
 
+import com.rumble.platform.TypeConvertingMap
 import org.json.simple.parser.JSONParser
 
 class DynamicConfigMap extends TypeConvertingMap {
