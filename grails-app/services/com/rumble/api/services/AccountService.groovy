@@ -78,8 +78,10 @@ class AccountService {
                 "chests",
                 "challenges",
                 "heroes",
+                "inbox",
                 "store",
                 "summary",
+                "tracking",
                 "tutorials",
                 "wallet"
         ]
