@@ -111,7 +111,7 @@ class JsonLayout extends LayoutBase<ILoggingEvent> {
                 sbuf.append(CoreConstants.LINE_SEPARATOR)*/
                 //json.key("exception");
                 //json.value(throwable.getClass().getCanonicalName());
-                json.key("trace");
+                json.key("stackTrace");
                 //appendTrace(json, throwable);
                 def throwableStr = ThrowableProxyUtil.asString(proxy)
                 json.value(throwableStr)
