@@ -96,3 +96,10 @@ assets {
     minifyJs = true
     minifyCss = true
 }
+
+tasks.withType(JavaExec) {
+    systemProperties System.properties
+}
+tasks.withType(Test) {
+    systemProperties System.properties
+}
