@@ -600,7 +600,5 @@ class PlayerController {
 
         geoLookupService = new GeoLookupService()
         geoLookupService.init(geoIpDbFile)
-
-        geoIpInitialzed
     }
 }
