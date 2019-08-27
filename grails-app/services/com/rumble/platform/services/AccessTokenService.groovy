@@ -22,7 +22,7 @@ class AccessTokenService {
         return (RSAKey)JWKSet.parse(json).getKeyByKeyId(keyId)
     }
 
-    def generateAccessToken(String gameId, String accountId) {
+    def generateAccessToken(String gameId, String accountId, Long ttlSeconds) {
 
         try { // TODO: take this try/catch out once this can be trusted
 
@@ -39,7 +39,7 @@ class AccessTokenService {
                 .subject(accountId)
                 .audience(gameId)
                 .issueTime(now)
-                .expirationTime(new Date(now.getTime() + 60L * 60L * 1000L))
+                .expirationTime(new Date(now.getTime() + ttlSeconds * 1000L))
                 .claim("key", keyId)
                 .build();
 
@@ -57,23 +57,29 @@ class AccessTokenService {
         }
     }
 
-    def validateAccessToken(String accessToken) {
+    def validateAccessToken(String accessToken, boolean expire = true, boolean verify = true) {
 
         def signedJWT = SignedJWT.parse(accessToken);
 
         def claims = signedJWT.getJWTClaimsSet()
 
-        def rsaJWK = getJWK(claims.getAudience().getAt(0), claims.getStringClaim('key'))
+        def expireTime = claims.getExpirationTime().time
 
-        def verifier = new RSASSAVerifier(rsaJWK);
-
-        if (signedJWT.verify(verifier) && signedJWT.getJWTClaimsSet().getExpirationTime().compareTo(new Date()) > 0) {
-            return [
-                    gameId: claims.getAudience().getAt(0),
-                    accountId: claims.getSubject()
-            ]
-        } else {
+        if (expire && expireTime < System.currentTimeMillis()) {
             return [:]
         }
+
+        if (verify) {
+            def rsaJWK = getJWK(claims.getAudience().getAt(0), claims.getStringClaim('key'))
+            def verifier = new RSASSAVerifier(rsaJWK);
+            if (!signedJWT.verify(verifier)) {
+                return [:]
+            }
+        }
+        return [
+                expires: expireTime,
+                gameId: claims.getAudience().getAt(0),
+                accountId: claims.getSubject()
+        ]
     }
 }

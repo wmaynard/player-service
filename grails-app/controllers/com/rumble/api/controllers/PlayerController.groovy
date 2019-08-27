@@ -197,7 +197,26 @@ class PlayerController {
         def conflict = false
         def id = player.getObjectId("_id")
 
-        responseData.accessToken = accessTokenService.generateAccessToken(gameGukey, id.toString())
+        def authHeader = request.getHeader('Authorization')
+        try {
+            if (authHeader?.startsWith('Bearer ')) {
+                def accessToken = authHeader.substring(7)
+                def tokenAuth = accessTokenService.validateAccessToken(accessToken, false, false)
+                if ((tokenAuth?.gameId == game) && (tokenAuth?.accountId == id.toString())) {
+                    def replaceAfter = tokenAuth.expires - gameConfig.long('auth:minTokenLifeSeconds',300L)*1000L
+                    if (System.currentTimeMillis() < replaceAfter) {
+                        responseData.accessToken = accessToken
+                    }
+                }
+            }
+        } catch (Exception e) {
+            logger.error("Exception examining authorization header", e, [header: authHeader])
+        }
+
+        if (!responseData.accessToken) {
+            responseData.accessToken = accessTokenService.generateAccessToken(
+                    gameGukey, id.toString(), gameConfig.long('auth:maxTokenLifeSeconds',172800L))
+        }
 
         //TODO: Validate account
         def validProfiles = profileService.validateProfile(manifest.identity)
