@@ -131,10 +131,10 @@ class PlayerController {
                     responseData.country = loc.getCountry()?.getIsoCode()
                     logger.info("getLocation", [loc: loc])
                 } else {
-                    logger.warn("Failed to look up geo location for IP Address", [ipAddr: ipAddr])
+                    logger.info("Failed to look up geo location for IP Address", [ipAddr: ipAddr])
                 }
             } catch (all) {
-                logger.error("Exception looking up geo location for IP Address", all, [ipAddr: ipAddr])
+                logger.warn("Exception looking up geo location for IP Address", all, [ipAddr: ipAddr])
             }
         }
 
@@ -298,14 +298,14 @@ class PlayerController {
                     conflict = true
                     responseData.success = false
                     responseData.errorCode = "accountConflict"
-                    logger.warn("Account conflict", [accountId:id.toString()])
+                    logger.info("Account conflict", [accountId:id.toString()])
                     //TODO: Include which accounts are conflicting? Security concerns?
                     def conflictingAccountIds = conflictProfiles.collect{
                         if(it.aid.toString() != id.toString()) { return it.aid }
                     } ?: "placeholder"
                     if(conflictingAccountIds.size() > 0) {
                         responseData.conflictingAccountId = conflictingAccountIds.first()
-                        logger.warn("Conflicting Account ID", [conflictingAccountId:responseData.conflictingAccountId])
+                        logger.info("Conflicting Account ID", [conflictingAccountId:responseData.conflictingAccountId])
                     }
                 }
             }
