@@ -9,6 +9,9 @@ class GoogleService {
     static private VALIDATE_TOKEN_URL = System.getProperty("GOOGLE_VALIDATE_TOKEN_URL") ?: System.getenv("GOOGLE_VALIDATE_TOKEN_URL")
     static private APP_ID = System.getProperty("GOOGLE_APP_ID") ?: System.getenv("GOOGLE_APP_ID")
     def validateAccount(token) {
+        if(!token.idToken) {
+            return false
+        }
         def http = new HTTPBuilder(VALIDATE_TOKEN_URL + APP_ID + "/verify/")
         http.client.params.setParameter("http.connection.timeout", 5000)
         http.client.params.setParameter("http.socket.timeout", 5000)
