@@ -481,11 +481,11 @@ class PlayerController {
         out.write(content.toString())
     }
 
-    private long geoIpInitialzed = 0
+    private long geoIpInitialized = 0
 
     private void initGeoIpDb() {
 
-        if (geoIpInitialzed < System.currentTimeMillis()-24L*60L*60L*1000L) return;
+        if (geoIpInitialized > System.currentTimeMillis()-24L*60L*60L*1000L) return;
 
         String clientRegion = System.getProperty("GEO_IP_S3_REGION") ?: System.getenv("GEO_IP_S3_REGION")
         String bucketName = System.getProperty("GEO_IP_S3_BUCKET") ?: System.getenv("GEO_IP_S3_BUCKET")
