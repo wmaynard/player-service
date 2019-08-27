@@ -22,7 +22,7 @@ class AccessTokenService {
         return (RSAKey)JWKSet.parse(json).getKeyByKeyId(keyId)
     }
 
-    def generateAccessToken(String gameId, String accountId, Long ttlSeconds) {
+    def generateAccessToken(String gameId, String accountId, Map claims, Long ttlSeconds) {
 
         try { // TODO: take this try/catch out once this can be trusted
 
@@ -34,14 +34,19 @@ class AccessTokenService {
 
         def now = new Date()
 
-        def claimsSet = new JWTClaimsSet.Builder()
-                .issuer("Rumble Player Service")
-                .subject(accountId)
-                .audience(gameId)
-                .issueTime(now)
-                .expirationTime(new Date(now.getTime() + ttlSeconds * 1000L))
-                .claim("key", keyId)
-                .build();
+        def claimsBuilder = new JWTClaimsSet.Builder()
+                    .issuer("Rumble Player Service")
+                    .subject(accountId)
+                    .audience(gameId)
+                    .issueTime(now)
+                    .expirationTime(new Date(now.getTime() + ttlSeconds * 1000L))
+                    .claim("key", keyId)
+
+        claims?.each {
+            claimsBuilder.claim(it.key, it.value)
+        }
+
+        def claimsSet = claimsBuilder.build();
 
         def signedJWT = new SignedJWT(
                 new JWSHeader.Builder(JWSAlgorithm.RS256).keyID(rsaJWK.getKeyID()).build(),
@@ -76,10 +81,6 @@ class AccessTokenService {
                 return [:]
             }
         }
-        return [
-                expires: expireTime,
-                gameId: claims.getAudience().getAt(0),
-                accountId: claims.getSubject()
-        ]
+        return claims.toJSONObject() as Map
     }
 }

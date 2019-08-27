@@ -202,9 +202,9 @@ class PlayerController {
             if (authHeader?.startsWith('Bearer ')) {
                 def accessToken = authHeader.substring(7)
                 def tokenAuth = accessTokenService.validateAccessToken(accessToken, false, false)
-                if ((tokenAuth?.gameId == game) && (tokenAuth?.accountId == id.toString())) {
-                    def replaceAfter = tokenAuth.expires - gameConfig.long('auth:minTokenLifeSeconds',300L)*1000L
-                    if (System.currentTimeMillis() < replaceAfter) {
+                if ((tokenAuth.aud == game) && (tokenAuth.sub == id.toString())) {
+                    def replaceAfter = tokenAuth.exp - gameConfig.long('auth:minTokenLifeSeconds',300L)
+                    if (System.currentTimeMillis()/1000L < replaceAfter) {
                         responseData.accessToken = accessToken
                     }
                 }
@@ -215,7 +215,7 @@ class PlayerController {
 
         if (!responseData.accessToken) {
             responseData.accessToken = accessTokenService.generateAccessToken(
-                    gameGukey, id.toString(), gameConfig.long('auth:maxTokenLifeSeconds',172800L))
+                    gameGukey, id.toString(), null, gameConfig.long('auth:maxTokenLifeSeconds',172800L))
         }
 
         //TODO: Validate account
@@ -338,6 +338,7 @@ class PlayerController {
                     profileService.saveProfile(profile, id.toString(), profileData)
                 }
 
+                // do we really need this update? maybe not on a new player?
                 updatedAccount = accountService.updateAccountData(id.toString(), manifest.identity, manifest.manifestVersion)
                 responseData.createdDate = updatedAccount.cd?.toString() ?: null
             }
