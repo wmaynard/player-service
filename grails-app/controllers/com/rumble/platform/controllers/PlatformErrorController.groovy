@@ -10,10 +10,6 @@ class PlatformErrorController {
     def mongoService
 
     def uncaughtException() {
-        if(mongoService.hasClient()) {
-            mongoService.client().close()
-        }
-
         try {
 
             def e = request.exception?.cause ?: request.exception
@@ -43,10 +39,6 @@ class PlatformErrorController {
     }
 
     def notFound() {
-        if(mongoService.hasClient()) {
-            mongoService.client().close()
-        }
-
         render ([ success: false, errorCode: 'notFound' ] as JSON)
     }
 }

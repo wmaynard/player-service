@@ -70,9 +70,6 @@ class PlayerController {
             out.write('--')
             out.write(boundary)
             out.write('--')
-            if(mongoService.hasClient()) {
-                mongoService.client().close()
-            }
             return false
         } else {
             def slurper = new JsonSlurper()
@@ -105,9 +102,6 @@ class PlayerController {
             out.write('--')
             out.write(boundary)
             out.write('--')
-            if(mongoService.hasClient()) {
-                mongoService.client().close()
-            }
             return false
         }
 
@@ -171,9 +165,6 @@ class PlayerController {
             out.write('--')
             out.write(boundary)
             out.write('--')
-            if(mongoService.hasClient()) {
-                mongoService.client().close()
-            }
             return false
         }
 
@@ -187,9 +178,6 @@ class PlayerController {
             out.write('--')
             out.write(boundary)
             out.write('--')
-            if(mongoService.hasClient()) {
-                mongoService.client().close()
-            }
             return false
         }
 
@@ -389,9 +377,6 @@ class PlayerController {
         out.write('--')
         out.write(boundary)
         out.write('--')
-        if(mongoService.hasClient()) {
-            mongoService.client().close()
-        }
         return false
     }
 
