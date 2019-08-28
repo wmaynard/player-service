@@ -11,9 +11,12 @@ class AdminPlayerController {
         paramsService.require(params, 's')
 
         def results = accountService.find(params.s)
-        def responseData = [
-                'results': results
-        ]
+        def responseData = [:]
+        if(results) {
+            responseData.results = results
+        } else {
+            responseData.errorText = "Player '${params.s}' not found."
+        }
         render responseData as JSON
     }
 
