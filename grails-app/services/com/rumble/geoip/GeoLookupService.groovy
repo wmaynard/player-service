@@ -75,9 +75,9 @@ class GeoLookupService {
                 dbReader = new MonitoredDatabaseReader(db);
             }
         } catch (FileNotFoundException e) {
-            log.error("${this} :: Database file was not found. $e");
+            log.error("GeoIP Database file was not found. $e");
         } catch (all) {
-            log.error("${this} :: ${all.getMessage()}")
+            log.error("GeoIP ${all.getMessage()}")
         }
     }
 
@@ -91,9 +91,9 @@ class GeoLookupService {
                 dbReader = new MonitoredDatabaseReader(dbFile);
             }
         } catch (FileNotFoundException e) {
-            log.error("${this} :: Database file was not found. $e")
+            log.error("GeoIP Database file was not found. $e")
         } catch (all) {
-            log.error("${this} :: ${all.getMessage()}")
+            log.error("GeoIP ${all.getMessage()}")
         }
     }
 
@@ -121,14 +121,6 @@ class GeoLookupService {
 
     /* Gets the ip address based on a request*/
     String getIpAddress(request) {
-        log.trace("GeoLookupService:getIpAddress()")
-        //def headers = request.get('headers')
-        def headers = [:]
-        request.getHeaderNames().each{
-            headers[it] = request.getHeader(it)
-        }
-        log.info("headers: ${headers}")
-
         String ipAddress = request.getHeader('X-Real-IP')
         if (!ipAddress) ipAddress = request.getHeader('Client-IP')
         if (!ipAddress){
@@ -149,9 +141,8 @@ class GeoLookupService {
         if (!ipAddress) ipAddress = request.getHeader('HTTP_FORWARDED')
         if (!ipAddress) ipAddress = request.getHeader('HTTP_VIA')
         if (!ipAddress) ipAddress = request.getHeader('REMOTE_ADDR')
-        //if (!ipAddress) ipAddress = request.getHeader('requestContext')?.get('identity')?.get('sourceIp')
-        log.info("ipAddress: ${ipAddress}")
-        return ipAddress ?: request.remoteAddr
+        if (!ipAddress) ipAddress = request.remoteAddr
+        return ipAddress
     }
 
     /**
@@ -165,47 +156,39 @@ class GeoLookupService {
         def inetAddress = ipAddress ? InetAddress.getByName(ipAddress) : null
 
         if (!inetAddress) {
-            log.warn("${this}.getLocation() :: Inet Address is $inetAddress")
+            log.warn("GeoIP Inet Address is $inetAddress")
             return null
         }
 
         if (inetAddress.isLoopbackAddress()) {
-            log.warn("${this}.getLocation() :: $inetAddress is Loopback Address")
+            log.warn("GeoIP $inetAddress is Loopback Address")
             return null
         }
 
         if (isReservedIp(inetAddress)) {
-            log.warn("${this}.getLocation() :: $inetAddress is Reserved IP")
+            log.warn("GeoIP $inetAddress is Reserved IP")
             return null
         }
 
         try {
-            def attempts = 0
-            while (dbReader == null && attempts < 2) {
-                // Database was not inialized
-                log.warn("${this}.getLocation() :: Database was not initialized")
-                log.warn("${this}.getLocation() :: Attempting to initialize")
-                init()
-                attempts++
-            }
             if (dbReader == null) {
-                log.error("${this}.getLocation() :: Unable to initialize Database")
+                log.warn("GeoIP Database was not initialized")
                 return null
             }
             try {
                 CountryResponse response = dbReader.country(inetAddress)
                 return response
             } catch (IOException e) {
-                log.error("${this}.getLocation() :: Caught $e. Check is Database file exists, or the path ${this} is reading.")
+                log.error("GeoIP Caught $e. Check is Database file exists, or the path ${this} is reading.")
             } catch (GeoIp2Exception e) {
-                log.error("${this}.getLocation() :: Caught $e. Check if Database is corrupted, or IP address is invalid.")
+                log.error("GeoIP Caught $e. Check if Database is corrupted, or IP address is invalid.")
             } catch (all) {
                 log.error(all.getMessage())
             }
         } catch (GeoIp2Exception e) {
-            log.error("${this}.getLocation() :: $e")
+            log.error("GeoIP $e")
         } catch (all) {
-            log.error("${this}.getLocation() :: ${all.getMessage()}")
+            log.error("GeoIP ${all.getMessage()}")
         }
 
         return null

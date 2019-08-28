@@ -111,30 +111,29 @@ class PlayerController {
             return false
         }
 
-        initGeoIpDb()
+        if (initGeoIpDb()) {
+            def ipAddr = geoLookupService.getIpAddress(request)
 
-        def ipAddr = geoLookupService.getIpAddress(request)
-        logger.info("clientIp", [ipAddr: ipAddr])
+            if (ipAddr.contains(':')) {
+                ipAddr = ipAddr.substring(0, ipAddr.indexOf(':')) // remove port
+            }
 
-        if (ipAddr.contains(':')) {
-            ipAddr = ipAddr.substring(0, ipAddr.indexOf(':')) // remove port
-        }
+            if(ipAddr) {
+                responseData.remoteAddr = ipAddr
+                responseData.geoipAddr = ipAddr
 
-        if(ipAddr) {
-            responseData.remoteAddr = ipAddr
-            responseData.geoipAddr = ipAddr
-
-            def loc
-            try {
-                loc = geoLookupService.getLocation(ipAddr)
-                if (loc) {
-                    responseData.country = loc.getCountry()?.getIsoCode()
-                    logger.info("getLocation", [loc: loc])
-                } else {
-                    logger.info("Failed to look up geo location for IP Address", [ipAddr: ipAddr])
+                def loc
+                try {
+                    loc = geoLookupService.getLocation(ipAddr)
+                    if (loc) {
+                        responseData.country = loc.getCountry()?.getIsoCode()
+                        logger.info("GeoIP lookup results", [ipAddr: ipAddr, loc: loc])
+                    } else {
+                        logger.info("GeoIP lookup failed", [ipAddr: ipAddr])
+                    }
+                } catch (e) {
+                    logger.warn("Exception looking up geo location for IP Address", all, [ipAddr: ipAddr])
                 }
-            } catch (all) {
-                logger.warn("Exception looking up geo location for IP Address", all, [ipAddr: ipAddr])
             }
         }
 
@@ -483,122 +482,66 @@ class PlayerController {
 
     private long geoIpInitialized = 0
 
-    private void initGeoIpDb() {
-
-        if (geoIpInitialized > System.currentTimeMillis()-24L*60L*60L*1000L) return;
-
-        String clientRegion = System.getProperty("GEO_IP_S3_REGION") ?: System.getenv("GEO_IP_S3_REGION")
-        String bucketName = System.getProperty("GEO_IP_S3_BUCKET") ?: System.getenv("GEO_IP_S3_BUCKET")
-        String s3Key = System.getProperty("GEO_IP_S3_KEY") ?: System.getenv("GEO_IP_S3_KEY")
-
-        if (!clientRegion || !bucketName || !s3Key) {
-            throw new ApplicationException(null, "Missing environment variable(s)", null, [
-                    clientRegion: clientRegion ?: null,
-                    bucketName  : bucketName ?: null,
-                    s3Key       : s3Key ?: null
-            ])
-        }
-
-        // Sometimes an existing Lambda instance is being used so check if geo file already exists
-        File geoIpDbFile = new File("/var/cache/tomcat8/temp/geo-ip.mmdb")
-        AmazonS3 s3Client = AmazonS3ClientBuilder.standard()
-                .withRegion(clientRegion)
-                //.withCredentials(new ProfileCredentialsProvider())
-                .build()
-
-        File folder = new File("/var/cache/tomcat8/temp");
-        File[] listOfFiles = folder.listFiles(new FilenameFilter() {
-            @Override
-            boolean accept(File dir, String name) {
-                return name.startsWith("geo-ip") && name.endsWith(".mmdb")
-            }
-        });
-        logger.trace("listOfFiles", [files: listOfFiles])
+    private def initGeoIpDb() {
 
         try {
-            if (listOfFiles?.length > 0) {
-                logger.info("Geo IP DB File(s) exists")
 
-                listOfFiles = (LastModifiedFileComparator.LASTMODIFIED_COMPARATOR).sort(listOfFiles);
+            if (geoIpInitialized > System.currentTimeMillis()-24L*60L*60L*1000L) return true
 
-                // Check if file on S3 is newer
-                ObjectMetadata s3MetaData = s3Client.getObjectMetadata(bucketName, s3Key)
-                Date s3LastModified = s3MetaData.getLastModified()
-                boolean newer = false;
-                for (int i = 0; i < listOfFiles.length; i++) {
-                    Date geoLastModified = new Date(listOfFiles[i].lastModified())
-                    if (i == 0 && geoLastModified.after(s3LastModified)) {
-                        geoIpDbFile = listOfFiles[i];
-                        logger.info("Using existing db file", [
-                                geoIpDbFile: geoIpDbFile
-                        ])
-                        newer = true;
-                    } else {
-                        logger.info("Geo IP DB File is newer on S3", [
-                                delete: listOfFiles[i].name
-                        ])
-                        listOfFiles[i].delete()
-                    }
-                }
+            def clientRegion = System.getProperty("GEO_IP_S3_REGION") ?: System.getenv("GEO_IP_S3_REGION")
+            def bucketName = System.getProperty("GEO_IP_S3_BUCKET") ?: System.getenv("GEO_IP_S3_BUCKET")
+            def s3Key = System.getProperty("GEO_IP_S3_KEY") ?: System.getenv("GEO_IP_S3_KEY")
 
-                if (!newer) {
-                    // Lambda only has permissions to create files in the /tmp folder
-                    geoIpDbFile = File.createTempFile("geo-ip", ".mmdb")
-                    logger.info("Created temp geoIpDbFile", [
-                            geoIpDbFile: geoIpDbFile
-                    ])
-                    ObjectMetadata metadataObj = s3Client.getObject(new GetObjectRequest(bucketName, s3Key), geoIpDbFile)
-                }
-            } else {
-                logger.info("Geo IP DB File does not exist. Attempting download.")
-
-                // Lambda only has permissions to create files in the /tmp folder
-                geoIpDbFile = File.createTempFile("geo-ip", ".mmdb")
-                logger.info("Created temp geoIpDbFile", [
-                        geoIpDbFile: geoIpDbFile
+            if (!clientRegion || !bucketName || !s3Key) {
+                throw new ApplicationException(null, "Missing environment variable(s)", null, [
+                        clientRegion: clientRegion ?: null,
+                        bucketName  : bucketName ?: null,
+                        s3Key       : s3Key ?: null
                 ])
-                ObjectMetadata metadataObj = s3Client.getObject(new GetObjectRequest(bucketName, s3Key), geoIpDbFile)
             }
-        } catch (AmazonServiceException e) {
-            // The call was transmitted successfully, but Amazon S3 couldn't process
-            // it, so it returned an error response.
-            logger.error("Failed downloading Geo IP DB", e,[
-                    bucketName : bucketName,
-                    s3Key      : s3Key,
-                    geoIpDbFile: geoIpDbFile
-            ])
-            throw new ApplicationException(null, "Failed downloading Geo IP DB", e, [
-                    bucketName : bucketName,
-                    s3Key      : s3Key,
-                    geoIpDbFile: geoIpDbFile
-            ])
-        } catch (SdkClientException e) {
-            // Amazon S3 couldn't be contacted for a response, or the client
-            // couldn't parse the response from Amazon S3.
-            logger.error("Failed downloading Geo IP DB", e,[
-                    bucketName : bucketName,
-                    s3Key      : s3Key,
-                    geoIpDbFile: geoIpDbFile
-            ])
-            throw new ApplicationException(null, "Failed connecting to Geo IP DB", e, [
-                    bucketName : bucketName,
-                    s3Key      : s3Key,
-                    geoIpDbFile: geoIpDbFile
-            ])
-        } catch (all) {
-            logger.error(all.getMessage(), all,[
-                    bucketName : bucketName,
-                    s3Key      : s3Key,
-                    geoIpDbFile: geoIpDbFile
-            ])
-            throw new ApplicationException(null, all.getMessage(), all, [
-                    bucketName : bucketName,
-                    s3Key      : s3Key,
-                    geoIpDbFile: geoIpDbFile
-            ])
-        }
 
-        geoLookupService = new GeoLookupService()
-        geoLookupService.init(geoIpDbFile)
+            def tmpFolder = File.createTempFile('dummy','ext').parentFile
+            def geoIpDbFile = new File(tmpFolder, "geo-ip.mmdb")
+
+            def s3Client = AmazonS3ClientBuilder.standard()
+                    .withRegion(clientRegion)
+                    .build()
+
+            boolean download = true
+
+            if (geoIpDbFile.exists()) {
+                ObjectMetadata s3MetaData = s3Client.getObjectMetadata(bucketName, s3Key)
+                if (s3MetaData.lastModified.time < geoIpDbFile.lastModified()) {
+                    download = false
+                    logger.info("Using existing GeoIP DB")
+                } else {
+                    logger.info("New GeoIP DB available")
+                }
+            }
+
+            if (download) {
+
+                def tempFile = File.createTempFile("geo-ip", ".mmdb")
+
+                logger.info("Downloading GeoIP DB", [ path: tempFile.absolutePath ])
+
+                s3Client.getObject(new GetObjectRequest(bucketName, s3Key), tempFile)
+
+                logger.info("Moving GeoIP DB", [ source: tempFile.absolutePath, target: geoIpDbFile.absolutePath ])
+
+                tempFile.renameTo(geoIpDbFile)
+            }
+
+            geoLookupService = new GeoLookupService()
+            geoLookupService.init(geoIpDbFile)
+
+            geoIpInitialized = System.currentTimeMillis()
+
+            return true
+
+        } catch (Exception e) {
+            logger.error("GeoIP DB initialization failed", e)
+            return false
+        }
     }
 }
