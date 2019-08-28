@@ -20,7 +20,7 @@ class MongoService {
     }
 
     static boolean hasClient() {
-        return (mongoClient == null)
+        return (mongoClient != null)
     }
 
     DBCollection collection(String collectionName) {
