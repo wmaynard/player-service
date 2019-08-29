@@ -7,6 +7,7 @@ import ch.qos.logback.core.LayoutBase
 
 import org.apache.log4j.MDC
 import org.json.JSONException
+import org.json.JSONObject
 import org.json.JSONWriter
 
 import java.text.DateFormat
@@ -56,11 +57,7 @@ class JsonLayout extends LayoutBase<ILoggingEvent> {
             if (mdc != null) {
                 mdc.each { k, v ->
                     json.key(k)
-                    try {
-                        json.value(v)
-                    } catch(all) {
-                        json.value(v.toString())
-                    }
+                    json.value(v)
                 }
             }
 

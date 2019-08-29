@@ -6,27 +6,36 @@ import javax.crypto.spec.SecretKeySpec
 
 class ChecksumService {
 
-    static def generateMasterChecksum(data, String deviceId) {
+    final String HMAC_ALGO = "HmacSHA512"
+
+    def mac = new ThreadLocal<Mac> () {
+        @Override
+        protected Mac initialValue() {
+            return Mac.getInstance(HMAC_ALGO)
+        }
+    }
+
+    def getChecksumGenerator(String deviceId) {
+        String key =  deviceId + "saltyMcSalterSon"
+        byte [] byteKey = key.getBytes("UTF-8")
+        SecretKeySpec keySpec = new SecretKeySpec(byteKey, HMAC_ALGO)
+        def mac = mac.get()
+        mac.init(keySpec)
+        return mac
+    }
+
+    def generateMasterChecksum(data, mac) {
         def str = ''
         data.sort({ it.name }).each{ obj ->
             str <<= obj.name
             str <<= obj.checksum
         }
 
-        return generateComponentChecksum(str.toString(), deviceId)
+        return generateComponentChecksum(str.toString(), mac)
     }
 
-    // Source: https://stackoverflow.com/questions/39355241/compute-hmac-sha512-with-secret-key-in-java
-    static def generateComponentChecksum(data, String deviceId) {
-        String key =  deviceId + "saltyMcSalterSon"
-        byte [] byteKey = key.getBytes("UTF-8")
-        final String HMAC_SHA512 = "HmacSHA512"
-        def sha512_HMAC = Mac.getInstance(HMAC_SHA512)
-        SecretKeySpec keySpec = new SecretKeySpec(byteKey, HMAC_SHA512)
-        sha512_HMAC.init(keySpec)
-
-        byte [] mac_data = sha512_HMAC.doFinal(data.bytes)
-
+    def generateComponentChecksum(data, mac) {
+        byte [] mac_data = mac.doFinal(data.bytes)
         def result = toHexString(mac_data)
         return result.replaceAll('-','').toLowerCase()
     }

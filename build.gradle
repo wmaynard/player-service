@@ -40,7 +40,7 @@ dependencies {
     compile "org.grails.plugins:events"
     compile group: 'org.json', name: 'json', version:'20180130'
     compile group: 'com.googlecode.json-simple', name: 'json-simple', version:'1.1.1'
-    compile "org.mongodb:mongo-java-driver:3.6.3"
+    compile "org.mongodb:mongo-java-driver:3.8.2"
     compile "org.springframework.social:spring-social-facebook:2.0.3.RELEASE"
     compile 'org.grails.plugins:http-builder-helper:1.1.0'
     compile group: 'redis.clients', name: 'jedis', version: '2.9.0'
@@ -57,7 +57,7 @@ dependencies {
 
     // logging
     compile group: 'ch.qos.logback', name: 'logback-classic', version: '1.2.3'
-    compile group: 'org.logback-extensions', name: 'logback-ext-loggly', version: '0.1.2'
+    compile group: 'org.logback-extensions', name: 'logback-ext-loggly', version: '0.1.5'
     // https://mvnrepository.com/artifact/log4j/log4j
     compile group: 'log4j', name: 'log4j', version: '1.2.17'
     

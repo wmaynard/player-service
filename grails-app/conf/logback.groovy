@@ -1,4 +1,4 @@
-import ch.qos.logback.ext.loggly.LogglyAppender
+import ch.qos.logback.ext.loggly.LogglyBatchAppender
 import com.rumble.platform.common.JsonLayout
 import grails.util.BuildSettings
 import grails.util.Environment
@@ -28,16 +28,18 @@ appender('STDOUT', ConsoleAppender) {
 def rootErrorLogOutput = ['STDOUT']
 
 if (!Environment.isDevelopmentMode() || TESTING_LOGGLY) {
-        appender("loggly", LogglyAppender) {
-        def epu = "${System.getProperty('LOGGLY_URL')}tag/player-service/"
-            endpointUrl = epu
-            System.out.println("Setting Loggly endpoint to: ${epu}")
-            pattern = '%d{"ISO8601", UTC} %p %t %c{0}.%M - %m%n'
-            layout(JsonLayout)
-        }
-
-        rootErrorLogOutput.add('loggly')
-        logger("com.rumble", INFO, ['loggly'])
+    def epu = "${System.getProperty('LOGGLY_URL')}tag/player-service/".replaceAll('/inputs/','/bulk/')
+    System.out.println("Setting Loggly endpoint to: ${epu}")
+    appender("loggly", LogglyBatchAppender) {
+        endpointUrl = epu
+        pattern = '%d{"ISO8601", UTC} %p %t %c{0}.%M - %m%n'
+        layout(JsonLayout)
+        maxNumberOfBuckets = 8
+        maxBucketSizeInKilobytes = 1024
+        flushIntervalInSeconds = 3
+    }
+    rootErrorLogOutput.add('loggly')
+    logger("com.rumble", INFO, ['loggly'], false)
 } else if(Environment.isDevelopmentMode()) {
     logger("com.rumble", INFO)
 }

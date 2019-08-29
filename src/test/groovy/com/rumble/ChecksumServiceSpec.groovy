@@ -26,7 +26,7 @@ class ChecksumServiceSpec extends Specification implements ServiceUnitTest<Check
                 "    \"seenCurrentEvent\": false\n" +
                 "}"
 
-        def result = service.generateComponentChecksum(data, "18e6ac7b555154bdf9dbe6ccae9bacca")
+        def result = service.generateComponentChecksum(data, service.getChecksumGenerator("18e6ac7b555154bdf9dbe6ccae9bacca"))
         expect:
             result == "bb0d9cdea1494bbcbef6f6768c4ba76db8cff5d7baf66c79418ec033df8d8e0eb7b427f950734daa760ad678d322aa81ea15475f394aa38c052d6864829a6ff3"
     }
@@ -55,7 +55,7 @@ class ChecksumServiceSpec extends Specification implements ServiceUnitTest<Check
                 ]
         ]
 
-        def result = service.generateMasterChecksum(checksums, "18e6ac7b555154bdf9dbe6ccae9bacca")
+        def result = service.generateMasterChecksum(checksums, service.getChecksumGenerator("18e6ac7b555154bdf9dbe6ccae9bacca"))
         expect:
         result == "b545bf77b1f30d893f0d582abda34d200b497eee8dda84a546c7dfe2e6a5dc4d2da2590352ec70db6037c944ff7c2ce97287169446b1d4af16108d301f1d2017"
     }

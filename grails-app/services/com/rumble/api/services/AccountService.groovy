@@ -191,7 +191,7 @@ class AccountService {
             updateDoc = new BasicDBObject('$set', updateDoc).append('$unset', new BasicDBObject("mt", ""))
         }
 
-        logger.info("AccountService:updateAccountData", [updateDoc: updateDoc])
+        logger.info("AccountService:updateAccountData")//, [updateDoc: updateDoc.toString()])
         def account = coll.findAndModify(
                 new BasicDBObject("_id", (accountId instanceof String) ? new ObjectId(accountId) : accountId),    // query
                 new BasicDBObject(),                    // fields
@@ -226,10 +226,10 @@ class AccountService {
         if(query.size()) {
             DBCursor cursor = coll.find(query)
             if (cursor.size() > 0) {
-                def result = cursor.toArray()
+                def docs = cursor.toArray()
                 cursor.close()
-                logger.info("AccountService:getComponentData",[accountId: accountId, component: component, result: result])
-                return result
+                logger.info("AccountService:getComponentData",[accountId: accountId, component: component])//, docs: docs.collect { it.toString() }])
+                return docs
             }
 
             return []
@@ -244,7 +244,7 @@ class AccountService {
         def jsonSlurper = new JsonSlurper()
         BasicDBObject doc = new BasicDBObject("aid", (accountId instanceof String) ? new ObjectId(accountId) : accountId)
                 .append("data", jsonSlurper.parseText(data))
-        logger.info("AccountService:saveComponentData", [doc: doc])
+        logger.info("AccountService:saveComponentData")//, [doc: doc.toString()])
         coll.findAndModify(
                 query,            // query
                 new BasicDBObject(),            // fields
