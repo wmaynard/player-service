@@ -140,6 +140,51 @@ class DynamicConfigService {
         }
     }
 
+    def updateConfigs() {
+
+        def updateInfo
+
+        if (updating.compareAndSet(false, true)) {
+            try {
+                def cachedKeys
+                synchronized (cachedConfigs) {
+                    cachedKeys = cachedConfigs.keySet() as List
+                }
+                updateInfo = [
+                        cached   : cachedKeys.size(),
+                        checked  : 0,
+                        fetched  : 0,
+                        failed   : 0,
+                        startTime: System.currentTimeMillis()
+                ]
+                cachedKeys.each { String scope ->
+                    def cached
+                    try {
+                        updateInfo.checked = updateInfo.checked + 1
+                        cached = cachedConfigs[scope]
+                        if (cached && (cached['fetchedTime'] + maxAge) < updateInfo.startTime) {
+                            if (fetchConfig(scope, (String) cached['etag'])) {
+                                updateInfo.fetched = updateInfo.fetched + 1
+                                log.info("Fetched new config for scope '${scope}'")
+                            }
+                        }
+                    } catch (Exception e) {
+                        updateInfo.failed = updateInfo.failed + 1
+                        if (cached && (cached['fetchedTime'] + maxAge * 2) < updateInfo.startTime) {
+                            log.error("Persistent failure fetching new config for scope '${scope}'", e)
+                        } else {
+                            log.warn("Failed to fetch new config for scope '${scope}'", e)
+                        }
+                    }
+                }
+            } finally {
+                updateInfo.endTime = System.currentTimeMillis()
+                lastUpdateInfo = updateInfo
+                updating.set(false)
+            }
+        }
+    }
+
     DynamicConfigMap getGameConfig(String gukey, boolean allowCached = true) {
 
         def config

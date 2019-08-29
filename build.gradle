@@ -62,7 +62,7 @@ dependencies {
     compile group: 'log4j', name: 'log4j', version: '1.2.17'
     
     // jobs
-    compile 'org.grails.plugins:quartz:2.0.1'
+    compile 'org.grails.plugins:quartz:2.0.13'
 
     profile "org.grails.profiles:web"
 }
