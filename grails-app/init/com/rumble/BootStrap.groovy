@@ -6,6 +6,7 @@ import org.bson.types.ObjectId
 
 class BootStrap {
     def dynamicConfigService
+    def geoLookupService
 
     def init = { servletContext ->
         requireSystemProperty('RUMBLE_CONFIG_SERVICE_URL')
@@ -31,6 +32,7 @@ class BootStrap {
         requireSystemProperty('GEO_IP_S3_KEY')
 
         dynamicConfigService.init()
+        geoLookupService.init()
 
         JSON.registerObjectMarshaller(ObjectId) {
             return it.toString()

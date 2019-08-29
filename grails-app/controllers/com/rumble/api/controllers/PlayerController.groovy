@@ -1,21 +1,15 @@
 package com.rumble.api.controllers
 
-import com.amazonaws.AmazonServiceException
-import com.amazonaws.SdkClientException
-import com.amazonaws.services.s3.AmazonS3
+
 import com.amazonaws.services.s3.AmazonS3ClientBuilder
 import com.amazonaws.services.s3.model.GetObjectRequest
 import com.amazonaws.services.s3.model.ObjectMetadata
-import com.rumble.api.services.AccountService
 import com.rumble.api.services.ChecksumService
 import com.rumble.api.services.ProfileTypes
-import com.rumble.geoip.GeoLookupService
 import com.rumble.platform.exception.ApplicationException
-import com.rumble.platform.services.DynamicConfigService
 import grails.converters.JSON
 import groovy.json.JsonSlurper
 import groovy.json.JsonOutput
-import org.apache.commons.io.comparator.LastModifiedFileComparator
 import org.springframework.util.MimeTypeUtils
 
 class PlayerController {
@@ -105,7 +99,6 @@ class PlayerController {
             return false
         }
 
-        if (initGeoIpDb()) {
             def ipAddr = geoLookupService.getIpAddress(request)
 
             if (ipAddr.contains(':')) {
@@ -129,7 +122,6 @@ class PlayerController {
                     logger.warn("Exception looking up geo location for IP Address", all, [ipAddr: ipAddr])
                 }
             }
-        }
 
         //TODO: Remove, for testing only
         //manifest.identity.facebook.accessToken = "EAAGfjfXqzCIBAG57lgP2LHg91j96mw1a0kXWXWo9OqzqKGB0VDqQLkOFibrt86fRybpZBHuMZCJ6P7h03KT75wnwLUQPROjyE98iLincC0ZCRAfCvubC77cPoBtE0PGV2gsFjKnMMHKBDrwhGfeN3FZAoiZCEeNWlg91UR6njFZALQOEab7EAuyyH6WkKevYrCIiN5hnOtcGVZCEC82nGH4"
@@ -463,70 +455,5 @@ class PlayerController {
         out.write('\r\n')
         out.write('\r\n')
         out.write(content.toString())
-    }
-
-    private long geoIpInitialized = 0
-
-    private def initGeoIpDb() {
-
-        try {
-
-            if (geoIpInitialized > System.currentTimeMillis()-24L*60L*60L*1000L) return true
-
-            def clientRegion = System.getProperty("GEO_IP_S3_REGION") ?: System.getenv("GEO_IP_S3_REGION")
-            def bucketName = System.getProperty("GEO_IP_S3_BUCKET") ?: System.getenv("GEO_IP_S3_BUCKET")
-            def s3Key = System.getProperty("GEO_IP_S3_KEY") ?: System.getenv("GEO_IP_S3_KEY")
-
-            if (!clientRegion || !bucketName || !s3Key) {
-                throw new ApplicationException(null, "Missing environment variable(s)", null, [
-                        clientRegion: clientRegion ?: null,
-                        bucketName  : bucketName ?: null,
-                        s3Key       : s3Key ?: null
-                ])
-            }
-
-            def tmpFolder = File.createTempFile('dummy','ext').parentFile
-            def geoIpDbFile = new File(tmpFolder, "geo-ip.mmdb")
-
-            def s3Client = AmazonS3ClientBuilder.standard()
-                    .withRegion(clientRegion)
-                    .build()
-
-            boolean download = true
-
-            if (geoIpDbFile.exists()) {
-                ObjectMetadata s3MetaData = s3Client.getObjectMetadata(bucketName, s3Key)
-                if (s3MetaData.lastModified.time < geoIpDbFile.lastModified()) {
-                    download = false
-                    logger.info("Using existing GeoIP DB")
-                } else {
-                    logger.info("New GeoIP DB available")
-                }
-            }
-
-            if (download) {
-
-                def tempFile = File.createTempFile("geo-ip", ".mmdb")
-
-                logger.info("Downloading GeoIP DB", [ path: tempFile.absolutePath ])
-
-                s3Client.getObject(new GetObjectRequest(bucketName, s3Key), tempFile)
-
-                logger.info("Moving GeoIP DB", [ source: tempFile.absolutePath, target: geoIpDbFile.absolutePath ])
-
-                tempFile.renameTo(geoIpDbFile)
-            }
-
-            geoLookupService = new GeoLookupService()
-            geoLookupService.init(geoIpDbFile)
-
-            geoIpInitialized = System.currentTimeMillis()
-
-            return true
-
-        } catch (Exception e) {
-            logger.error("GeoIP DB initialization failed", e)
-            return false
-        }
     }
 }
