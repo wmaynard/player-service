@@ -330,24 +330,18 @@ class PlayerController {
                 out.write(JsonOutput.toJson(responseData)) // actual response
 
                 if (conflict) {
-
                     def entries = [:]
                     def entriesChecksums = []
                     // Send component responses based on entries in manifest
                     manifest.entries.each { component ->
                         def content = ""
-                        if (responseData.errorCode) {
                             // Return the data in the format that the client expects it (which is really just the embedded data field)
                             def c = accountService.getComponentData(responseData.conflictingAccountId ?: id, component.name)
                             if (c && c.size() > 0) {
                                 c = c.first()
                             }
                             content = (c) ? c.data ?: c : ""
-                        } else {
-                            accountService.saveComponentData(id, component.name, request.getParameter(component.name))
-                        }
 
-                        // Don't send anything if successful
                         entries[component.name] = content
 
                         def cs = [
@@ -368,6 +362,10 @@ class PlayerController {
                     sendFile(out, boundary, "manifest", JsonOutput.toJson(mani))
                     entries.each { name, data ->
                         sendFile(out, boundary, name, data)
+                    }
+                } else {
+                    manifest.entries.each { component ->
+                        accountService.saveComponentData(id, component.name, request.getParameter(component.name))
                     }
                 }
             }
