@@ -186,7 +186,7 @@ class PlayerController {
                     def accessToken = authHeader.substring(7)
                     def tokenAuth = accessTokenService.validateAccessToken(accessToken, false, false)
                     if ((tokenAuth.aud == game) && (tokenAuth.sub == id.toString())) {
-                        def replaceAfter = tokenAuth.exp - gameConfig.long('auth:minTokenLifeSeconds', 300L)
+                        def replaceAfter = tokenAuth.exp - gameConfig.long('auth:minTokenLifeSeconds', 172800L) // 2d
                         if (System.currentTimeMillis() / 1000L < replaceAfter) {
                             responseData.accessToken = accessToken
                         }
@@ -198,7 +198,7 @@ class PlayerController {
 
             if (!responseData.accessToken) {
                 responseData.accessToken = accessTokenService.generateAccessToken(
-                        gameGukey, id.toString(), null, gameConfig.long('auth:maxTokenLifeSeconds', 172800L))
+                        gameGukey, id.toString(), null, gameConfig.long('auth:maxTokenLifeSeconds', 345600L)) // 4d
             }
 
         //TODO: Validate account
