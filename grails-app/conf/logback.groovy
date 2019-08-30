@@ -39,7 +39,7 @@ if (!Environment.isDevelopmentMode() || TESTING_LOGGLY) {
         flushIntervalInSeconds = 3
     }
     rootErrorLogOutput.add('loggly')
-    logger("com.rumble", INFO, ['loggly'], false)
+    logger("com.rumble", INFO, ['loggly'])
 } else if(Environment.isDevelopmentMode()) {
     logger("com.rumble", INFO)
 }
