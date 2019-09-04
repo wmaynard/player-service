@@ -19,6 +19,13 @@ apply plugin:"org.grails.grails-web"
 repositories {
     mavenLocal()
     maven { url "https://repo.grails.org/grails/core" }
+    maven {
+        credentials {
+            username artifactory_user
+            password artifactory_password
+        }
+        url "http://artifactory.aws.cdrentertainment.com:8081/artifactory/plugins-release-local"
+    }
 }
 
 dependencies {
@@ -44,10 +51,11 @@ dependencies {
     compile "org.springframework.social:spring-social-facebook:2.0.3.RELEASE"
     compile 'org.grails.plugins:http-builder-helper:1.1.0'
     compile group: 'redis.clients', name: 'jedis', version: '2.9.0'
-    compile group: 'org.apache.commons', name: 'commons-lang3', version: '3.7'
     compile "com.nimbusds:nimbus-jose-jwt:7.1"
     compile group: 'org.codehaus.groovy', name: 'groovy-json', version: '2.4.15'
     compile group: 'org.codehaus.groovy', name: 'groovy-all', version: '2.4.15'
+
+    compile "com.rumble:platform-common:2.0"
 
     // geo-ip
     compile group: 'com.maxmind.geoip2', name: 'geoip2', version: '2.12.0'

@@ -5,7 +5,6 @@ import grails.converters.JSON
 import org.bson.types.ObjectId
 
 class BootStrap {
-    def dynamicConfigService
     def geoLookupService
 
     def init = { servletContext ->
@@ -31,7 +30,6 @@ class BootStrap {
         requireSystemProperty('GEO_IP_S3_BUCKET')
         requireSystemProperty('GEO_IP_S3_KEY')
 
-        dynamicConfigService.init()
         geoLookupService.init()
 
         JSON.registerObjectMarshaller(ObjectId) {
