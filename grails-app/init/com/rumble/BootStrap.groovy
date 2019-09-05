@@ -30,8 +30,6 @@ class BootStrap {
         requireSystemProperty('GEO_IP_S3_BUCKET')
         requireSystemProperty('GEO_IP_S3_KEY')
 
-        geoLookupService.init()
-
         JSON.registerObjectMarshaller(ObjectId) {
             return it.toString()
         }

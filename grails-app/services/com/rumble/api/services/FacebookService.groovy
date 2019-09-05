@@ -5,7 +5,7 @@ import groovyx.net.http.HTTPBuilder
 import groovyx.net.http.Method
 
 class FacebookService {
-    def logger = new com.rumble.Log(this.class)
+    def logger = new com.rumble.platform.common.Log(this.class)
 
     static private FB_VALIDATE_TOKEN_URL = System.getProperty("FB_VALIDATE_TOKEN_URL") ?: System.getenv("FB_VALIDATE_TOKEN_URL")
 

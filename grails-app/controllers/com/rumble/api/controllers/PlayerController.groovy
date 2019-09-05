@@ -13,7 +13,7 @@ class PlayerController {
     def authService
     def dynamicConfigService
     def geoLookupService
-    def logger = new com.rumble.Log(this.class)
+    def logger = new com.rumble.platform.common.Log(this.class)
     def mongoService
     def paramsService
     def profileService

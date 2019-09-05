@@ -7,7 +7,7 @@ import groovy.json.JsonSlurper
 import org.bson.types.ObjectId
 
 class AccountService {
-    def logger = new com.rumble.Log(this.class)
+    def logger = new com.rumble.platform.common.Log(this.class)
     def mongoService
     def profileService
 
