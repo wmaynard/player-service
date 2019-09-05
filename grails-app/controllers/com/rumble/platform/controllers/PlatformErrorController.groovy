@@ -7,7 +7,6 @@ import com.rumble.platform.exception.PlatformException
 import grails.converters.JSON
 
 class PlatformErrorController {
-    def mongoService
 
     def uncaughtException() {
         try {
