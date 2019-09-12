@@ -6,6 +6,7 @@ import org.bson.types.ObjectId
 
 class BootStrap {
     def geoLookupService
+	def mongoService
 
     def init = { servletContext ->
         requireSystemProperty('RUMBLE_CONFIG_SERVICE_URL')
@@ -30,12 +31,14 @@ class BootStrap {
         requireSystemProperty('GEO_IP_S3_BUCKET')
         requireSystemProperty('GEO_IP_S3_KEY')
 
+        mongoService.init()
         JSON.registerObjectMarshaller(ObjectId) {
             return it.toString()
         }
     }
 
     def destroy = {
+        mongoService.close()
     }
 
     def requireSystemProperty(name) {

@@ -2,6 +2,8 @@ package com.rumble.api.services
 
 import com.mongodb.BasicDBObject
 import com.mongodb.DBObject
+import com.mongodb.client.model.FindOneAndUpdateOptions
+import com.mongodb.session.ClientSession
 import org.bson.types.ObjectId
 
 class ProfileService {
@@ -39,7 +41,7 @@ class ProfileService {
         return validProfiles
     }
 
-    def saveProfile(type, accountId, profileId, updateData = null){
+    def saveProfile(ClientSession clientSession, type, accountId, profileId, updateData = null){
         def coll = mongoService.collection(PROFILE_COLLECTION_NAME)
         def now = System.currentTimeMillis()
         def query = new BasicDBObject("type", type)
@@ -59,21 +61,18 @@ class ProfileService {
             }
         }
 
-        def profile = coll.findAndModify(
-                query, // query
-                new BasicDBObject(), // fields
-                new BasicDBObject(), // sort
-                false, // remove
-                new BasicDBObject('$setOnInsert', upsertDoc)
-                        .append('$set', updateDoc), // update
-                true, // returnNew
-                true // upsert
+        def profile = coll.findOneAndUpdate(
+                clientSession,
+                query, // filter
+                new BasicDBObject('$set', updateDoc)
+                        .append('$setOnInsert', upsertDoc), // update
+                new FindOneAndUpdateOptions().upsert(true) //.returnDocument()
         )
 
         return profile
     }
 
-    def mergeProfile(type, accountId, profileId, updateData = null) {
+    def mergeProfile(ClientSession clientSession, type, accountId, profileId, updateData = null) {
         def coll = mongoService.collection(PROFILE_COLLECTION_NAME)
         def now = System.currentTimeMillis()
         def query = new BasicDBObject("type", type)
@@ -92,25 +91,22 @@ class ProfileService {
             }
         }
 
-        def profile = coll.findAndModify(
+        def profile = coll.findOneAndUpdate(
+                clientSession,
                 query, // query
-                new BasicDBObject(), // fields
-                new BasicDBObject(), // sort
-                false, // remove
-                new BasicDBObject('$setOnInsert', upsertDoc)
-                        .append('$set', updateDoc), // update
-                true, // returnNew
-                true // upsert
+                new BasicDBObject('$set', updateDoc)
+                        .append('$setOnInsert', upsertDoc), // update
+                new FindOneAndUpdateOptions().upsert(true) //.returnDocument()
         )
 
         return profile
     }
 
-    def saveInstallIdProfile(accountId, installId, identityData) {
+    def saveInstallIdProfile(ClientSession clientSession, accountId, installId, identityData) {
         // Extract data to save with the Install ID
         def data = AccountService.extractInstallData(identityData)
 
-        return saveProfile(ProfileTypes.INSTALL_ID, accountId, installId, data)
+        return saveProfile(clientSession, ProfileTypes.INSTALL_ID, accountId, installId, data)
     }
 
     def getProfilesForAccount(accountId) {

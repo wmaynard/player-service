@@ -1,30 +1,35 @@
 package com.rumble.platform.services
 
-import com.mongodb.DB
-import com.mongodb.DBCollection
-import com.mongodb.MongoClient
-import com.mongodb.MongoClientURI
+import com.mongodb.client.MongoClient
+import com.mongodb.client.MongoCollection
+import com.mongodb.client.MongoDatabase
 
 class MongoService {
     private static mongoClient
     private static databaseName = System.getProperty("MONGODB_NAME") ?: System.getenv("MONGODB_NAME")
+    private static logger = new com.rumble.platform.common.Log(this.class)
+
+    static def init(){
+        if(mongoClient == null){
+            mongoClient = com.mongodb.client.MongoClients.create(System.getProperty("MONGODB_URI"))
+        } else {
+            logger.warn("MongoClient already initialized")
+        }
+    }
 
     static MongoClient client() {
         if(mongoClient == null){
-            def u = System.getProperty("MONGODB_URI") ?: System.getenv("MONGODB_URI")
-            MongoClientURI uri = new MongoClientURI(u)
-            mongoClient = new MongoClient(uri)
+            throw new Exception("Mongo Service not initialized")
         }
-
         return mongoClient
     }
 
-    static boolean hasClient() {
-        return (mongoClient != null)
+    static close() {
+        mongoClient?.close()
     }
 
-    DBCollection collection(String collectionName) {
-        DB db = client().getDB(databaseName)
+    MongoCollection collection(String collectionName) {
+        MongoDatabase db = client().getDatabase(databaseName)
         return db.getCollection(collectionName)
     }
 }

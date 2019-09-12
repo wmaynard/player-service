@@ -1,8 +1,9 @@
 package com.rumble.api.services
 
 import com.mongodb.BasicDBObject
-import com.mongodb.DBCursor
 import com.mongodb.DBObject
+import com.mongodb.client.model.FindOneAndUpdateOptions
+import com.mongodb.session.ClientSession
 import groovy.json.JsonSlurper
 import org.bson.types.ObjectId
 
@@ -65,7 +66,7 @@ class AccountService {
 
         query = new BasicDBObject('$or', baseQuery)
         logger.debug("AccountService:find", [query: query])
-        DBCursor cursor = coll.find(query)
+        def cursor = coll.find(query)
         return cursor.toArray()
     }
 
@@ -94,7 +95,7 @@ class AccountService {
         return details
     }
 
-    def exists(String installId, upsertData = null) {
+    def exists(ClientSession clientSession, String installId, upsertData = null) {
         def coll = mongoService.collection(COLLECTION_NAME)
         DBObject query = new BasicDBObject("lsi", installId)
         if(upsertData) {
@@ -112,19 +113,16 @@ class AccountService {
                 setOnInsertObj.append('sn', upsertData.screenName)
             }
 
-            def player = coll.findAndModify(
+            def player = coll.findOneAndUpdate(
+                    clientSession,
                     query, // query
-                    new BasicDBObject(), // fields
-                    new BasicDBObject(), // sort
-                    false, // remove
-                    new BasicDBObject('$setOnInsert', setOnInsertObj)
-                            .append('$set', new BasicDBObject('lc', now)), // last checked
-                    true, // returnNew
-                    true // upsert
+                    new BasicDBObject('$set', new BasicDBObject("lc", now))
+                            .append('$setOnInsert', setOnInsertObj),
+                    new FindOneAndUpdateOptions().upsert(true) //.returnDocument()
             )
             return player
         } else {
-            DBCursor cursor = coll.find(query)
+            def cursor = coll.find(query)
             if (cursor.size() > 0) {
                 // There should only be one result
                 if(cursor.size() > 1) {
@@ -153,7 +151,7 @@ class AccountService {
         return doc
     }
 
-    def updateAccountData(accountId, identityData, manifestVersion = null, isMerge = false) {
+    def updateAccountData(ClientSession clientSession, accountId, identityData, manifestVersion = null, isMerge = false) {
         def now = System.currentTimeMillis()
         def coll = mongoService.collection(COLLECTION_NAME)
         BasicDBObject updateDoc = new BasicDBObject("lu", now)
@@ -189,17 +187,16 @@ class AccountService {
         if(isMerge) {
             // Remove merge token
             updateDoc = new BasicDBObject('$set', updateDoc).append('$unset', new BasicDBObject("mt", ""))
+        } else {
+            updateDoc = new BasicDBObject('$set', updateDoc)
         }
 
-        logger.info("AccountService:updateAccountData")//, [updateDoc: updateDoc.toString()])
-        def account = coll.findAndModify(
+        logger.info("AccountService:updateAccountData")//, [updateDoc: updateDoc])
+        def account = coll.findOneAndUpdate(
+                clientSession,
                 new BasicDBObject("_id", (accountId instanceof String) ? new ObjectId(accountId) : accountId),    // query
-                new BasicDBObject(),                    // fields
-                new BasicDBObject(),                    // sort
-                false,                          // remove
                 updateDoc,                              // update
-                true,                         // returnNew
-                false                            // upsert
+                new FindOneAndUpdateOptions().upsert(true) //.returnDocument()
         )
 
         return account
@@ -224,12 +221,11 @@ class AccountService {
         }
 
         if(query.size()) {
-            DBCursor cursor = coll.find(query)
+            def cursor = coll.find(query)
             if (cursor.size() > 0) {
-                def docs = cursor.toArray()
-                cursor.close()
+                def result = cursor.toList()
                 logger.info("AccountService:getComponentData",[accountId: accountId, component: component])//, docs: docs.collect { it.toString() }])
-                return docs
+                return result
             }
 
             return []
@@ -238,48 +234,54 @@ class AccountService {
         return false
     }
 
-    def saveComponentData(accountId, String collection, data) {
+    def saveComponentData(ClientSession clientSession, accountId, String collection, data) {
         def coll = mongoService.collection(getComponentCollectionName(collection))
         DBObject query = new BasicDBObject("aid", (accountId instanceof String) ? new ObjectId(accountId) : accountId)
         def jsonSlurper = new JsonSlurper()
-        BasicDBObject doc = new BasicDBObject("aid", (accountId instanceof String) ? new ObjectId(accountId) : accountId)
-                .append("data", jsonSlurper.parseText(data))
-        logger.info("AccountService:saveComponentData")//, [doc: doc.toString()])
-        coll.findAndModify(
+        BasicDBObject doc = new BasicDBObject('$set', new BasicDBObject("data", jsonSlurper.parseText(data)))
+                .append('$setOnInsert', new BasicDBObject("aid", (accountId instanceof String) ? new ObjectId(accountId) : accountId))
+        logger.info("AccountService:saveComponentData")//, [doc: doc])
+        //System.out.println("saveComponentData" + doc.toString())
+        coll.findOneAndUpdate(
+                clientSession,
                 query,            // query
-                new BasicDBObject(),            // fields
-                new BasicDBObject(),            // sort
-                false,                          // remove
                 doc,                            // update
-                true,                           // returnNew
-                true                            // upsert
+                new FindOneAndUpdateOptions().upsert(true) //.returnDocument()
         )
     }
 
     def validateMergeToken(accountId, mergeToken) {
         def coll = mongoService.collection(COLLECTION_NAME)
-        DBCursor cursor = coll.find(new BasicDBObject("_id", (accountId instanceof String) ? new ObjectId(accountId) : accountId)
+        def cursor = coll.find(new BasicDBObject("_id", (accountId instanceof String) ? new ObjectId(accountId) : accountId)
                 .append("mt", mergeToken)
         )
 
         def cursorSize = cursor.size()
         cursor.close()
         if(cursorSize > 1) {
-            // TODO: Log if there is more than one because this shouldn't happen
+            // Log if there is more than one because this shouldn't happen
+            logger.warn("Found more than one merge token", [ accountId: accountId, mergeToken: mergeToken ])
         }
 
         return (cursorSize > 0)
     }
 
-    def generateMergeToken(accountId) {
+    def generateMergeToken(ClientSession clientSession, accountId) {
         logger.trace("AccountService:generateMergeToken()")
         def coll = mongoService.collection(COLLECTION_NAME)
         def mergeToken = UUID.randomUUID().toString()
-        BasicDBObject doc = new BasicDBObject()
-        doc.append('$set', new BasicDBObject().append("mt", mergeToken))
-        BasicDBObject query = new BasicDBObject().append("_id", (accountId instanceof String) ? new ObjectId(accountId) : accountId)
-        coll.update(query, doc)
+        BasicDBObject updateDoc = new BasicDBObject('$set', new BasicDBObject("mt", mergeToken))
+        BasicDBObject query = new BasicDBObject("_id", (accountId instanceof String) ? new ObjectId(accountId) : accountId)
+        coll.findOneAndUpdate(clientSession, query, updateDoc)
         return mergeToken
+    }
+
+    def hasInstallConflict(player, manifest){
+        return (player.lsi != manifest.identity.installId)
+    }
+
+    def hasVersionConflict(player, manifest){
+        return (player.dv > manifest.identity.dataVersion)
     }
 
     static def extractInstallData(identityData) {

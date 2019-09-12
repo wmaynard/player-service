@@ -1,10 +1,13 @@
 package com.rumble.api.controllers
 
-
+import com.mongodb.MongoException
+import com.rumble.api.services.ChecksumService
 import com.rumble.api.services.ProfileTypes
+import com.rumble.platform.services.DynamicConfigService
 import grails.converters.JSON
 import groovy.json.JsonSlurper
 import groovy.json.JsonOutput
+import org.bson.types.ObjectId
 import org.springframework.util.MimeTypeUtils
 
 class PlayerController {
@@ -28,7 +31,7 @@ class PlayerController {
     def save() {
         def manifest
         def responseData = [
-                success: true,
+                success: false,
                 remoteAddr: request.remoteAddr,
                 geoipAddr: request.remoteAddr,
                 country: 'US',
@@ -40,25 +43,12 @@ class PlayerController {
         def boundary = MimeTypeUtils.generateMultipartBoundaryString()
         response.setContentType('multipart/related; boundary="' + boundary + '"')
         def out = response.writer
-        out.write('--')
-        out.write(boundary)
-        out.write('\r\n')
-        out.write('Content-Type: text/html')
-        out.write('\r\n')
-        out.write('Content-Disposition: inline')
-        out.write('\r\n')
-        out.write('\r\n')
 
         paramsService.require(params, 'manifest')
 
         if(!params.manifest) {
-            responseData.success = false
             responseData.errorCode = "authError"
-            out.write(JsonOutput.toJson(responseData))
-            out.write('\r\n')
-            out.write('--')
-            out.write(boundary)
-            out.write('--')
+            sendError(out, boundary, responseData)
             return false
         } else {
             def slurper = new JsonSlurper()
@@ -68,17 +58,16 @@ class PlayerController {
             responseData.accountId = manifest.identity.installId
         }
 
-        def mac = checksumService.getChecksumGenerator(manifest.identity.installId)
-
+		def mac = checksumService.getChecksumGenerator(manifest.identity.installId)
         //TODO: Validate checksums
         def validChecksums = true
-        if(checksumService.generateMasterChecksum(manifest.entries, mac) != manifest.checksum) {
+        if(!checksumService.validateChecksum(manifest.checksum, checksumService.generateMasterChecksum(manifest.entries, mac))) {
             validChecksums = false
         } else {
             manifest.entries.each { entry ->
                 if (validChecksums) {
                     def cs = checksumService.generateComponentChecksum(params.get(entry.name), mac)
-                    if (entry.checksum != cs) {
+                    if (!checksumService.validateChecksum(cs, entry.checksum)) {
                         validChecksums = false
                     }
                 }
@@ -86,16 +75,10 @@ class PlayerController {
         }
 
         if(!validChecksums) {
-            responseData.success = false
             responseData.errorCode = "invalidData"
-            out.write(JsonOutput.toJson(responseData))
-            out.write('\r\n')
-            out.write('--')
-            out.write(boundary)
-            out.write('--')
+            sendError(out, boundary, responseData)
             return false
         }
-
         def ipAddr = geoLookupService.getIpAddress(request)
 
         if (ipAddr.contains(':')) {
@@ -119,6 +102,7 @@ class PlayerController {
                 logger.warn("Exception looking up geo location for IP Address", all, [ipAddr: ipAddr])
             }
         }
+
 
         //TODO: Remove, for testing only
         //manifest.identity.facebook.accessToken = "EAAGfjfXqzCIBAG57lgP2LHg91j96mw1a0kXWXWo9OqzqKGB0VDqQLkOFibrt86fRybpZBHuMZCJ6P7h03KT75wnwLUQPROjyE98iLincC0ZCRAfCvubC77cPoBtE0PGV2gsFjKnMMHKBDrwhGfeN3FZAoiZCEeNWlg91UR6njFZALQOEab7EAuyyH6WkKevYrCIiN5hnOtcGVZCEC82nGH4"
@@ -146,38 +130,28 @@ class PlayerController {
 
         // Blacklist countries
         if (dynamicConfigService.getConfig('canvas').list('blacklistCountries').contains(responseData.country as String)) {
-            responseData.success = false
             responseData.errorCode = "geoblocked"
             responseData.supportUrl = gameConfig['supportUrl']
-            out.write(JsonOutput.toJson(responseData))
-            out.write('\r\n')
-            out.write('--')
-            out.write(boundary)
-            out.write('--')
+            sendError(out, boundary, responseData)
             return false
         }
 
-
-        def clientSession = mongoService.client().startSession()
-
+        def conflict = false
+        def mani = []
+        def entries = [:]
+        def entriesChecksums = []
+        def clientSession
         try {
-
+            clientSession = mongoService.client().startSession()
             clientSession.startTransaction()
-
-            def player = accountService.exists(manifest.identity.installId, manifest.identity)
+            def player = accountService.exists(clientSession, manifest.identity.installId, manifest.identity)
             if (!player) {
-                //TODO: Error 'cause upsert failed
-                responseData.success = false
+                // Error 'cause upsert failed
                 responseData.errorCode = "dbError"
-                out.write(JsonOutput.toJson(responseData))
-                out.write('\r\n')
-                out.write('--')
-                out.write(boundary)
-                out.write('--')
+                sendError(out, boundary, responseData)
                 return false
             }
 
-            def conflict = false
             def id = player.getObjectId("_id")
 
             def authHeader = request.getHeader('Authorization')
@@ -209,28 +183,25 @@ class PlayerController {
          *   googlePlay: GOOGLEPLAY_ID
          * ]
          */
+
             if (params.mergeToken) {
                 // Validate merge token
                 if (accountService.validateMergeToken(id, params.mergeToken)) {
                     responseData.accountId = id.toString()
                     responseData.createdDate = player.cd.toString()
-                    out.write(JsonOutput.toJson(responseData))
 
-                    profileService.saveInstallIdProfile(id.toString(), manifest.identity.installId, manifest.identity)
+                    profileService.saveInstallIdProfile(clientSession, id.toString(), manifest.identity.installId, manifest.identity)
 
                     // Save over data
                     validProfiles.each { profile, profileData ->
-                        profileService.mergeProfile(profile, id.toString(), profileData)
+                        profileService.mergeProfile(clientSession, profile, id.toString(), profileData)
                     }
 
-                    def updatedAccount = accountService.updateAccountData(id.toString(), manifest.identity, manifest.manifestVersion, true)
-
-                    def entries = [:]
-                    def entriesChecksums = []
+                    def updatedAccount = accountService.updateAccountData(clientSession, id.toString(), manifest.identity, manifest.manifestVersion, true)
 
                     // Send component responses based on entries in manifest
                     manifest.entries.each { component ->
-                        accountService.saveComponentData(id, component.name, request.getParameter(component.name))
+                        accountService.saveComponentData(clientSession, id, component.name, request.getParameter(component.name))
 
                         // Don't send anything if successful
                         entries[component.name] = ""
@@ -238,26 +209,22 @@ class PlayerController {
                         //TODO: Generate new checksums
                         def cs = [
                                 "name"    : component.name,
-                                "checksum": checksumService.generateComponentChecksum(component, mac) ?: "placeholder"
+                                "checksum": ChecksumService.generateComponentChecksum(component, manifest.identity.installId) ?: "placeholder"
                         ]
                         entriesChecksums.add(cs)
                     }
 
                     // Recreate manifest to send back to the client
-                    def mani = [
+                    mani = [
                             "identity"       : manifest.identity,
                             "entries"        : entriesChecksums,
                             "manifestVersion": updatedAccount?.mv ?: "placeholder", //TODO: Save manifestVersion
                             "checksum"       : checksumService.generateMasterChecksum(entriesChecksums, mac) ?: "placeholder"
                     ]
-
-                    sendFile(out, boundary, "manifest", JsonOutput.toJson(mani))
-                    entries.each { name, data ->
-                        sendFile(out, boundary, name, data)
-                    }
                 } else {
-                    responseData.success = false
                     responseData.errorCode = "mergeConflict"
+                    sendError(out, boundary, responseData)
+                    return false
                 }
             } else {
                 if (validProfiles) {
@@ -271,9 +238,9 @@ class PlayerController {
                         // and then compare those Account IDs with the Account ID that matches the Install ID
                         playerProfiles.each { profile ->
                             //TODO: Check for profile conflict
-                            if (id.toString() != profile.aid.toString()) {
-                                conflictProfiles << profile
-                            }
+                                if (id.toString() != profile.aid.toString()) {
+                                    conflictProfiles << profile
+                                }
                         }
                     }
 
@@ -284,7 +251,9 @@ class PlayerController {
                         logger.info("Account conflict", [accountId: id.toString()])
                         //TODO: Include which accounts are conflicting? Security concerns?
                         def conflictingAccountIds = conflictProfiles.collect {
-                        if(it.aid.toString() != id.toString()) { return it.aid }
+                            if (it.aid.toString() != id.toString()) {
+                                return it.aid
+                            }
                         } ?: "placeholder"
                         if (conflictingAccountIds.size() > 0) {
                             responseData.conflictingAccountId = conflictingAccountIds.first()
@@ -293,15 +262,15 @@ class PlayerController {
                     }
                 }
 
-                //TODO: Check for install conflict
-                if (!conflict && player.lsi != manifest.identity.installId) {
+                // Check for install conflict
+                if (!conflict && accountService.hasInstallConflict(player, manifest)) {
                     conflict = true
                     responseData.success = false
                     responseData.errorCode = "installConflict"
                 }
 
-                //TODO: Check for version conflict
-                if (!conflict && player.dv > manifest.identity.dataVersion) {
+                // Check for version conflict
+                if (!conflict && accountService.hasVersionConflict(player, manifest)) {
                     conflict = true
                     responseData.success = false
                     responseData.errorCode = "versionConflict"
@@ -309,72 +278,98 @@ class PlayerController {
 
                 def updatedAccount
                 if (conflict) {
-                    //TODO: Generate merge token
-                    responseData.mergeToken = accountService.generateMergeToken(id)
+                    // Generate merge token
+                    responseData.mergeToken = accountService.generateMergeToken(clientSession, id)
                 } else {
                     // If we've gotten this far, there should be no conflicts, so save all the things
                     // Save Install ID profile
-                    profileService.saveInstallIdProfile(id.toString(), manifest.identity.installId, manifest.identity)
+                    profileService.saveInstallIdProfile(clientSession, id.toString(), manifest.identity.installId, manifest.identity)
 
                     // Save social profiles
-                    logger.info("save social profiles")
-                    validProfiles.each { profile, profileData ->
-                        profileService.saveProfile(profile, id.toString(), profileData)
-                    }
+                        validProfiles.each { profile, profileData ->
+                            profileService.saveProfile(clientSession, profile, id.toString(), profileData)
+                        }
 
-                    updatedAccount = accountService.updateAccountData(id.toString(), manifest.identity, manifest.manifestVersion)
-                    responseData.createdDate = updatedAccount.cd?.toString() ?: null
+                    // do we really need this update? maybe not on a new player?
+                    updatedAccount = accountService.updateAccountData(clientSession, id.toString(), manifest.identity, manifest.manifestVersion)
+                        responseData.createdDate = updatedAccount.cd?.toString() ?: null
                 }
 
                 responseData.accountId = id.toString()
-                out.write(JsonOutput.toJson(responseData)) // actual response
 
-                if (conflict) {
-                    def entries = [:]
-                    def entriesChecksums = []
+                if(conflict) {
                     // Send component responses based on entries in manifest
                     manifest.entries.each { component ->
                         def content = ""
-                            // Return the data in the format that the client expects it (which is really just the embedded data field)
-                            def c = accountService.getComponentData(responseData.conflictingAccountId ?: id, component.name)
+                        // Return the data in the format that the client expects it (which is really just the embedded data field)
+                        def c = accountService.getComponentData(responseData.conflictingAccountId ?: id, component.name)
                             if (c && c.size() > 0) {
                                 c = c.first()
                             }
                             content = (c) ? c.data ?: c : ""
 
+                        // Don't send anything if successful
                         entries[component.name] = content
 
                         def cs = [
                                 "name"    : component.name,
-                                "checksum": checksumService.generateComponentChecksum(content.toString(), mac) ?: "placeholder"
+                                "checksum": ChecksumService.generateComponentChecksum(content.toString(), manifest.identity.installId) ?: "placeholder"
                         ]
                         entriesChecksums.add(cs)
                     }
 
                     // Recreate manifest to send back to the client
-                    def mani = [
+                    mani = [
                             "identity"       : manifest.identity,
                             "entries"        : entriesChecksums,
                             "manifestVersion": updatedAccount?.mv.toString() ?: "placeholder",
-                            "checksum"       : checksumService.generateMasterChecksum(entriesChecksums, mac) ?: "placeholder"
+                            "checksum"       : checksumService.generateMasterChecksum(entriesChecksums, manifest.identity.installId) ?: "placeholder"
                     ]
-
-                    sendFile(out, boundary, "manifest", JsonOutput.toJson(mani))
-                    entries.each { name, data ->
-                        sendFile(out, boundary, name, data)
-                    }
                 } else {
-                    manifest.entries.each { component ->
-                        accountService.saveComponentData(id, component.name, request.getParameter(component.name))
+                    if(manifest.entries) {
+                        manifest.entries.each { component ->
+                            accountService.saveComponentData(clientSession, id, component.name, request.getParameter(component.name))
+                        }
                     }
                 }
             }
 
-
             clientSession.commitTransaction()
-        } catch(all) {
-            logger.error("Failed to commit transaction", all)
+        } catch(MongoException err) {
             clientSession.abortTransaction()
+            responseData.errorCode = "dbError"
+            sendError(out, boundary, responseData)
+            logger.error("MongoDB Error", err)
+            return false
+        } catch(all) {
+            clientSession.abortTransaction()
+            responseData.errorCode = "error"
+            sendError(out, boundary, responseData)
+            logger.error("Unexpected error exception", all)
+            return false
+        } finally {
+            clientSession.close()
+        }
+
+        responseData.success = true
+
+        out.write('--')
+        out.write(boundary)
+        out.write('\r\n')
+        out.write('Content-Type: application/json')
+        out.write('\r\n')
+        out.write('Content-Disposition: inline')
+        out.write('\r\n')
+        out.write('\r\n')
+        out.write(JsonOutput.toJson(responseData)) // actual response
+
+        // Only send the manifest out if there is a conflict or a mergeToken is present
+        // Manifest is needed in merges for checksum verification on the client
+        if(conflict || params.mergeToken){
+            sendFile(out, boundary, "manifest", JsonOutput.toJson(mani))
+            entries.each { name, data ->
+                sendFile(out, boundary, name, data)
+            }
         }
 
         out.write('\r\n')
@@ -450,6 +445,22 @@ class PlayerController {
         responseData.accounts = formattedSummaries
 
         render responseData as JSON
+    }
+
+    private def sendError(out, boundary, responseData) {
+        out.write('--')
+        out.write(boundary)
+        out.write('\r\n')
+        out.write('Content-Type: application/json')
+        out.write('\r\n')
+        out.write('Content-Disposition: inline')
+        out.write('\r\n')
+        out.write('\r\n')
+        out.write(JsonOutput.toJson(responseData))
+        out.write('\r\n')
+        out.write('--')
+        out.write(boundary)
+        out.write('--')
     }
 
     private def sendFile(out, boundary, name, content) {

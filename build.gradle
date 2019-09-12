@@ -47,7 +47,7 @@ dependencies {
     compile "org.grails.plugins:events"
     compile group: 'org.json', name: 'json', version:'20180130'
     compile group: 'com.googlecode.json-simple', name: 'json-simple', version:'1.1.1'
-    compile "org.mongodb:mongo-java-driver:3.8.2"
+    compile "org.mongodb:mongodb-driver-sync:3.11.0"
     compile "org.springframework.social:spring-social-facebook:2.0.3.RELEASE"
     compile 'org.grails.plugins:http-builder-helper:1.1.0'
     compile group: 'redis.clients', name: 'jedis', version: '2.9.0'
@@ -61,9 +61,16 @@ dependencies {
     compile group: 'org.logback-extensions', name: 'logback-ext-loggly', version: '0.1.5'
     // https://mvnrepository.com/artifact/log4j/log4j
     compile group: 'log4j', name: 'log4j', version: '1.2.17'
-    
+
     // jobs
     compile 'org.grails.plugins:quartz:2.0.13'
+
+    testCompile 'org.grails:grails-test-mixins:3.3.0'
+    testCompile 'org.grails:grails-gorm-testing-support:1.1.5'
+    testCompile 'org.grails:grails-web-testing-support:1.1.5'
+    testCompile group: 'org.apache.httpcomponents', name: 'httpmime', version: '4.5.9'
+    testCompile "org.grails.plugins:async-http-builder:1.0.0-20160330.101049-1"
+    testCompile group: 'javax.mail', name: 'javax.mail-api', version: '1.6.0'
 
     profile "org.grails.profiles:web"
 }

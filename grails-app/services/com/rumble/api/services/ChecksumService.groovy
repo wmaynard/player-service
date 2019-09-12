@@ -5,7 +5,6 @@ import javax.crypto.spec.SecretKeySpec
 
 
 class ChecksumService {
-
     final String HMAC_ALGO = "HmacSHA512"
 
     def mac = new ThreadLocal<Mac> () {
@@ -38,6 +37,17 @@ class ChecksumService {
         byte [] mac_data = mac.doFinal(data.bytes)
         def result = toHexString(mac_data)
         return result.replaceAll('-','').toLowerCase()
+    }
+
+    /**
+     * Convenience method to force outcome during tests
+     *
+     * @param given
+     * @param generated
+     * @return boolean
+     */
+    boolean validateChecksum(given, generated) {
+        return (given == generated)
     }
 
     private static String toHexString(byte[] bytes) {
