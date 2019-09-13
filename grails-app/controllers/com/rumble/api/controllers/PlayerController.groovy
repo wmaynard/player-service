@@ -142,6 +142,7 @@ class PlayerController {
         def entriesChecksums = []
         def clientSession
         try {
+        try {
             clientSession = mongoService.client().startSession()
             clientSession.startTransaction()
             def player = accountService.exists(clientSession, manifest.identity.installId, manifest.identity)
@@ -160,7 +161,8 @@ class PlayerController {
                     def accessToken = authHeader.substring(7)
                     def tokenAuth = accessTokenService.validateAccessToken(accessToken, false, false)
                     if ((tokenAuth.aud == game) && (tokenAuth.sub == id.toString())) {
-                        def replaceAfter = tokenAuth.exp - gameConfig.long('auth:minTokenLifeSeconds', 172800L) // 2d
+                            def replaceAfter = tokenAuth.exp - gameConfig.long('auth:minTokenLifeSeconds', 172800L)
+                            // 2d
                         if (System.currentTimeMillis() / 1000L < replaceAfter) {
                             responseData.accessToken = accessToken
                         }
@@ -333,16 +335,18 @@ class PlayerController {
                     }
                 }
             }
+            } catch(MongoException e) {
+                clientSession.abortTransaction()
+                throw e
+            }
 
             clientSession.commitTransaction()
         } catch(MongoException err) {
-            clientSession.abortTransaction()
             responseData.errorCode = "dbError"
             sendError(out, boundary, responseData)
             logger.error("MongoDB Error", err)
             return false
         } catch(all) {
-            clientSession.abortTransaction()
             responseData.errorCode = "error"
             sendError(out, boundary, responseData)
             logger.error("Unexpected error exception", all)
