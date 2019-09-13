@@ -7,9 +7,9 @@ import com.mongodb.client.MongoDatabase
 class MongoService {
     private static mongoClient
     private static databaseName = System.getProperty("MONGODB_NAME") ?: System.getenv("MONGODB_NAME")
-    private static logger = new com.rumble.platform.common.Log(this.class)
+    def logger = new com.rumble.platform.common.Log(this.class)
 
-    static def init(){
+    def init(){
         if(mongoClient == null){
             mongoClient = com.mongodb.client.MongoClients.create(System.getProperty("MONGODB_URI"))
         } else {
@@ -17,14 +17,14 @@ class MongoService {
         }
     }
 
-    static MongoClient client() {
+    MongoClient client() {
         if(mongoClient == null){
             throw new Exception("Mongo Service not initialized")
         }
         return mongoClient
     }
 
-    static close() {
+    def close() {
         mongoClient?.close()
     }
 
