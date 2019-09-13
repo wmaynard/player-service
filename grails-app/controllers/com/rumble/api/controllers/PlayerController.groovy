@@ -209,7 +209,7 @@ class PlayerController {
                         //TODO: Generate new checksums
                         def cs = [
                                 "name"    : component.name,
-                                "checksum": checksumService.generateComponentChecksum(component, manifest.identity.installId) ?: "placeholder"
+                                "checksum": checksumService.generateComponentChecksum(component, mac) ?: "placeholder"
                         ]
                         entriesChecksums.add(cs)
                     }
@@ -297,7 +297,7 @@ class PlayerController {
 
                 responseData.accountId = id.toString()
 
-                if(conflict) {
+                if(conflict || responseData.mergeToken) {
                     // Send component responses based on entries in manifest
                     manifest.entries.each { component ->
                         def content = ""
@@ -313,7 +313,7 @@ class PlayerController {
 
                         def cs = [
                                 "name"    : component.name,
-                                "checksum": checksumService.generateComponentChecksum(content.toString(), manifest.identity.installId) ?: "placeholder"
+                                "checksum": checksumService.generateComponentChecksum(content.toString(), mac) ?: "placeholder"
                         ]
                         entriesChecksums.add(cs)
                     }
@@ -323,7 +323,7 @@ class PlayerController {
                             "identity"       : manifest.identity,
                             "entries"        : entriesChecksums,
                             "manifestVersion": updatedAccount?.mv.toString() ?: "placeholder",
-                            "checksum"       : checksumService.generateMasterChecksum(entriesChecksums, manifest.identity.installId) ?: "placeholder"
+                            "checksum"       : checksumService.generateMasterChecksum(entriesChecksums, mac) ?: "placeholder"
                     ]
                 } else {
                     if(manifest.entries) {
@@ -365,7 +365,7 @@ class PlayerController {
 
         // Only send the manifest out if there is a conflict or a mergeToken is present
         // Manifest is needed in merges for checksum verification on the client
-        if(conflict || params.mergeToken){
+        if(conflict || responseData.mergeToken){
             sendFile(out, boundary, "manifest", JsonOutput.toJson(mani))
             entries.each { name, data ->
                 sendFile(out, boundary, name, data)

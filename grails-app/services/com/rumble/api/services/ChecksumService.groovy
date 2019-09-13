@@ -14,7 +14,7 @@ class ChecksumService {
         }
     }
 
-    def getChecksumGenerator(String deviceId) {
+    Mac getChecksumGenerator(String deviceId) {
         String key =  deviceId + "saltyMcSalterSon"
         byte [] byteKey = key.getBytes("UTF-8")
         SecretKeySpec keySpec = new SecretKeySpec(byteKey, HMAC_ALGO)
@@ -23,7 +23,7 @@ class ChecksumService {
         return mac
     }
 
-    def generateMasterChecksum(data, mac) {
+    def generateMasterChecksum(data, Mac mac) {
         def str = ''
         data.sort({ it.name }).each{ obj ->
             str <<= obj.name
@@ -33,7 +33,7 @@ class ChecksumService {
         return generateComponentChecksum(str.toString(), mac)
     }
 
-    def generateComponentChecksum(data, mac) {
+    def generateComponentChecksum(data, Mac mac) {
         byte [] mac_data = mac.doFinal(data.bytes)
         def result = toHexString(mac_data)
         return result.replaceAll('-','').toLowerCase()
