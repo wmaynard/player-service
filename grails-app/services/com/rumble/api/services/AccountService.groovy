@@ -67,7 +67,7 @@ class AccountService {
         query = new BasicDBObject('$or', baseQuery)
         logger.debug("AccountService:find", [query: query])
         def cursor = coll.find(query)
-        return cursor.toArray()
+        return cursor.toList()
     }
 
     def getDetails(String accountId) {
