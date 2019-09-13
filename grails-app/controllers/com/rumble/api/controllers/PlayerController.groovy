@@ -433,19 +433,21 @@ class PlayerController {
         }
 
         if(accounts) {
-        def uniqueAccountIds = accounts.unique()
-        def summaries = accountService.getComponentData(uniqueAccountIds, "summary")
+            def uniqueAccountIds = accounts.unique()
+            def summaries = accountService.getComponentData(uniqueAccountIds, "summary")
 
-        // Format summary data and map with fb ids
-        def formattedSummaries = summaries.collect{ s ->
-            def f = [
-                    id: s.aid,
-                    fb: (facebookProfiles.find{ s.aid == it.aid })?.pid ?: "",
-                    data: s.data
-            ]
-            return f
-        }
-        responseData.accounts = formattedSummaries
+            // Format summary data and map with fb ids
+            def formattedSummaries = summaries.collect{ s ->
+                def f = [
+                        id: s.aid,
+                        fb: (facebookProfiles.find{ s.aid == it.aid })?.pid ?: "",
+                        data: s.data
+                ]
+                return f
+            }
+            responseData.accounts = formattedSummaries
+        } else {
+            responseData.accounts = []
         }
 
         render responseData as JSON
