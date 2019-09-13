@@ -150,6 +150,7 @@ class PlayerController {
                 // Error 'cause upsert failed
                 responseData.errorCode = "dbError"
                 sendError(out, boundary, responseData)
+                    logger.error("Probably impossible dbError")
                 return false
             }
 
