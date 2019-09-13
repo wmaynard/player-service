@@ -115,7 +115,7 @@ class ProfileService {
         DBObject query = new BasicDBObject("aid", (accountId instanceof String) ? new ObjectId(accountId): accountId)
         def results = coll.find(query)
 
-        return results.toArray()
+        return results.toList()
     }
 
     /* profiles = {
@@ -127,7 +127,7 @@ class ProfileService {
         profiles.each { type, profile ->
             DBObject query = new BasicDBObject("type", type).append("pid", profile)
             def result = coll.find(query)
-            results += result.toArray()
+            results += result.toList()
         }
 
         return results
@@ -139,7 +139,7 @@ class ProfileService {
                 .append("pid", new BasicDBObject('$in', profileIds))
 
         def results = coll.find(query)
-        return results.toArray()
+        return results.toList()
     }
 }
 
