@@ -430,6 +430,7 @@ class PlayerController {
             accounts += accountService.validateAccountId(facebookProfiles.collect{ it.aid })
         }
 
+        if(accounts) {
         def uniqueAccountIds = accounts.unique()
         def summaries = accountService.getComponentData(uniqueAccountIds, "summary")
 
@@ -443,6 +444,7 @@ class PlayerController {
             return f
         }
         responseData.accounts = formattedSummaries
+        }
 
         render responseData as JSON
     }
