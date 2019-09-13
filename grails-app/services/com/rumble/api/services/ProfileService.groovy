@@ -7,6 +7,7 @@ import com.mongodb.session.ClientSession
 import org.bson.types.ObjectId
 
 class ProfileService {
+    def accountService
     def appleService
     def facebookService
     def googleService
@@ -104,7 +105,7 @@ class ProfileService {
 
     def saveInstallIdProfile(ClientSession clientSession, accountId, installId, identityData) {
         // Extract data to save with the Install ID
-        def data = AccountService.extractInstallData(identityData)
+        def data = accountService.extractInstallData(identityData)
 
         return saveProfile(clientSession, ProfileTypes.INSTALL_ID, accountId, installId, data)
     }

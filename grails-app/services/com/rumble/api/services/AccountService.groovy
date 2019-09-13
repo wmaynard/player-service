@@ -284,7 +284,7 @@ class AccountService {
         return (player.dv > manifest.identity.dataVersion)
     }
 
-    static def extractInstallData(identityData) {
+    def extractInstallData(identityData) {
         def data = [:]
 
         // Subtracting data for convenience

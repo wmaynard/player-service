@@ -379,7 +379,7 @@ class PlayerController {
         return false
     }
 
-    static extractClientVars(clientVersion, List<String> prefixes, configs) {
+    private extractClientVars(clientVersion, List<String> prefixes, configs) {
         def clientVersions = [clientVersion]
         while (clientVersion.lastIndexOf('.') > 0) {
             clientVersions += clientVersion = clientVersion.substring(0, clientVersion.lastIndexOf('.'))

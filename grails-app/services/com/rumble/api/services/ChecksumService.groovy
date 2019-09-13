@@ -50,7 +50,7 @@ class ChecksumService {
         return (given == generated)
     }
 
-    private static String toHexString(byte[] bytes) {
+    private String toHexString(byte[] bytes) {
         Formatter formatter = new Formatter()
         for (byte b : bytes) {
             formatter.format("%02x", b)

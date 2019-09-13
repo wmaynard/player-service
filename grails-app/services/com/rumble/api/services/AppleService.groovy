@@ -23,7 +23,7 @@ class AppleService {
     }
 
     // Source: https://stackoverflow.com/questions/26900116/documentation-on-public-key-returned-by-gklocalplayer-generateidentityverifica
-    static String generateEncodedSignedDataForAppleVerify(String player_id, String bundle_id, String timestamp, String salt){
+    String generateEncodedSignedDataForAppleVerify(String player_id, String bundle_id, String timestamp, String salt){
         def decoder = java.util.Base64.getDecoder()
         return new String(Base64.encodeBase64(concat(player_id.getBytes(),
                 bundle_id.getBytes(),
@@ -31,7 +31,7 @@ class AppleService {
                 decoder.decode(salt))))
     }
 
-    static def getCertificate(publicKeyUrl) {
+    def getCertificate(publicKeyUrl) {
         // TODO: Cache certificate
 
         URL url = new URL(publicKeyUrl)
@@ -50,7 +50,7 @@ class AppleService {
         return certificate
     }
 
-    static boolean verifyGamecenterUser(String publicKeyUrl, String signedData, String signature){
+    boolean verifyGamecenterUser(String publicKeyUrl, String signedData, String signature){
         try{
             // Get certificate from apple
             def c = getCertificate(publicKeyUrl)
@@ -86,7 +86,7 @@ class AppleService {
         return false
     }
 
-    static byte[] concat(byte[]...arrays)
+    byte[] concat(byte[]...arrays)
     {
         // Determine the length of the result array
         int totalLength = 0
