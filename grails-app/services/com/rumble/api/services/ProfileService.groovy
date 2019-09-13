@@ -3,6 +3,7 @@ package com.rumble.api.services
 import com.mongodb.BasicDBObject
 import com.mongodb.DBObject
 import com.mongodb.client.model.FindOneAndUpdateOptions
+import com.mongodb.client.model.ReturnDocument
 import com.mongodb.session.ClientSession
 import org.bson.types.ObjectId
 
@@ -67,7 +68,7 @@ class ProfileService {
                 query, // filter
                 new BasicDBObject('$set', updateDoc)
                         .append('$setOnInsert', upsertDoc), // update
-                new FindOneAndUpdateOptions().upsert(true) //.returnDocument()
+                new FindOneAndUpdateOptions().upsert(true).returnDocument(ReturnDocument.AFTER)
         )
 
         return profile
@@ -97,7 +98,7 @@ class ProfileService {
                 query, // query
                 new BasicDBObject('$set', updateDoc)
                         .append('$setOnInsert', upsertDoc), // update
-                new FindOneAndUpdateOptions().upsert(true) //.returnDocument()
+                new FindOneAndUpdateOptions().upsert(true).returnDocument(ReturnDocument.AFTER)
         )
 
         return profile

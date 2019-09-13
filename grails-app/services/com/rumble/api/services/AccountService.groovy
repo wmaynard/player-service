@@ -3,6 +3,7 @@ package com.rumble.api.services
 import com.mongodb.BasicDBObject
 import com.mongodb.DBObject
 import com.mongodb.client.model.FindOneAndUpdateOptions
+import com.mongodb.client.model.ReturnDocument
 import com.mongodb.session.ClientSession
 import groovy.json.JsonSlurper
 import org.bson.types.ObjectId
@@ -118,8 +119,9 @@ class AccountService {
                     query, // query
                     new BasicDBObject('$set', new BasicDBObject("lc", now))
                             .append('$setOnInsert', setOnInsertObj),
-                    new FindOneAndUpdateOptions().upsert(true) //.returnDocument()
+                    new FindOneAndUpdateOptions().upsert(true).returnDocument(ReturnDocument.AFTER)
             )
+
             return player
         } else {
             def cursor = coll.find(query)
@@ -196,7 +198,7 @@ class AccountService {
                 clientSession,
                 new BasicDBObject("_id", (accountId instanceof String) ? new ObjectId(accountId) : accountId),    // query
                 updateDoc,                              // update
-                new FindOneAndUpdateOptions().upsert(true) //.returnDocument()
+                new FindOneAndUpdateOptions().upsert(true).returnDocument(ReturnDocument.AFTER)
         )
 
         return account
@@ -246,7 +248,7 @@ class AccountService {
                 clientSession,
                 query,            // query
                 doc,                            // update
-                new FindOneAndUpdateOptions().upsert(true) //.returnDocument()
+                new FindOneAndUpdateOptions().upsert(true).returnDocument(ReturnDocument.AFTER)
         )
     }
 
