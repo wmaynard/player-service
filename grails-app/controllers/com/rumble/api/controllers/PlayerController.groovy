@@ -209,7 +209,7 @@ class PlayerController {
                         //TODO: Generate new checksums
                         def cs = [
                                 "name"    : component.name,
-                                "checksum": ChecksumService.generateComponentChecksum(component, manifest.identity.installId) ?: "placeholder"
+                                "checksum": checksumService.generateComponentChecksum(component, manifest.identity.installId) ?: "placeholder"
                         ]
                         entriesChecksums.add(cs)
                     }
@@ -313,7 +313,7 @@ class PlayerController {
 
                         def cs = [
                                 "name"    : component.name,
-                                "checksum": ChecksumService.generateComponentChecksum(content.toString(), manifest.identity.installId) ?: "placeholder"
+                                "checksum": checksumService.generateComponentChecksum(content.toString(), manifest.identity.installId) ?: "placeholder"
                         ]
                         entriesChecksums.add(cs)
                     }
