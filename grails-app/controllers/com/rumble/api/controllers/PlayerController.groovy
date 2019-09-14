@@ -1,14 +1,11 @@
 package com.rumble.api.controllers
 
 import com.mongodb.MongoException
-import com.rumble.api.services.ChecksumService
 import com.rumble.api.services.ProfileTypes
-import com.rumble.platform.services.DynamicConfigService
-import com.rumble.platform.exception.ForbiddenException
+import com.rumble.platform.exception.AuthException
 import grails.converters.JSON
 import groovy.json.JsonSlurper
 import groovy.json.JsonOutput
-import org.bson.types.ObjectId
 import org.springframework.util.MimeTypeUtils
 
 class PlayerController {
@@ -24,10 +21,6 @@ class PlayerController {
     def checksumService
 
     def game = System.getProperty("GAME_GUKEY") ?: System.getenv('GAME_GUKEY')
-
-    def index(){
-        redirect(action: "save", params: params)
-    }
 
     def save() {
         def manifest
@@ -404,7 +397,8 @@ class PlayerController {
     }
 
     def summary(){
-        //TODO: authService.checkClientAuth(request)
+
+        authService.requireClientAuth(request)
 
         def facebookProfiles
         def responseData = [
@@ -488,15 +482,9 @@ class PlayerController {
 
     def logout() {
 
-        def auth = authService.checkClientAuth(request, params)
+        def account = authService.requireClientAuth(request, params.account)
 
         paramsService.require(params, 'account', 'type')
-
-        def account = params.account
-
-        if (auth != account) {
-            throw new ForbiddenException()
-        }
 
         def type = params.type
 
