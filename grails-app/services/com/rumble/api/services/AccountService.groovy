@@ -58,11 +58,8 @@ class AccountService {
                 new BasicDBObject('sn', new BasicDBObject('$regex', searchStr).append('$options', 'i'))
         ]
 
-        try {
-            def id = new ObjectId(searchStr)
-            baseQuery << new BasicDBObject('_id', id)
-        } catch(all) {
-            logger.warn("Not an Object ID", all, [searchStr:searchStr])
+        if (ObjectId.isValid(searchStr)) {
+            baseQuery << new BasicDBObject('_id', new ObjectId(searchStr))
         }
 
         query = new BasicDBObject('$or', baseQuery)
