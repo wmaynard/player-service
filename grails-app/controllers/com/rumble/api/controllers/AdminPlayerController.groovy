@@ -3,11 +3,15 @@ package com.rumble.api.controllers
 import grails.converters.JSON
 
 class AdminPlayerController {
+    def authService
     def accountService
     def paramsService
     def profileService
 
     def search() {
+
+        authService.checkServerAuth(request)
+
         paramsService.require(params, 's')
 
         def results = accountService.find(params.s)
@@ -21,6 +25,9 @@ class AdminPlayerController {
     }
 
     def details(){
+
+        authService.checkServerAuth(request)
+
         paramsService.require(params, 'id')
 
         def account = accountService.find(params.id)?.first()
