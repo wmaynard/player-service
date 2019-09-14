@@ -259,7 +259,7 @@ class AccountService {
         )
 
         def cursorSize = cursor.size()
-        cursor.close()
+        cursor.iterator().close()
         if(cursorSize > 1) {
             // Log if there is more than one because this shouldn't happen
             logger.warn("Found more than one merge token", [ accountId: accountId, mergeToken: mergeToken ])
