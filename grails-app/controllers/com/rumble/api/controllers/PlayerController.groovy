@@ -4,6 +4,7 @@ import com.mongodb.MongoException
 import com.rumble.api.services.ChecksumService
 import com.rumble.api.services.ProfileTypes
 import com.rumble.platform.services.DynamicConfigService
+import com.rumble.platform.exception.ForbiddenException
 import grails.converters.JSON
 import groovy.json.JsonSlurper
 import groovy.json.JsonOutput
@@ -484,5 +485,24 @@ class PlayerController {
         out.write('\r\n')
         out.write('\r\n')
         out.write(content.toString())
+    }
+
+    def logout() {
+
+        def auth = authService.checkClientAuth(request, params)
+
+        paramsService.require(params, 'account', 'type')
+
+        def account = params.account
+
+        if (auth != account) {
+            throw new ForbiddenException()
+        }
+
+        def type = params.type
+
+        profileService.deleteProfilesForAccount(account, type)
+
+        render ([success:true] as JSON)
     }
 }

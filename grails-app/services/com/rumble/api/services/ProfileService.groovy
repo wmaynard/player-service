@@ -119,6 +119,14 @@ class ProfileService {
         return results.toList()
     }
 
+    def deleteProfilesForAccount(String accountId, String type) {
+        def coll = mongoService.collection(PROFILE_COLLECTION_NAME)
+        DBObject query = new BasicDBObject("aid", new ObjectId(accountId)).append("type", type)
+        def results = coll.deleteMany(query)
+
+        return results.deletedCount
+    }
+
     /* profiles = {
     *   "facebook" : "1234567890"
     *  } */
