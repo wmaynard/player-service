@@ -249,7 +249,6 @@ class PlayerController {
 
                     if (conflictProfiles && conflictProfiles.size() > 0) {
                         conflict = true
-                        responseData.success = false
                         responseData.errorCode = "accountConflict"
                         logger.info("Account conflict", [accountId: id.toString()])
                         //TODO: Include which accounts are conflicting? Security concerns?
@@ -268,21 +267,18 @@ class PlayerController {
                 // Check for install conflict
                 if (!conflict && accountService.hasInstallConflict(player, manifest)) {
                     conflict = true
-                    responseData.success = false
                     responseData.errorCode = "installConflict"
                 }
 
                 // Check for version conflict
                 if (!conflict && accountService.hasVersionConflict(player, manifest)) {
                     conflict = true
-                    responseData.success = false
                     responseData.errorCode = "versionConflict"
                 }
 
                 def updatedAccount
                 if (conflict) {
                     // Generate merge token
-                        responseData.success = false
                     responseData.mergeToken = accountService.generateMergeToken(clientSession, id)
                 } else {
                     // If we've gotten this far, there should be no conflicts, so save all the things
@@ -357,7 +353,7 @@ class PlayerController {
             clientSession.close()
         }
 
-        responseData.success = true
+        responseData.success = !(conflict || responseData.mergeToken)
 
         out.write('--')
         out.write(boundary)
