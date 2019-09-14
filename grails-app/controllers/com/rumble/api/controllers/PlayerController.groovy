@@ -282,6 +282,7 @@ class PlayerController {
                 def updatedAccount
                 if (conflict) {
                     // Generate merge token
+                        responseData.success = false
                     responseData.mergeToken = accountService.generateMergeToken(clientSession, id)
                 } else {
                     // If we've gotten this far, there should be no conflicts, so save all the things
