@@ -307,9 +307,8 @@ class PlayerController {
                             if (c && c.size() > 0) {
                                 c = c.first()
                             }
-                            content = (c) ? c.data ?: c : ""
+                            content = (c) ? c.data?.toJson() ?: c : ""
 
-                        // Don't send anything if successful
                         entries[component.name] = content
 
                         def cs = [
