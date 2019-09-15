@@ -75,10 +75,6 @@ class PlayerController {
         }
         def ipAddr = geoLookupService.getIpAddress(request)
 
-        if (ipAddr.contains(':')) {
-            ipAddr = ipAddr.substring(0, ipAddr.indexOf(':')) // remove port
-        }
-
         if(ipAddr) {
             responseData.remoteAddr = ipAddr
             responseData.geoipAddr = ipAddr
