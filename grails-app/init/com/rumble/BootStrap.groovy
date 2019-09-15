@@ -1,13 +1,13 @@
 package com.rumble
 
-import com.mongodb.DBObject
 import grails.converters.JSON
 import org.bson.types.ObjectId
 
 class BootStrap {
 
+    def healthService
     def dynamicConfigService
-	def mongoService
+    def mongoService
 
     def init = { servletContext ->
 
@@ -41,7 +41,6 @@ class BootStrap {
         }
 
         // prime cache
-        dynamicConfigService.getConfig("authorizations")
         dynamicConfigService.getGameConfig(System.getProperty("GAME_GUKEY"))
     }
 

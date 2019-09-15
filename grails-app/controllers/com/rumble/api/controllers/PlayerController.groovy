@@ -20,7 +20,7 @@ class PlayerController {
     def profileService
     def checksumService
 
-    def game = System.getProperty("GAME_GUKEY") ?: System.getenv('GAME_GUKEY')
+    def game = System.getProperty("GAME_GUKEY")
 
     def save() {
         def manifest
