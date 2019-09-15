@@ -5,10 +5,14 @@ import grails.converters.JSON
 import org.bson.types.ObjectId
 
 class BootStrap {
-    def geoLookupService
+
+    def dynamicConfigService
 	def mongoService
 
     def init = { servletContext ->
+
+        requireSystemProperty('GAME_GUKEY')
+
         requireSystemProperty('RUMBLE_CONFIG_SERVICE_URL')
         requireSystemProperty('RUMBLE_KEY')
 
@@ -35,6 +39,10 @@ class BootStrap {
         JSON.registerObjectMarshaller(ObjectId) {
             return it.toString()
         }
+
+        // prime cache
+        dynamicConfigService.getConfig("authorizations")
+        dynamicConfigService.getGameConfig(System.getProperty("GAME_GUKEY"))
     }
 
     def destroy = {
