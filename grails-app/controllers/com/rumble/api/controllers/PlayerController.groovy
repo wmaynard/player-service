@@ -342,7 +342,7 @@ class PlayerController {
             logger.error("Unexpected error exception", all)
             return false
         } finally {
-            clientSession.close()
+            clientSession?.close()
         }
 
         responseData.success = !(conflict || responseData.mergeToken)
