@@ -6,6 +6,8 @@ import com.rumble.platform.exception.AuthException
 import grails.converters.JSON
 import groovy.json.JsonSlurper
 import groovy.json.JsonOutput
+import org.bson.json.JsonMode
+import org.bson.json.JsonWriterSettings
 import org.springframework.util.MimeTypeUtils
 
 class PlayerController {
@@ -132,196 +134,197 @@ class PlayerController {
         def entriesChecksums = []
         def clientSession
         try {
-        try {
-            clientSession = mongoService.client().startSession()
-            clientSession.startTransaction()
-            def player = accountService.exists(clientSession, manifest.identity.installId, manifest.identity)
-            if (!player) {
-                // Error 'cause upsert failed
-                responseData.errorCode = "dbError"
-                sendError(out, boundary, responseData)
-                    logger.error("Probably impossible dbError")
-                return false
-            }
-
-            def id = player.getObjectId("_id")
-
-            def authHeader = request.getHeader('Authorization')
             try {
-                if (authHeader?.startsWith('Bearer ')) {
-                    def accessToken = authHeader.substring(7)
-                    def tokenAuth = accessTokenService.validateAccessToken(accessToken, false, false)
-                    if ((tokenAuth.aud == game) && (tokenAuth.sub == id.toString())) {
+                clientSession = mongoService.client().startSession()
+                clientSession.startTransaction()
+                def player = accountService.exists(clientSession, manifest.identity.installId, manifest.identity)
+                if (!player) {
+                    // Error 'cause upsert failed
+                    responseData.errorCode = "dbError"
+                    sendError(out, boundary, responseData)
+                    logger.error("Probably impossible dbError")
+                    return false
+                }
+
+                def id = player.getObjectId("_id")
+
+                def authHeader = request.getHeader('Authorization')
+                try {
+                    if (authHeader?.startsWith('Bearer ')) {
+                        def accessToken = authHeader.substring(7)
+                        def tokenAuth = accessTokenService.validateAccessToken(accessToken, false, false)
+                        if ((tokenAuth.aud == game) && (tokenAuth.sub == id.toString())) {
                             def replaceAfter = tokenAuth.exp - gameConfig.long('auth:minTokenLifeSeconds', 172800L)
                             // 2d
-                        if (System.currentTimeMillis() / 1000L < replaceAfter) {
-                            responseData.accessToken = accessToken
+                            if (System.currentTimeMillis() / 1000L < replaceAfter) {
+                                responseData.accessToken = accessToken
+                            }
                         }
                     }
+                } catch (Exception e) {
+                    logger.error("Exception examining authorization header", e, [header: authHeader])
                 }
-            } catch (Exception e) {
-                logger.error("Exception examining authorization header", e, [header: authHeader])
-            }
 
-            if (!responseData.accessToken) {
-                responseData.accessToken = accessTokenService.generateAccessToken(
-                        gameGukey, id.toString(), null, gameConfig.long('auth:maxTokenLifeSeconds', 345600L)) // 4d
-            }
+                if (!responseData.accessToken) {
+                    responseData.accessToken = accessTokenService.generateAccessToken(
+                            gameGukey, id.toString(), null, gameConfig.long('auth:maxTokenLifeSeconds', 345600L)) // 4d
+                }
 
-        //TODO: Validate account
-            def validProfiles = profileService.validateProfile(manifest.identity)
-            /* validProfiles = [
+                //TODO: Validate account
+                def validProfiles = profileService.validateProfile(manifest.identity)
+                /* validProfiles = [
          *   facebook: FACEBOOK_ID,
          *   gameCenter: GAMECENTER_ID,
          *   googlePlay: GOOGLEPLAY_ID
          * ]
          */
 
-            if (params.mergeToken) {
-                // Validate merge token
-                if (accountService.validateMergeToken(id, params.mergeToken)) {
-                    responseData.accountId = id.toString()
-                    responseData.createdDate = player.cd.toString()
+                if (params.mergeToken) {
+                    // Validate merge token
+                    if (accountService.validateMergeToken(id, params.mergeToken)) {
+                        responseData.accountId = id.toString()
+                        responseData.createdDate = player.cd.toString()
 
-                    profileService.saveInstallIdProfile(clientSession, id.toString(), manifest.identity.installId, manifest.identity)
+                        profileService.saveInstallIdProfile(clientSession, id.toString(), manifest.identity.installId, manifest.identity)
 
-                    // Save over data
-                    validProfiles.each { profile, profileData ->
-                        profileService.mergeProfile(clientSession, profile, id.toString(), profileData)
-                    }
+                        // Save over data
+                        validProfiles.each { profile, profileData ->
+                            profileService.mergeProfile(clientSession, profile, id.toString(), profileData)
+                        }
 
-                    def updatedAccount = accountService.updateAccountData(clientSession, id.toString(), manifest.identity, manifest.manifestVersion, true)
+                        def updatedAccount = accountService.updateAccountData(clientSession, id.toString(), manifest.identity, manifest.manifestVersion, true)
 
-                    // Send component responses based on entries in manifest
-                    manifest.entries.each { component ->
-                        accountService.saveComponentData(clientSession, id, component.name, request.getParameter(component.name))
+                        // Send component responses based on entries in manifest
+                        manifest.entries.each { component ->
+                            accountService.saveComponentData(clientSession, id, component.name, request.getParameter(component.name))
 
-                        // Don't send anything if successful
-                        entries[component.name] = ""
+                            // Don't send anything if successful
+                            entries[component.name] = ""
 
-                        //TODO: Generate new checksums
-                        def cs = [
-                                "name"    : component.name,
-                                "checksum": checksumService.generateComponentChecksum(component, mac) ?: "placeholder"
+                            //TODO: Generate new checksums
+                            def cs = [
+                                    "name"    : component.name,
+                                    "checksum": checksumService.generateComponentChecksum(component, mac) ?: "placeholder"
+                            ]
+                            entriesChecksums.add(cs)
+                        }
+
+                        // Recreate manifest to send back to the client
+                        mani = [
+                                "identity"       : manifest.identity,
+                                "entries"        : entriesChecksums,
+                                "manifestVersion": updatedAccount?.mv ?: "placeholder", //TODO: Save manifestVersion
+                                "checksum"       : checksumService.generateMasterChecksum(entriesChecksums, mac) ?: "placeholder"
                         ]
-                        entriesChecksums.add(cs)
+                    } else {
+                        responseData.errorCode = "mergeConflict"
+                        sendError(out, boundary, responseData)
+                        return false
                     }
-
-                    // Recreate manifest to send back to the client
-                    mani = [
-                            "identity"       : manifest.identity,
-                            "entries"        : entriesChecksums,
-                            "manifestVersion": updatedAccount?.mv ?: "placeholder", //TODO: Save manifestVersion
-                            "checksum"       : checksumService.generateMasterChecksum(entriesChecksums, mac) ?: "placeholder"
-                    ]
                 } else {
-                    responseData.errorCode = "mergeConflict"
-                    sendError(out, boundary, responseData)
-                    return false
-                }
-            } else {
-                if (validProfiles) {
-                    def conflictProfiles = []
-                    // Get profiles attached to player we found
-                    def playerProfiles = profileService.getAccountsFromProfiles(validProfiles)
+                    if (validProfiles) {
+                        def conflictProfiles = []
+                        // Get profiles attached to player we found
+                        def playerProfiles = profileService.getAccountsFromProfiles(validProfiles)
 
-                    if (playerProfiles) {
-                        // Assuming there is only one type of profile for each account, check to see if they conflict
-                        // For each valid profile, we need to grab all the accounts that are attached to it
-                        // and then compare those Account IDs with the Account ID that matches the Install ID
-                        playerProfiles.each { profile ->
-                            //TODO: Check for profile conflict
+                        if (playerProfiles) {
+                            // Assuming there is only one type of profile for each account, check to see if they conflict
+                            // For each valid profile, we need to grab all the accounts that are attached to it
+                            // and then compare those Account IDs with the Account ID that matches the Install ID
+                            playerProfiles.each { profile ->
+                                //TODO: Check for profile conflict
                                 if (id.toString() != profile.aid.toString()) {
                                     conflictProfiles << profile
                                 }
-                        }
-                    }
-
-                    if (conflictProfiles && conflictProfiles.size() > 0) {
-                        conflict = true
-                        responseData.errorCode = "accountConflict"
-                        logger.info("Account conflict", [accountId: id.toString()])
-                        //TODO: Include which accounts are conflicting? Security concerns?
-                        def conflictingAccountIds = conflictProfiles.collect {
-                            if (it.aid.toString() != id.toString()) {
-                                return it.aid
                             }
-                        } ?: "placeholder"
-                        if (conflictingAccountIds.size() > 0) {
-                            responseData.conflictingAccountId = conflictingAccountIds.first()
-                            logger.info("Conflicting Account ID", [conflictingAccountId: responseData.conflictingAccountId])
+                        }
+
+                        if (conflictProfiles && conflictProfiles.size() > 0) {
+                            conflict = true
+                            responseData.errorCode = "accountConflict"
+                            logger.info("Account conflict", [accountId: id.toString()])
+                            //TODO: Include which accounts are conflicting? Security concerns?
+                            def conflictingAccountIds = conflictProfiles.collect {
+                                if (it.aid.toString() != id.toString()) {
+                                    return it.aid
+                                }
+                            } ?: "placeholder"
+                            if (conflictingAccountIds.size() > 0) {
+                                responseData.conflictingAccountId = conflictingAccountIds.first()
+                                logger.info("Conflicting Account ID", [conflictingAccountId: responseData.conflictingAccountId])
+                            }
                         }
                     }
-                }
 
-                // Check for install conflict
-                if (!conflict && accountService.hasInstallConflict(player, manifest)) {
-                    conflict = true
-                    responseData.errorCode = "installConflict"
-                }
+                    // Check for install conflict
+                    if (!conflict && accountService.hasInstallConflict(player, manifest)) {
+                        conflict = true
+                        responseData.errorCode = "installConflict"
+                    }
 
-                // Check for version conflict
-                if (!conflict && accountService.hasVersionConflict(player, manifest)) {
-                    conflict = true
-                    responseData.errorCode = "versionConflict"
-                }
+                    // Check for version conflict
+                    if (!conflict && accountService.hasVersionConflict(player, manifest)) {
+                        conflict = true
+                        responseData.errorCode = "versionConflict"
+                    }
 
-                def updatedAccount
-                if (conflict) {
-                    // Generate merge token
-                    responseData.mergeToken = accountService.generateMergeToken(clientSession, id)
-                } else {
-                    // If we've gotten this far, there should be no conflicts, so save all the things
-                    // Save Install ID profile
-                    profileService.saveInstallIdProfile(clientSession, id.toString(), manifest.identity.installId, manifest.identity)
+                    def updatedAccount
+                    if (conflict) {
+                        // Generate merge token
+                        responseData.mergeToken = accountService.generateMergeToken(clientSession, id)
+                    } else {
+                        // If we've gotten this far, there should be no conflicts, so save all the things
+                        // Save Install ID profile
+                        profileService.saveInstallIdProfile(clientSession, id.toString(), manifest.identity.installId, manifest.identity)
 
-                    // Save social profiles
+                        // Save social profiles
                         validProfiles.each { profile, profileData ->
                             profileService.saveProfile(clientSession, profile, id.toString(), profileData)
                         }
 
-                    // do we really need this update? maybe not on a new player?
-                    updatedAccount = accountService.updateAccountData(clientSession, id.toString(), manifest.identity, manifest.manifestVersion)
+                        // do we really need this update? maybe not on a new player?
+                        updatedAccount = accountService.updateAccountData(clientSession, id.toString(), manifest.identity, manifest.manifestVersion)
                         responseData.createdDate = updatedAccount.cd?.toString() ?: null
-                }
+                    }
 
-                responseData.accountId = id.toString()
+                    responseData.accountId = id.toString()
 
-                if(conflict || responseData.mergeToken) {
-                    // Send component responses based on entries in manifest
-                    manifest.entries.each { component ->
-                        def content = ""
-                        // Return the data in the format that the client expects it (which is really just the embedded data field)
-                        def c = accountService.getComponentData(responseData.conflictingAccountId ?: id, component.name)
+                    if (conflict || responseData.mergeToken) {
+                        def jsonWriterSettings = new JsonWriterSettings(JsonMode.RELAXED)
+                        // Send component responses based on entries in manifest
+                        manifest.entries.each { component ->
+                            def content = ""
+                            // Return the data in the format that the client expects it (which is really just the embedded data field)
+                            def c = accountService.getComponentData(responseData.conflictingAccountId ?: id, component.name)
                             if (c && c.size() > 0) {
                                 c = c.first()
                             }
-                            content = (c) ? c.data?.toJson() ?: c : ""
+                            content = (c) ? c.data.toJson(jsonWriterSettings) ?: c : ""
 
                         entries[component.name] = content
 
-                        def cs = [
-                                "name"    : component.name,
-                                "checksum": checksumService.generateComponentChecksum(content.toString(), mac) ?: "placeholder"
-                        ]
-                        entriesChecksums.add(cs)
-                    }
+                            def cs = [
+                                    "name"    : component.name,
+                                    "checksum": checksumService.generateComponentChecksum(content.toString(), mac) ?: "placeholder"
+                            ]
+                            entriesChecksums.add(cs)
+                        }
 
-                    // Recreate manifest to send back to the client
-                    mani = [
-                            "identity"       : manifest.identity,
-                            "entries"        : entriesChecksums,
-                            "manifestVersion": updatedAccount?.mv.toString() ?: "placeholder",
-                            "checksum"       : checksumService.generateMasterChecksum(entriesChecksums, mac) ?: "placeholder"
-                    ]
-                } else {
-                    if(manifest.entries) {
-                        manifest.entries.each { component ->
-                            accountService.saveComponentData(clientSession, id, component.name, request.getParameter(component.name))
+                        // Recreate manifest to send back to the client
+                        mani = [
+                                "identity"       : manifest.identity,
+                                "entries"        : entriesChecksums,
+                                "manifestVersion": updatedAccount?.mv.toString() ?: "placeholder",
+                                "checksum"       : checksumService.generateMasterChecksum(entriesChecksums, mac) ?: "placeholder"
+                        ]
+                    } else {
+                        if (manifest.entries) {
+                            manifest.entries.each { component ->
+                                accountService.saveComponentData(clientSession, id, component.name, request.getParameter(component.name))
+                            }
                         }
                     }
                 }
-            }
             } catch(MongoException e) {
                 clientSession.abortTransaction()
                 throw e
