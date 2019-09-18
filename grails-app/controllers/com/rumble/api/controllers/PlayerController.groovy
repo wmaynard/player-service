@@ -40,8 +40,6 @@ class PlayerController {
         response.setContentType('multipart/related; boundary="' + boundary + '"')
         def out = response.writer
 
-        paramsService.require(params, 'manifest')
-
         if(!params.manifest) {
             responseData.errorCode = "authError"
             sendError(out, boundary, responseData)
@@ -179,13 +177,17 @@ class PlayerController {
          * ]
          */
 
-                if (params.mergeToken) {
-                    // Validate merge token
-                    if (accountService.validateMergeToken(id, params.mergeToken)) {
-                        responseData.accountId = id.toString()
-                        responseData.createdDate = player.cd.toString()
+            if (params.mergeToken) {
+                // Validate merge token
+                // TODO: params.accountId is a workaround because the client was sending this wrong; should be removed
+                def mergeAccountId = params.mergeAccountId?:params.accountId
+                if (accountService.validateMergeToken(id as String, params.mergeToken, mergeAccountId)) {
+                    logger.info("Merge token accepted", [ accountId: id, mergeAccountId: responseData.mergeAccountId ])
+                    id = mergeAccountId
+                    responseData.accountId = id.toString()
+                    responseData.createdDate = player.cd.toString()
 
-                        profileService.saveInstallIdProfile(clientSession, id.toString(), manifest.identity.installId, manifest.identity)
+                        profileService.mergeInstallIdProfile(clientSession, id.toString(), manifest.identity.installId, manifest.identity)
 
                         // Save over data
                         validProfiles.each { profile, profileData ->
@@ -250,8 +252,7 @@ class PlayerController {
                                 }
                             } ?: "placeholder"
                             if (conflictingAccountIds.size() > 0) {
-                                responseData.conflictingAccountId = conflictingAccountIds.first()
-                                logger.info("Conflicting Account ID", [conflictingAccountId: responseData.conflictingAccountId])
+                                responseData.conflictingAccountId = conflictingAccountIds.first().toString()
                             }
                         }
                     }
@@ -271,7 +272,8 @@ class PlayerController {
                     def updatedAccount
                     if (conflict) {
                         // Generate merge token
-                        responseData.mergeToken = accountService.generateMergeToken(clientSession, id)
+                        responseData.mergeToken = accountService.generateMergeToken(clientSession, id as String, responseData.conflictingAccountId)
+                        logger.info("Merge token generated", [ errorCode: responseData.errorCode, accountId: id, mergeAccountId: responseData.conflictingAccountId ])
                     } else {
                         // If we've gotten this far, there should be no conflicts, so save all the things
                         // Save Install ID profile

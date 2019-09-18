@@ -111,6 +111,13 @@ class ProfileService {
         return saveProfile(clientSession, ProfileTypes.INSTALL_ID, accountId, installId, data)
     }
 
+    def mergeInstallIdProfile(ClientSession clientSession, accountId, installId, identityData) {
+        // Extract data to save with the Install ID
+        def data = accountService.extractInstallData(identityData)
+
+        return mergeProfile(clientSession, ProfileTypes.INSTALL_ID, accountId, installId, data)
+    }
+
     def getProfilesForAccount(accountId) {
         def coll = mongoService.collection(PROFILE_COLLECTION_NAME)
         DBObject query = new BasicDBObject("aid", (accountId instanceof String) ? new ObjectId(accountId): accountId)

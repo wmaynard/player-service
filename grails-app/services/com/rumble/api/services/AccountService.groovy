@@ -249,11 +249,14 @@ class AccountService {
         )
     }
 
-    def validateMergeToken(accountId, mergeToken) {
+    def validateMergeToken(String accountId, String mergeToken, String mergeAccountId) {
         def coll = mongoService.collection(COLLECTION_NAME)
-        def cursor = coll.find(new BasicDBObject("_id", (accountId instanceof String) ? new ObjectId(accountId) : accountId)
+        def query = new BasicDBObject("_id", (accountId instanceof String) ? new ObjectId(accountId) : accountId)
                 .append("mt", mergeToken)
-        )
+        if (mergeAccountId && (mergeAccountId != accountId)) {
+            query = query.append("ma", mergeAccountId)
+        }
+        def cursor = coll.find(query)
 
         def cursorSize = cursor.size()
         cursor.iterator().close()
@@ -265,11 +268,11 @@ class AccountService {
         return (cursorSize > 0)
     }
 
-    def generateMergeToken(ClientSession clientSession, accountId) {
+    def generateMergeToken(ClientSession clientSession, accountId, mergeAccountId) {
         logger.trace("AccountService:generateMergeToken()")
         def coll = mongoService.collection(COLLECTION_NAME)
         def mergeToken = UUID.randomUUID().toString()
-        BasicDBObject updateDoc = new BasicDBObject('$set', new BasicDBObject("mt", mergeToken))
+        BasicDBObject updateDoc = new BasicDBObject('$set', new BasicDBObject("mt", mergeToken).append("ma", mergeAccountId))
         BasicDBObject query = new BasicDBObject("_id", (accountId instanceof String) ? new ObjectId(accountId) : accountId)
         coll.findOneAndUpdate(clientSession, query, updateDoc)
         return mergeToken
