@@ -54,5 +54,8 @@ if (Environment.isDevelopmentMode() && targetDir != null) {
         }
     }
     logger("StackTrace", ERROR, ['FULL_STACKTRACE'], false)
+} else {
+    // silence error logging for uncaught exceptions (PlatformErrorController logs them if appropriate)
+    logger("StackTrace", OFF)
 }
 root(ERROR, rootErrorLogOutput)
