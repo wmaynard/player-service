@@ -18,7 +18,7 @@ class AdminPlayerController {
         def results
         def responseData = [:]
         if(params.profileType) { // Facebook ID
-            if(params.profileType != ProfileTypes.FACEBOOK || params.profileType != ProfileTypes.INSTALL_ID) {
+            if(params.profileType != ProfileTypes.FACEBOOK && params.profileType != ProfileTypes.INSTALL_ID) {
                 responseData.errorText = "Invalid profile type '${params.profileType}'."
             } else {
                 /* profiles = {
