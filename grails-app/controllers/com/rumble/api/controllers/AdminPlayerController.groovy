@@ -26,7 +26,15 @@ class AdminPlayerController {
                 *  } */
                 def query = [:]
                 query[params.profileType] = params.s
-                results = profileService.getAccountsFromProfiles(query)
+                def profiles = profileService.getAccountsFromProfiles(query)
+
+                // Get account data from this list
+                def p = profiles.collect{ it.aid }
+                if(p.size() == 1) {
+                    results = accountService.find(p.first())
+                } else {
+                    results = accountService.findMulti(p)
+                }
             }
         } else { // Account ID or screen name
             results = accountService.find(params.s)

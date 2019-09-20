@@ -50,10 +50,15 @@ class AccountService {
         return null
     }
 
-    def find(String searchStr) {
+    def find(searchStr) {
         DBObject query
         def coll = mongoService.collection(COLLECTION_NAME)
-        def baseQuery = [
+        def baseQuery = []
+
+        if(searchStr instanceof ObjectId) {
+            baseQuery << new BasicDBObject('_id', searchStr)
+        } else {
+            baseQuery = [
                 new BasicDBObject("lsi", searchStr),
                 new BasicDBObject('sn', new BasicDBObject('$regex', searchStr).append('$options', 'i'))
         ]
@@ -61,9 +66,34 @@ class AccountService {
         if (ObjectId.isValid(searchStr)) {
             baseQuery << new BasicDBObject('_id', new ObjectId(searchStr))
         }
+        }
 
         query = new BasicDBObject('$or', baseQuery)
         logger.debug("AccountService:find", [query: query])
+        def cursor = coll.find(query)
+        return cursor.toList()
+    }
+
+    def findMulti(searchStr) {
+        DBObject query
+        def coll = mongoService.collection(COLLECTION_NAME)
+        def baseQuery = [
+                new BasicDBObject("lsi", new BasicDBObject('$in', searchStr))
+        ]
+
+        def ids = []
+        searchStr.each {
+            if (ObjectId.isValid(it)) {
+                ids << new ObjectId(it)
+            }
+        }
+
+        if(ids) {
+            baseQuery << new BasicDBObject('_id', new BasicDBObject('$in', ids))
+        }
+
+        query = new BasicDBObject('$or', baseQuery)
+        logger.debug("AccountService:findMulti", [query: query])
         def cursor = coll.find(query)
         return cursor.toList()
     }
