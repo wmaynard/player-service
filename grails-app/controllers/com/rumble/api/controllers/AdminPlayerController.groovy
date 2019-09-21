@@ -60,16 +60,27 @@ class AdminPlayerController {
         if(accounts && accounts.size() > 0) {
             account = accounts.first()
         }
-        def components = accountService.getDetails(params.id)
-        def profiles = profileService.getProfilesForAccount(params.id)
 
-        def responseData = [
-                'data': [
-                        account: account,
-                        components: components,
-                        profiles: profiles
-                ]
-        ]
+        def responseData = [:]
+        if(account) {
+            def components = accountService.getDetails(params.id)
+            def profiles = profileService.getProfilesForAccount(params.id)
+
+            responseData = [
+                    success: true,
+                    'data': [
+                            account   : account,
+                            components: components,
+                            profiles  : profiles
+                    ]
+            ]
+        } else {
+            responseData = [
+                    success: false,
+                    errorCode: "notFound",
+                    errorText: "Player '${params.id}' not found"
+            ]
+        }
 
         render responseData as JSON
     }
