@@ -59,3 +59,6 @@ if (Environment.isDevelopmentMode() && targetDir != null) {
     logger("StackTrace", OFF)
 }
 root(ERROR, rootErrorLogOutput)
+
+// Silence warn logging for no mapping found for HTTP request with URI
+logger("org.springframework.web.servlet.DispatcherServlet", ERROR)
