@@ -28,6 +28,7 @@ appender('STDOUT', ConsoleAppender) {
 def rootErrorLogOutput = ['STDOUT']
 
 if (!Environment.isDevelopmentMode() || TESTING_LOGGLY) {
+    JsonLayout.component = 'player-service'
     def epu = "${System.getProperty('LOGGLY_URL')}tag/player-service/".replaceAll('/inputs/','/bulk/')
     System.out.println("Setting Loggly endpoint to: ${epu}")
     appender("loggly", LogglyBatchAppender) {
