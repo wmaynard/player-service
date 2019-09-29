@@ -36,8 +36,6 @@ class BootStrap {
         requireSystemProperty('GEO_IP_S3_BUCKET')
         requireSystemProperty('GEO_IP_S3_KEY')
 
-        JsonLayout.component = 'player-service'
-
         mongoService.init()
         JSON.registerObjectMarshaller(ObjectId) {
             return it.toString()

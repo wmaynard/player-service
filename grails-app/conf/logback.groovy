@@ -3,9 +3,10 @@ import com.rumble.platform.common.JsonLayout
 import grails.util.Environment
 import org.springframework.boot.logging.logback.ColorConverter
 import org.springframework.boot.logging.logback.WhitespaceThrowableProxyConverter
-import sun.util.logging.PlatformLogger
 
 import java.nio.charset.Charset
+
+JsonLayout.component = 'player-service'
 
 def logglyEnabled = (System.getProperty('LOGGLY_ENABLED')?:!Environment.isDevelopmentMode()) as Boolean
 
