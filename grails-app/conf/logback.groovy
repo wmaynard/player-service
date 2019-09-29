@@ -1,18 +1,19 @@
 import ch.qos.logback.ext.loggly.LogglyBatchAppender
 import com.rumble.platform.common.JsonLayout
-import grails.util.BuildSettings
 import grails.util.Environment
 import org.springframework.boot.logging.logback.ColorConverter
 import org.springframework.boot.logging.logback.WhitespaceThrowableProxyConverter
 
 import java.nio.charset.Charset
 
-def TESTING_LOGGLY = false
+def logglyEnabled = System.getProperty('LOGGLY_ENABLED', !Environment.isDevelopmentMode()) as Boolean
+
+// See http://logback.qos.ch/manual/groovy.html for details on configuration
+
 conversionRule 'clr', ColorConverter
 conversionRule 'wex', WhitespaceThrowableProxyConverter
 
-// See http://logback.qos.ch/manual/groovy.html for details on configuration
-appender('STDOUT', ConsoleAppender) {
+appender('console', ConsoleAppender) {
     encoder(PatternLayoutEncoder) {
         charset = Charset.forName('UTF-8')
 
@@ -25,11 +26,8 @@ appender('STDOUT', ConsoleAppender) {
     }
 }
 
-def rootErrorLogOutput = ['STDOUT']
-
-if (!Environment.isDevelopmentMode() || TESTING_LOGGLY) {
-    JsonLayout.component = 'player-service'
-    def epu = "${System.getProperty('LOGGLY_URL')}tag/player-service/".replaceAll('/inputs/','/bulk/')
+if (logglyEnabled) {
+    def epu = "${System.getProperty('LOGGLY_URL')}tag/${JsonLayout.component}/".replaceAll('/inputs/','/bulk/')
     System.out.println("Setting Loggly endpoint to: ${epu}")
     appender("loggly", LogglyBatchAppender) {
         endpointUrl = epu
@@ -39,27 +37,17 @@ if (!Environment.isDevelopmentMode() || TESTING_LOGGLY) {
         maxBucketSizeInKilobytes = 1024
         flushIntervalInSeconds = 3
     }
-    rootErrorLogOutput.add('loggly')
-    logger("com.rumble", INFO, ['loggly'])
-} else if(Environment.isDevelopmentMode()) {
-    logger("com.rumble", INFO)
-}
-
-def targetDir = BuildSettings.TARGET_DIR
-if (Environment.isDevelopmentMode() && targetDir != null) {
-    appender("FULL_STACKTRACE", FileAppender) {
-        file = "${targetDir}/stacktrace.log"
-        append = true
-        encoder(PatternLayoutEncoder) {
-            pattern = "%level %logger - %msg%n"
-        }
-    }
-    logger("StackTrace", ERROR, ['FULL_STACKTRACE'], false)
+    root(ERROR, ['console', 'loggly'])
 } else {
-    // silence error logging for uncaught exceptions (PlatformErrorController logs them if appropriate)
-    logger("StackTrace", OFF)
+    root(ERROR, ['console'])
 }
-root(ERROR, rootErrorLogOutput)
 
-// Silence warn logging for no mapping found for HTTP request with URI
-logger("org.springframework.web.servlet.DispatcherServlet", ERROR)
+if (!Environment.isDevelopmentMode()) {
+    logger("com.rumble", INFO)
+} else {
+    logger("com.rumble", System.getProperty('LOG_LEVEL','INFO'))
+}
+
+// silence error logging for uncaught exceptions (PlatformErrorController logs them if appropriate)
+logger("StackTrace", OFF)
+logger("org.grails.web.errors.GrailsExceptionResolver", OFF)
