@@ -3,6 +3,7 @@ package com.rumble.api.controllers
 import com.mongodb.MongoException
 import com.rumble.api.services.ProfileTypes
 import com.rumble.platform.exception.AuthException
+import com.rumble.platform.exception.BadRequestException
 import grails.converters.JSON
 import groovy.json.JsonSlurper
 import groovy.json.JsonOutput
@@ -181,6 +182,9 @@ class PlayerController {
                 // Validate merge token
                 // TODO: params.accountId is a workaround because the client was sending this wrong; should be removed
                 def mergeAccountId = params.mergeAccountId?:params.accountId
+                if (!mergeAccountId) {
+                    throw new BadRequestException('Required parameter mergeAccountId was not provided.')
+                }
                 if (accountService.validateMergeToken(id as String, params.mergeToken, mergeAccountId)) {
                     logger.info("Merge token accepted", [ accountId: id, mergeAccountId: responseData.mergeAccountId ])
                     id = mergeAccountId
