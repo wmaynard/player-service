@@ -3,10 +3,11 @@ import com.rumble.platform.common.JsonLayout
 import grails.util.Environment
 import org.springframework.boot.logging.logback.ColorConverter
 import org.springframework.boot.logging.logback.WhitespaceThrowableProxyConverter
+import sun.util.logging.PlatformLogger
 
 import java.nio.charset.Charset
 
-def logglyEnabled = System.getProperty('LOGGLY_ENABLED', !Environment.isDevelopmentMode()) as Boolean
+def logglyEnabled = (System.getProperty('LOGGLY_ENABLED')?:!Environment.isDevelopmentMode()) as Boolean
 
 // See http://logback.qos.ch/manual/groovy.html for details on configuration
 
@@ -45,7 +46,7 @@ if (logglyEnabled) {
 if (!Environment.isDevelopmentMode()) {
     logger("com.rumble", INFO)
 } else {
-    logger("com.rumble", System.getProperty('LOG_LEVEL','INFO'))
+    logger("com.rumble", ch.qos.logback.classic.Level.valueOf(System.getProperty('LOG_LEVEL','INFO')))
 }
 
 // silence error logging for uncaught exceptions (PlatformErrorController logs them if appropriate)
