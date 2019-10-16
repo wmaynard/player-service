@@ -265,12 +265,14 @@ class PlayerController {
                     if (!conflict && accountService.hasInstallConflict(player, manifest)) {
                         conflict = true
                         responseData.errorCode = "installConflict"
+                        responseData.conflictingAccountId = id.toString()
                     }
 
                     // Check for version conflict
                     if (!conflict && accountService.hasVersionConflict(player, manifest)) {
                         conflict = true
                         responseData.errorCode = "versionConflict"
+                        responseData.conflictingAccountId = id.toString()
                     }
 
                     def updatedAccount

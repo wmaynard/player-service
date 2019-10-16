@@ -59,13 +59,13 @@ class AccountService {
             baseQuery << new BasicDBObject('_id', searchStr)
         } else {
             baseQuery = [
-                new BasicDBObject("lsi", searchStr),
-                new BasicDBObject('sn', new BasicDBObject('$regex', searchStr).append('$options', 'i'))
-        ]
+                    new BasicDBObject("lsi", searchStr),
+                    new BasicDBObject('sn', new BasicDBObject('$regex', searchStr).append('$options', 'i'))
+            ]
 
-        if (ObjectId.isValid(searchStr)) {
-            baseQuery << new BasicDBObject('_id', new ObjectId(searchStr))
-        }
+            if (ObjectId.isValid(searchStr)) {
+                baseQuery << new BasicDBObject('_id', new ObjectId(searchStr))
+            }
         }
 
         query = new BasicDBObject('$or', baseQuery)
@@ -146,12 +146,12 @@ class AccountService {
                     query, // query
                     new BasicDBObject('$set', new BasicDBObject("lc", now))
                             .append('$setOnInsert', setOnInsertObj),
-                    new FindOneAndUpdateOptions().upsert(true).returnDocument(ReturnDocument.AFTER)
+                    new FindOneAndUpdateOptions().upsert(true).sort(new BasicDBObject("lu", -1)).returnDocument(ReturnDocument.AFTER)
             )
 
             return player
         } else {
-            def cursor = coll.find(query)
+            def cursor = coll.find(query).sort(new BasicDBObject("lu", -1))
             if (cursor.size() > 0) {
                 // There should only be one result
                 if(cursor.size() > 1) {
