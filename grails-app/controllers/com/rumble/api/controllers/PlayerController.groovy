@@ -43,8 +43,13 @@ class PlayerController {
         def boundary = MimeTypeUtils.generateMultipartBoundaryString()
         response.setContentType('multipart/related; boundary="' + boundary + '"')
         response.characterEncoding = StandardCharsets.UTF_8.name()
-//        def out = response.writer
-        def out = new PrintWriter(new TeeOutputStream(response.outputStream, System.out),true)
+        def out = new PrintWriter(new OutputStreamWriter(new TeeOutputStream(response.outputStream, System.out), StandardCharsets.UTF_8), true) {
+            @Override
+            public void write(String s, int off, int len) {
+                super.write(s, off, len)
+                flush()
+            }
+        }
 
         if(!params.manifest) {
             responseData.errorCode = "authError"
