@@ -7,6 +7,7 @@ import com.rumble.platform.exception.BadRequestException
 import grails.converters.JSON
 import groovy.json.JsonSlurper
 import groovy.json.JsonOutput
+import org.apache.commons.io.output.TeeOutputStream
 import org.bson.json.JsonMode
 import org.bson.json.JsonWriterSettings
 import org.springframework.util.MimeTypeUtils
@@ -42,7 +43,8 @@ class PlayerController {
         def boundary = MimeTypeUtils.generateMultipartBoundaryString()
         response.setContentType('multipart/related; boundary="' + boundary + '"')
         response.characterEncoding = StandardCharsets.UTF_8.name()
-        def out = response.writer
+//        def out = response.writer
+        def out = new PrintWriter(new TeeOutputStream(response.outputStream, System.out),true)
 
         if(!params.manifest) {
             responseData.errorCode = "authError"
