@@ -367,6 +367,7 @@ class PlayerController {
         out.write('\r\n')
         out.write('\r\n')
         out.write(JsonOutput.toJson(responseData)) // actual response
+        out.flush()
 
         // Only send the manifest out if there is a conflict or a mergeToken is present
         // Manifest is needed in merges for checksum verification on the client
@@ -491,6 +492,7 @@ class PlayerController {
         out.write('\r\n')
         out.write('\r\n')
         out.write(content.toString())
+        out.flush()
     }
 
     def logout() {
