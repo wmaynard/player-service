@@ -43,13 +43,7 @@ class PlayerController {
         def boundary = MimeTypeUtils.generateMultipartBoundaryString()
         response.setContentType('multipart/related; boundary="' + boundary + '"')
         response.characterEncoding = StandardCharsets.UTF_8.name()
-        def out = new PrintWriter(new OutputStreamWriter(new TeeOutputStream(response.outputStream, System.out), StandardCharsets.UTF_8), true) {
-            @Override
-            public void write(String s, int off, int len) {
-                super.write(s, off, len)
-                flush()
-            }
-        }
+        def out = request.writer
 
         if(!params.manifest) {
             responseData.errorCode = "authError"
@@ -388,6 +382,8 @@ class PlayerController {
         out.write('--')
         out.write(boundary)
         out.write('--')
+        out.flush()
+
         return false
     }
 
@@ -478,6 +474,7 @@ class PlayerController {
         out.write('--')
         out.write(boundary)
         out.write('--')
+        out.flush()
     }
 
     private def sendFile(out, boundary, name, content) {
