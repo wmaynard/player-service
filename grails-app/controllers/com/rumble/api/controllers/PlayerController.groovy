@@ -1,8 +1,10 @@
 package com.rumble.api.controllers
 
+import com.mongodb.MongoCommandException
 import com.mongodb.MongoException
 import com.rumble.api.services.ProfileTypes
 import com.rumble.platform.exception.AuthException
+import com.rumble.platform.exception.ApplicationException
 import com.rumble.platform.exception.BadRequestException
 import grails.converters.JSON
 import groovy.json.JsonSlurper
@@ -336,9 +338,16 @@ class PlayerController {
                         }
                     }
                 }
-            } catch(MongoException e) {
+            } catch(MongoCommandException e) {
                 clientSession.abortTransaction()
-                throw e
+                if(e.getErrorMessage().contains("Cannot create namespace")) {
+                    throw new ApplicationException("dbError", "Unknown component", e)
+                } else {
+                    throw e
+                }
+            } catch(all) {
+                clientSession.abortTransaction()
+                throw all
             }
 
             clientSession.commitTransaction()
@@ -346,6 +355,11 @@ class PlayerController {
             responseData.errorCode = "dbError"
             sendError(out, boundary, responseData)
             logger.error("MongoDB Error", err)
+            return false
+        } catch(ApplicationException err) {
+            responseData.errorCode = err.getErrorCode()
+            sendError(out, boundary, responseData)
+            logger.error(err.getMessage(), err)
             return false
         } catch(all) {
             responseData.errorCode = "error"
