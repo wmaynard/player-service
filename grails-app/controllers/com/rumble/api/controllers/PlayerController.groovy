@@ -6,6 +6,7 @@ import com.rumble.api.services.ProfileTypes
 import com.rumble.platform.exception.AuthException
 import com.rumble.platform.exception.ApplicationException
 import com.rumble.platform.exception.BadRequestException
+import com.rumble.platform.exception.PlatformException
 import grails.converters.JSON
 import groovy.json.JsonSlurper
 import groovy.json.JsonOutput
@@ -356,7 +357,7 @@ class PlayerController {
             sendError(out, boundary, responseData)
             logger.error("MongoDB Error", err)
             return false
-        } catch(ApplicationException err) {
+        } catch(PlatformException err) {
             responseData.errorCode = err.getErrorCode()
             sendError(out, boundary, responseData)
             logger.error(err.getMessage(), err)
