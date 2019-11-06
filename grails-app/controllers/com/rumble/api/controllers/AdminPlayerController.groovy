@@ -84,4 +84,50 @@ class AdminPlayerController {
 
         render responseData as JSON
     }
+    def update(){
+        //TODO: Ability to force an update
+        authService.checkServerAuth(request)
+
+        paramsService.require(params, 'aid', 'data')
+
+        def id = params.aid.trim()
+        def data = params.data.trim()
+        def responseData = [:]
+        def clientSession
+        try {
+            clientSession = mongoService.client().startSession()
+            clientSession.startTransaction()
+
+            def jsonSlurper = new JsonSlurper()
+            data = jsonSlurper.parseText(data)
+            data.each { key, component ->
+                switch (key) {
+                    case "account":
+                        //TODO: Conflicts with the component named "account"
+                        break;
+                    case "profiles":
+                        // TODO: Update profiles
+                        break;
+                    default:
+                        def d = jsonSlurper.parseText(component)
+                        def componentData = d.data
+                        accountService.saveComponentData(clientSession, id, key, JsonOutput.toJson(componentData))
+                }
+            }
+
+            // We're going to force a conflict by changing dataVersion
+            def account = accountService.updateAccountData(clientSession, id, [ "dataVersion": "PUBLISHING_APP" ])
+            clientSession.commitTransaction()
+            responseData.success = true
+        } catch(all) {
+            logger.error(all.getMessage(), all)
+            clientSession.abortTransaction()
+            responseData.success = false
+            responseData.errorText = all.getMessage()
+        } finally {
+            clientSession?.close()
+        }
+
+        render responseData as JSON
+    }
 }
