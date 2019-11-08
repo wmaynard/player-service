@@ -2,15 +2,18 @@ package com.rumble.api.controllers
 
 import com.rumble.api.services.ProfileTypes
 import grails.converters.JSON
+import groovy.json.JsonOutput
+import groovy.json.JsonSlurper
 
 class AdminPlayerController {
     def accountService
     def authService
+    def logger = new com.rumble.platform.common.Log(this.class)
+    def mongoService
     def paramsService
     def profileService
 
     def search() {
-
         authService.checkServerAuth(request)
 
         paramsService.require(params, 's')
@@ -50,7 +53,6 @@ class AdminPlayerController {
     }
 
     def details(){
-
         authService.checkServerAuth(request)
 
         paramsService.require(params, 'id')
@@ -84,7 +86,76 @@ class AdminPlayerController {
 
         render responseData as JSON
     }
-    def update(){
+
+    def updateAccount() {
+        //TODO: Ability to force an update
+        authService.checkServerAuth(request)
+
+        paramsService.require(params, 'aid', 'data')
+
+        def id = params.aid.trim()
+        def data = params.data.trim()
+        def responseData = [:]
+        def clientSession
+        try {
+            clientSession = mongoService.client().startSession()
+            clientSession.startTransaction()
+
+            def jsonSlurper = new JsonSlurper()
+            data = jsonSlurper.parseText(data)
+
+            // Since this is raw data from publishing-app, we have to map it
+            def identityData = [:]
+            data.each{ k, v ->
+                switch(k){
+                    case "cv":
+                        identityData.clientVersion = v
+                        break
+                    case "dv":
+                        identityData.dataVersion = v
+                        break
+                    case "dt":
+                        identityData.deviceType = v
+                        break
+                    case "ldv":
+                        identityData.localDataVersion = v
+                        break
+                    case "lsi":
+                        identityData.installId = v
+                        break
+                    case "sn":
+                        identityData.screenName = v
+                        break
+                    case "mv":
+                        identityData.manifestVersion = v
+                        break
+                    default:
+                        identityData[k] = v
+                        break
+                }
+            }
+
+            // We're going to force a conflict by changing dataVersion
+            identityData += [ "dataVersion" : "PUBLISHING_APP" ]
+
+            def account = accountService.updateAccountData(clientSession, id, identityData)
+            clientSession.commitTransaction()
+            responseData.success = true
+        } catch(all) {
+            logger.error(all.getMessage(), all)
+            clientSession.abortTransaction()
+            responseData.success = false
+            responseData.errorText = all.getMessage()
+        } finally {
+            clientSession?.close()
+        }
+
+        render responseData as JSON
+    }
+
+
+    // Update player component data
+    def updateComponent(){
         //TODO: Ability to force an update
         authService.checkServerAuth(request)
 
@@ -101,18 +172,9 @@ class AdminPlayerController {
             def jsonSlurper = new JsonSlurper()
             data = jsonSlurper.parseText(data)
             data.each { key, component ->
-                switch (key) {
-                    case "account":
-                        //TODO: Conflicts with the component named "account"
-                        break;
-                    case "profiles":
-                        // TODO: Update profiles
-                        break;
-                    default:
-                        def d = jsonSlurper.parseText(component)
-                        def componentData = d.data
-                        accountService.saveComponentData(clientSession, id, key, JsonOutput.toJson(componentData))
-                }
+                def d = jsonSlurper.parseText(component)
+                def componentData = d.data
+                accountService.saveComponentData(clientSession, id, key, JsonOutput.toJson(componentData))
             }
 
             // We're going to force a conflict by changing dataVersion
@@ -130,4 +192,5 @@ class AdminPlayerController {
 
         render responseData as JSON
     }
+
 }
