@@ -252,15 +252,11 @@ class AccountService {
         if(query.size()) {
             def cursor = coll.find(query)
             if (cursor.size() > 0) {
-                def result = cursor.toList()
-                logger.info("AccountService:getComponentData",[accountId: accountId, component: component])//, docs: docs.collect { it.toString() }])
-                return result
+                return cursor.toList()
             }
-
-            return []
         }
-
-        return false
+        
+        return []
     }
 
     def saveComponentData(ClientSession clientSession, accountId, String collection, data) {
@@ -269,7 +265,6 @@ class AccountService {
         def jsonSlurper = new JsonSlurper()
         BasicDBObject doc = new BasicDBObject('$set', new BasicDBObject("data", jsonSlurper.parseText(data)))
                 .append('$setOnInsert', new BasicDBObject("aid", (accountId instanceof String) ? new ObjectId(accountId) : accountId))
-        logger.info("AccountService:saveComponentData")//, [doc: doc])
         //System.out.println("saveComponentData" + doc.toString())
         coll.findOneAndUpdate(
                 clientSession,
