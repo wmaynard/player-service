@@ -18,7 +18,9 @@ class FacebookServiceSpec extends Specification {
     }
 
     def "test validateAccount"() {
-        def valid = service.validateAccount("EAAFGCUWA9z0BAIY8vZCbKlK9X4hQiQkWVA9eYFw4GvudXmhUjUvrZBt5AbWOIZCC1bK3wI9BThBlcb28ZCqZAWNInVy6nzpJsdIVLz4gZBLmhXYX4jIiCa5R2PQaGEULVXRokRJy8lrRdcCScC2n9cQsvTP1BkBjU8vjJyGwbF3lS7kKBubxJixi23EjE98HI2ZA2bewWU7Q5Bh7z15Fq1V")
+        // AccessTokens will always expire so this test will likely always fail
+        def token = [ accessToken: "EAAFGCUWA9z0BAIY8vZCbKlK9X4hQiQkWVA9eYFw4GvudXmhUjUvrZBt5AbWOIZCC1bK3wI9BThBlcb28ZCqZAWNInVy6nzpJsdIVLz4gZBLmhXYX4jIiCa5R2PQaGEULVXRokRJy8lrRdcCScC2n9cQsvTP1BkBjU8vjJyGwbF3lS7kKBubxJixi23EjE98HI2ZA2bewWU7Q5Bh7z15Fq1V"]
+        def valid = service.validateAccount(token)
 
         expect:
             valid == "106804767185697"
