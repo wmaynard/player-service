@@ -95,6 +95,7 @@ class AdminPlayerController {
 
         def id = params.aid.trim()
         def data = params.data.trim()
+        def forceConflict = params.forceConfict?.trim() ?: true
         def responseData = [:]
         def clientSession
         try {
@@ -136,7 +137,9 @@ class AdminPlayerController {
             }
 
             // We're going to force a conflict by changing dataVersion
-            identityData += [ "dataVersion" : "PUBLISHING_APP" ]
+            if(forceConflict.toBoolean()) {
+                identityData += ["dataVersion": "PUBLISHING_APP"]
+            }
 
             def account = accountService.updateAccountData(clientSession, id, identityData)
             clientSession.commitTransaction()
@@ -163,6 +166,7 @@ class AdminPlayerController {
 
         def id = params.aid.trim()
         def data = params.data.trim()
+        def forceConflict = params.forceConfict?.trim() ?: true
         def responseData = [:]
         def clientSession
         try {
@@ -178,7 +182,9 @@ class AdminPlayerController {
             }
 
             // We're going to force a conflict by changing dataVersion
-            def account = accountService.updateAccountData(clientSession, id, [ "dataVersion": "PUBLISHING_APP" ])
+            if(forceConflict.toBoolean()) {
+                def account = accountService.updateAccountData(clientSession, id, ["dataVersion": "PUBLISHING_APP"])
+            }
             clientSession.commitTransaction()
             responseData.success = true
         } catch(all) {
