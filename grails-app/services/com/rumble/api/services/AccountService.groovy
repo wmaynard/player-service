@@ -103,9 +103,12 @@ class AccountService {
 
         // TODO: Do not hardcode components
         def components = [
+                "abtestgroups",
                 "account",
                 "chests",
                 "challenges",
+                "dailyquests",
+                "dailyrewards",
                 "heroes",
                 "inbox",
                 "store",
