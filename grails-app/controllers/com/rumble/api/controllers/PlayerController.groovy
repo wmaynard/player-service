@@ -12,6 +12,7 @@ import groovy.json.JsonSlurper
 import groovy.json.JsonOutput
 import org.bson.json.JsonMode
 import org.bson.json.JsonWriterSettings
+import org.slf4j.MDC
 import org.springframework.util.MimeTypeUtils
 
 import java.nio.charset.StandardCharsets
@@ -54,7 +55,11 @@ class PlayerController {
         } else {
             def slurper = new JsonSlurper()
             manifest = slurper.parseText(params.manifest)
-            def requestId = manifest.identity?.requestId ?: UUID.randomUUID().toString()
+            def clientRequestId = manifest.identity?.requestId
+            def requestId = clientRequestId ?: UUID.randomUUID().toString()
+            if(clientRequestId) {
+                MDC.put("clientRequestId", clientRequestId)
+            }
             responseData.requestId = requestId
             responseData.accountId = manifest.identity.installId
         }
