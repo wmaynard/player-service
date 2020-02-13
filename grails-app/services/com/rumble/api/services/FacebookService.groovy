@@ -35,7 +35,7 @@ class FacebookService {
             }
 
             response.failure = { resp, reader ->
-                logger.error("Error validating Facebook access token: ${reader?.error?.message}")
+                logger.warn("Error validating Facebook access token: ${reader?.error?.message}")
                 return false
             }
         }
