@@ -34,12 +34,12 @@ class PlayerController {
     def save() {
         def manifest
         def responseData = [
-                success: false,
+                success   : false,
                 remoteAddr: request.remoteAddr,
-                geoipAddr: request.remoteAddr,
-                country: 'US',
+                geoipAddr : request.remoteAddr,
+                country   : 'US',
                 serverTime: '\'' + System.currentTimeMillis() + '\'',
-                assetPath: 'https://rumble-game-alliance-dist.s3.amazonaws.com/client/',
+                assetPath : 'https://rumble-game-alliance-dist.s3.amazonaws.com/client/',
                 clientvars: [:]
         ]
 
@@ -48,7 +48,7 @@ class PlayerController {
         response.characterEncoding = StandardCharsets.UTF_8.name()
         def out = response.writer
 
-        if(!params.manifest) {
+        if (!params.manifest) {
             responseData.errorCode = "authError"
             sendError(out, boundary, responseData)
             return false
@@ -57,17 +57,17 @@ class PlayerController {
             manifest = slurper.parseText(params.manifest)
             def clientRequestId = manifest.identity?.requestId
             def requestId = clientRequestId ?: UUID.randomUUID().toString()
-            if(clientRequestId) {
+            if (clientRequestId) {
                 MDC.put("clientRequestId", clientRequestId)
             }
             responseData.requestId = requestId
             responseData.accountId = manifest.identity.installId
         }
 
-		def mac = checksumService.getChecksumGenerator(manifest.identity.installId)
+        def mac = checksumService.getChecksumGenerator(manifest.identity.installId)
         //TODO: Validate checksums
         def validChecksums = true
-        if(!checksumService.validateChecksum(manifest.checksum, checksumService.generateMasterChecksum(manifest.entries, mac))) {
+        if (!checksumService.validateChecksum(manifest.checksum, checksumService.generateMasterChecksum(manifest.entries, mac))) {
             validChecksums = false
         } else {
             manifest.entries.each { entry ->
@@ -80,14 +80,14 @@ class PlayerController {
             }
         }
 
-        if(!validChecksums) {
+        if (!validChecksums) {
             responseData.errorCode = "invalidData"
             sendError(out, boundary, responseData)
             return false
         }
         def ipAddr = geoLookupService.getIpAddress(request)
 
-        if(ipAddr) {
+        if (ipAddr) {
             responseData.remoteAddr = ipAddr
             responseData.geoipAddr = ipAddr
 
@@ -96,7 +96,7 @@ class PlayerController {
                 loc = geoLookupService.getLocation(ipAddr)
                 if (loc) {
                     responseData.country = loc.getCountry()?.getIsoCode()
-                    logger.info("GeoIP lookup results", [ipAddr: ipAddr, country: loc.country.isoCode ])
+                    logger.info("GeoIP lookup results", [ipAddr: ipAddr, country: loc.country.isoCode])
                 } else {
                     logger.info("GeoIP lookup failed", [ipAddr: ipAddr])
                 }
@@ -114,7 +114,7 @@ class PlayerController {
         def channelConfig = dynamicConfigService.getConfig(channelScope)
 
         //Map channel-specific game identifier to game gukey
-        if(manifest.identity.gameGukey) {
+        if (manifest.identity.gameGukey) {
             game = manifest.identity.gameGukey
         }
         String gameGukey = channelConfig["game.${game}.gukey"] ?: game
@@ -126,7 +126,7 @@ class PlayerController {
         def prefixes = gameConfig.list("clientVarPrefixes")
         def configs = [channelConfig, gameConfig]
         def clientvars = extractClientVars(clientVersion, prefixes, configs)
-        if(clientvars) {
+        if (clientvars) {
             responseData.clientvars = clientvars
         }
 
@@ -183,24 +183,24 @@ class PlayerController {
                 //TODO: Validate account
                 def validProfiles = profileService.validateProfile(manifest.identity)
                 /* validProfiles = [
-         *   facebook: FACEBOOK_ID,
-         *   gameCenter: GAMECENTER_ID,
-         *   googlePlay: GOOGLEPLAY_ID
-         * ]
-         */
+                 *   facebook: FACEBOOK_ID,
+                 *   gameCenter: GAMECENTER_ID,
+                 *   googlePlay: GOOGLEPLAY_ID
+                 * ]
+                 */
 
-            if (params.mergeToken) {
-                // Validate merge token
-                // TODO: params.accountId is a workaround because the client was sending this wrong; should be removed
-                def mergeAccountId = params.mergeAccountId?:params.accountId
-                if (!mergeAccountId) {
-                    throw new BadRequestException('Required parameter mergeAccountId was not provided.')
-                }
-                if (accountService.validateMergeToken(id as String, params.mergeToken, mergeAccountId)) {
-                    logger.info("Merge token accepted", [ accountId: id, mergeAccountId: responseData.mergeAccountId ])
-                    id = mergeAccountId
-                    responseData.accountId = id.toString()
-                    responseData.createdDate = player.cd.toString()
+                if (params.mergeToken) {
+                    // Validate merge token
+                    // TODO: params.accountId is a workaround because the client was sending this wrong; should be removed
+                    def mergeAccountId = params.mergeAccountId ?: params.accountId
+                    if (!mergeAccountId) {
+                        throw new BadRequestException('Required parameter mergeAccountId was not provided.')
+                    }
+                    if (accountService.validateMergeToken(id as String, params.mergeToken, mergeAccountId)) {
+                        logger.info("Merge token accepted", [accountId: id, mergeAccountId: responseData.mergeAccountId])
+                        id = mergeAccountId
+                        responseData.accountId = id.toString()
+                        responseData.createdDate = player.cd.toString()
 
                         profileService.mergeInstallIdProfile(clientSession, id.toString(), manifest.identity.installId, manifest.identity)
 
@@ -290,7 +290,7 @@ class PlayerController {
                     if (conflict) {
                         // Generate merge token
                         responseData.mergeToken = accountService.generateMergeToken(clientSession, id as String, responseData.conflictingAccountId)
-                        logger.info("Merge token generated", [ errorCode: responseData.errorCode, accountId: id, mergeAccountId: responseData.conflictingAccountId ])
+                        logger.info("Merge token generated", [errorCode: responseData.errorCode, accountId: id, mergeAccountId: responseData.conflictingAccountId])
                     } else {
                         // If we've gotten this far, there should be no conflicts, so save all the things
                         // Save Install ID profile
@@ -320,7 +320,7 @@ class PlayerController {
                             }
                             content = (c) ? c.data.toJson(jsonWriterSettings) ?: c : ""
 
-                        entries[component.name] = content
+                            entries[component.name] = content
 
                             def cs = [
                                     "name"    : component.name,
@@ -344,30 +344,30 @@ class PlayerController {
                         }
                     }
                 }
-            } catch(MongoCommandException e) {
+            } catch (MongoCommandException e) {
                 clientSession.abortTransaction()
-                if(e.getErrorMessage().contains("Cannot create namespace")) {
+                if (e.getErrorMessage().contains("Cannot create namespace")) {
                     throw new ApplicationException("dbError", "Unknown component", e)
                 } else {
                     throw e
                 }
-            } catch(all) {
+            } catch (all) {
                 clientSession.abortTransaction()
                 throw all
             }
 
             clientSession.commitTransaction()
-        } catch(MongoException err) {
+        } catch (MongoException err) {
             responseData.errorCode = "dbError"
             sendError(out, boundary, responseData)
             logger.error("MongoDB Error", err)
             return false
-        } catch(PlatformException err) {
+        } catch (PlatformException err) {
             responseData.errorCode = err.getErrorCode()
             sendError(out, boundary, responseData)
             logger.error(err.getMessage(), err)
             return false
-        } catch(all) {
+        } catch (all) {
             responseData.errorCode = "error"
             sendError(out, boundary, responseData)
             logger.error("Unexpected error exception", all)
@@ -391,7 +391,7 @@ class PlayerController {
 
         // Only send the manifest out if there is a conflict or a mergeToken is present
         // Manifest is needed in merges for checksum verification on the client
-        if(conflict || responseData.mergeToken){
+        if (conflict || responseData.mergeToken) {
             sendFile(out, boundary, "manifest", JsonOutput.toJson(mani))
             entries.each { name, data ->
                 sendFile(out, boundary, name, data)
@@ -429,7 +429,7 @@ class PlayerController {
         return clientvars
     }
 
-    def summary(){
+    def summary() {
 
         authService.requireClientAuth(request)
 
@@ -438,36 +438,36 @@ class PlayerController {
                 success: true
         ]
 
-        if(!params.accounts && !params.facebook) {
+        if (!params.accounts && !params.facebook) {
             responseData = [
-                    success: false,
+                    success  : false,
                     errorCode: "invalidRequest"
             ]
         }
 
         def accounts = []
         def slurper = new JsonSlurper()
-        if(params.accounts) {
+        if (params.accounts) {
             def a = slurper.parseText(params.accounts)
             accounts = accountService.validateAccountId(a)
         }
 
 
-        if(params.facebook) {
+        if (params.facebook) {
             def facebookIds = slurper.parseText(params.facebook)
             facebookProfiles = profileService.getProfilesFromList(ProfileTypes.FACEBOOK, facebookIds)
-            accounts += accountService.validateAccountId(facebookProfiles.collect{ it.aid })
+            accounts += accountService.validateAccountId(facebookProfiles.collect { it.aid })
         }
 
-        if(accounts) {
+        if (accounts) {
             def uniqueAccountIds = accounts.unique()
             def summaries = accountService.getComponentData(uniqueAccountIds, "summary")
 
             // Format summary data and map with fb ids
-            def formattedSummaries = summaries.collect{ s ->
+            def formattedSummaries = summaries.collect { s ->
                 def f = [
-                        id: s.aid,
-                        fb: (facebookProfiles.find{ s.aid == it.aid })?.pid ?: "",
+                        id  : s.aid,
+                        fb  : (facebookProfiles.find { s.aid == it.aid })?.pid ?: "",
                         data: s.data
                 ]
                 return f
@@ -525,6 +525,6 @@ class PlayerController {
 
         profileService.deleteProfilesForAccount(account, type)
 
-        render ([success:true] as JSON)
+        render([success: true] as JSON)
     }
 }
