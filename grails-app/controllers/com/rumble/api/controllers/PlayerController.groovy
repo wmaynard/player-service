@@ -151,9 +151,8 @@ class PlayerController {
                 if (!player) {
                     // Error 'cause upsert failed
                     responseData.errorCode = "dbError"
-                    sendError(out, boundary, responseData)
                     logger.error("Probably impossible dbError")
-                    return false
+                    throw new PlatformException('dbError', 'Probably impossible dbError', null, responseData)
                 }
 
                 def id = player.getObjectId("_id")
@@ -235,8 +234,7 @@ class PlayerController {
                         ]
                     } else {
                         responseData.errorCode = "mergeConflict"
-                        sendError(out, boundary, responseData)
-                        return false
+                        throw new PlatformException('mergeConflict', null, null, responseData)
                     }
                 } else {
                     if (validProfiles) {
