@@ -32,6 +32,10 @@ class PlayerController {
     def game = System.getProperty("GAME_GUKEY")
 
     def save() {
+        mongoService.runTransactionWithRetry({ saveTransaction() }, 1)
+    }
+
+    def saveTransaction() {
         def manifest
         def responseData = [
                 success   : false,

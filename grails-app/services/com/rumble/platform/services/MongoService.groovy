@@ -56,4 +56,24 @@ class MongoService {
             }
         }
     }
+
+    def runTransactionWithRetry(Runnable transactional, maxNumberOfRetries = 3) {
+        def count = 0
+        while (count <= maxNumberOfRetries) {
+            try {
+                transactional.run()
+                break;
+            } catch (MongoException e) {
+                log.warn("Transaction aborted. Caught exception during transaction.")
+
+                if (e.hasErrorLabel(MongoException.TRANSIENT_TRANSACTION_ERROR_LABEL)) {
+                    log.warn("TransientTransactionError, aborting transaction and retrying ...")
+                    count++
+                    continue
+                } else {
+                    throw e
+                }
+            }
+        }
+    }
 }
