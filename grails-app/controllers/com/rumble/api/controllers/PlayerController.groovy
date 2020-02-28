@@ -354,7 +354,7 @@ class PlayerController {
                 throw all
             }
 
-            clientSession.commitTransaction()
+            mongoService.commitWithRetry(clientSession, 1)
         } catch (MongoException err) {
             responseData.errorCode = "dbError"
             sendError(out, boundary, responseData)

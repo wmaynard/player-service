@@ -1,5 +1,7 @@
 package com.rumble.platform.services
 
+import com.mongodb.MongoException
+import com.mongodb.client.ClientSession
 import com.mongodb.client.MongoClient
 import com.mongodb.client.MongoCollection
 import com.mongodb.client.MongoDatabase
@@ -31,5 +33,27 @@ class MongoService {
     MongoCollection collection(String collectionName) {
         MongoDatabase db = client().getDatabase(databaseName)
         return db.getCollection(collectionName)
+    }
+
+    def commitWithRetry(ClientSession clientSession, maxNumberOfRetries = 3) {
+        def count = 0
+        while (count <= maxNumberOfRetries) {
+            try {
+                clientSession.commitTransaction()
+                logger.info("Transaction committed");
+                break
+            } catch (MongoException e) {
+                // can retry commit
+                if (e.hasErrorLabel(MongoException.UNKNOWN_TRANSACTION_COMMIT_RESULT_LABEL)) {
+                    logger.info("UnknownTransactionCommitResult, retrying commit operation ...");
+                    count++
+                    continue
+                } else {
+                    logger.warn("Exception during commit ...");
+                    clientSession.abortTransaction()
+                    throw e
+                }
+            }
+        }
     }
 }
