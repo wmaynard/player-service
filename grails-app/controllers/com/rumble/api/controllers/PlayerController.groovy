@@ -66,6 +66,14 @@ class PlayerController {
             }
             responseData.requestId = requestId
             responseData.accountId = manifest.identity.installId
+            if(manifest.identity) {
+                if(manifest.identity.installId) {
+                    MDC.put('installId', manifest.identity.installId)
+                }
+                if(manifest.identity.clientVersion) {
+                    MDC.put('clientVersion', manifest.identity.clientVersion)
+                }
+            }
         }
 
         def mac = checksumService.getChecksumGenerator(manifest.identity.installId)
@@ -160,6 +168,7 @@ class PlayerController {
                 }
 
                 def id = player.getObjectId("_id")
+                MDC.put('accountId', id?.toString())
 
                 def authHeader = request.getHeader('Authorization')
                 try {
