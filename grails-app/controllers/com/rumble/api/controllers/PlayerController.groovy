@@ -363,7 +363,7 @@ class PlayerController {
                     throw e
                 }
             } catch (all) {
-                clientSession.abortTransaction()
+                clientSession?.abortTransaction()
                 throw all
             }
 
