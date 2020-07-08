@@ -31,6 +31,270 @@ class PlayerController {
 
     def game = System.getProperty("GAME_GUKEY")
 
+    /**
+     * Used for server-authoritative games.
+     */
+    def launch() {
+        mongoService.runTransactionWithRetry({ saveTransaction() }, 1)
+    }
+
+    def launchTransaction() {
+
+        def manifest = request.JSON
+        def responseData = [
+                success   : false,
+                remoteAddr: request.remoteAddr,
+                geoipAddr : request.remoteAddr,
+                country   : 'US',
+                serverTime: '\'' + System.currentTimeMillis() + '\'',
+                assetPath : 'https://rumble-game-alliance-dist.s3.amazonaws.com/client/',
+                clientvars: [:]
+        ]
+
+        def clientRequestId = manifest.identity?.requestId
+        def requestId = clientRequestId ?: UUID.randomUUID().toString()
+        if (clientRequestId) {
+            MDC.put("clientRequestId", clientRequestId)
+        }
+        responseData.requestId = requestId
+        responseData.accountId = manifest.identity.installId
+        if(manifest.identity) {
+            if(manifest.identity.installId) {
+                MDC.put('installId', manifest.identity.installId)
+            }
+            if(manifest.identity.clientVersion) {
+                MDC.put('clientVersion', manifest.identity.clientVersion)
+            }
+        }
+
+        def ipAddr = geoLookupService.getIpAddress(request)
+
+        if (ipAddr) {
+            responseData.remoteAddr = ipAddr
+            responseData.geoipAddr = ipAddr
+
+            def loc
+            try {
+                loc = geoLookupService.getLocation(ipAddr)
+                if (loc) {
+                    responseData.country = loc.getCountry()?.getIsoCode()
+                    logger.info("GeoIP lookup results", [ipAddr: ipAddr, country: loc.country.isoCode])
+                } else {
+                    logger.info("GeoIP lookup failed", [ipAddr: ipAddr])
+                }
+            } catch (e) {
+                logger.warn("Exception looking up geo location for IP Address", all, [ipAddr: ipAddr])
+            }
+        }
+
+        def channel = manifest.identity.channel ?: ""
+        def channelScope = "channel:${channel}"
+        def channelConfig = dynamicConfigService.getConfig(channelScope)
+
+        //Map channel-specific game identifier to game gukey
+        if (manifest.identity.gameGukey) {
+            game = manifest.identity.gameGukey
+        }
+        String gameGukey = channelConfig["game.${game}.gukey"] ?: game
+        def gameConfig = dynamicConfigService.getGameConfig(gameGukey)
+
+        //This looks for variables with a certain prefix (eg_ kr:clientvars:) and puts them in the client_vars structure
+        //The prefixes are in a json list, and will be applied in order, overlaying any variable that collides
+        def clientVersion = manifest.identity.clientVersion
+        def prefixes = gameConfig.list("clientVarPrefixes")
+        def configs = [channelConfig, gameConfig]
+        def clientvars = extractClientVars(clientVersion, prefixes, configs)
+        if (clientvars) {
+            responseData.clientvars = clientvars
+        }
+
+        // Blacklist countries
+        if (dynamicConfigService.getConfig('canvas').list('blacklistCountries').contains(responseData.country as String)) {
+            responseData.errorCode = "geoblocked"
+            responseData.supportUrl = gameConfig['supportUrl']
+            render(responseData as JSON)
+            return false
+        }
+
+        def conflict = false
+        def clientSession
+        try {
+            try {
+                clientSession = mongoService.client().startSession()
+                clientSession.startTransaction()
+                def player = accountService.exists(clientSession, manifest.identity.installId, manifest.identity)
+                if (!player) {
+                    // Error 'cause upsert failed
+                    responseData.errorCode = "dbError"
+                    logger.error("Probably impossible dbError")
+                    throw new PlatformException('dbError', 'Probably impossible dbError', null, responseData)
+                }
+
+                def id = player.getObjectId("_id")
+                MDC.put('accountId', id?.toString())
+
+                def authHeader = request.getHeader('Authorization')
+                try {
+                    if (authHeader?.startsWith('Bearer ')) {
+                        def accessToken = authHeader.substring(7)
+                        def tokenAuth = accessTokenService.validateAccessToken(accessToken, false, false)
+                        if ((tokenAuth.aud == game) && (tokenAuth.sub == id.toString())) {
+                            def replaceAfter = tokenAuth.exp - gameConfig.long('auth:minTokenLifeSeconds', 172800L)
+                            // 2d
+                            if (System.currentTimeMillis() / 1000L < replaceAfter) {
+                                responseData.accessToken = accessToken
+                            }
+                        }
+                    }
+                } catch (Exception e) {
+                    logger.error("Exception examining authorization header", e, [header: authHeader])
+                }
+
+                if (!responseData.accessToken) {
+                    responseData.accessToken = accessTokenService.generateAccessToken(
+                            gameGukey, id.toString(), null, gameConfig.long('auth:maxTokenLifeSeconds', 345600L)) // 4d
+                }
+
+                //TODO: Validate account
+                def validProfiles = profileService.validateProfile(manifest.identity)
+                /* validProfiles = [
+                 *   facebook: FACEBOOK_ID,
+                 *   gameCenter: GAMECENTER_ID,
+                 *   googlePlay: GOOGLEPLAY_ID
+                 * ]
+                 */
+
+                if (params.mergeToken) {
+                    // Validate merge token
+                    // TODO: params.accountId is a workaround because the client was sending this wrong; should be removed
+                    def mergeAccountId = params.mergeAccountId ?: params.accountId
+                    if (!mergeAccountId) {
+                        throw new BadRequestException('Required parameter mergeAccountId was not provided.')
+                    }
+                    if (accountService.validateMergeToken(id as String, params.mergeToken, mergeAccountId)) {
+                        logger.info("Merge token accepted", [accountId: id, mergeAccountId: responseData.mergeAccountId])
+                        id = mergeAccountId
+                        responseData.accountId = id.toString()
+                        responseData.createdDate = player.cd.toString()
+
+                        profileService.mergeInstallIdProfile(clientSession, id.toString(), manifest.identity.installId, manifest.identity)
+
+                        // Save over data
+                        validProfiles.each { profile, profileData ->
+                            profileService.mergeProfile(clientSession, profile, id.toString(), profileData)
+                        }
+
+                        accountService.updateAccountData(clientSession, id.toString(), manifest.identity, null, true)
+
+                    } else {
+                        responseData.errorCode = "mergeConflict"
+                        throw new PlatformException('mergeConflict', null, null, responseData)
+                    }
+                } else {
+                    if (validProfiles) {
+                        def conflictProfiles = []
+                        // Get profiles attached to player we found
+                        def playerProfiles = profileService.getAccountsFromProfiles(validProfiles)
+
+                        if (playerProfiles) {
+                            // Assuming there is only one type of profile for each account, check to see if they conflict
+                            // For each valid profile, we need to grab all the accounts that are attached to it
+                            // and then compare those Account IDs with the Account ID that matches the Install ID
+                            playerProfiles.each { profile ->
+                                //TODO: Check for profile conflict
+                                if (id.toString() != profile.aid.toString()) {
+                                    conflictProfiles << profile
+                                }
+                            }
+                        }
+
+                        if (conflictProfiles && conflictProfiles.size() > 0) {
+                            conflict = true
+                            responseData.errorCode = "accountConflict"
+                            logger.info("Account conflict", [accountId: id.toString()])
+                            //TODO: Include which accounts are conflicting? Security concerns?
+                            def conflictingAccountIds = conflictProfiles.collect {
+                                if (it.aid.toString() != id.toString()) {
+                                    return it.aid
+                                }
+                            } ?: "placeholder"
+                            if (conflictingAccountIds.size() > 0) {
+                                responseData.conflictingAccountId = conflictingAccountIds.first().toString()
+                            }
+                        }
+                    }
+
+                    // Check for install conflict
+                    if (!conflict && accountService.hasInstallConflict(player, manifest)) {
+                        conflict = true
+                        responseData.errorCode = "installConflict"
+                        responseData.conflictingAccountId = id.toString()
+                    }
+
+                    def updatedAccount
+                    if (conflict) {
+                        // Generate merge token
+                        responseData.mergeToken = accountService.generateMergeToken(clientSession, id as String, responseData.conflictingAccountId)
+                        logger.info("Merge token generated", [errorCode: responseData.errorCode, accountId: id, mergeAccountId: responseData.conflictingAccountId])
+                    } else {
+                        // If we've gotten this far, there should be no conflicts, so save all the things
+                        // Save Install ID profile
+                        profileService.saveInstallIdProfile(clientSession, id.toString(), manifest.identity.installId, manifest.identity)
+
+                        // Save social profiles
+                        validProfiles.each { profile, profileData ->
+                            profileService.saveProfile(clientSession, profile, id.toString(), profileData)
+                        }
+
+                        // do we really need this update? maybe not on a new player?
+                        updatedAccount = accountService.updateAccountData(clientSession, id.toString(), manifest.identity, null)
+                        responseData.createdDate = updatedAccount.cd?.toString() ?: null
+                    }
+
+                    responseData.accountId = id.toString()
+                }
+            } catch (MongoCommandException e) {
+                clientSession.abortTransaction()
+                if (e.getErrorMessage().contains("Cannot create namespace")) {
+                    throw new ApplicationException("dbError", "Unknown component", e)
+                } else {
+                    throw e
+                }
+            } catch (all) {
+                clientSession?.abortTransaction()
+                throw all
+            }
+
+            mongoService.commitWithRetry(clientSession, 1)
+        } catch (MongoException err) {
+            responseData.errorCode = "dbError"
+            render(responseData as JSON)
+            logger.error("MongoDB Error", err)
+            return false
+        } catch (PlatformException err) {
+            responseData.errorCode = err.getErrorCode()
+            render(responseData as JSON)
+            logger.error(err.getMessage(), err)
+            return false
+        } catch (all) {
+            responseData.errorCode = "error"
+            render(responseData as JSON)
+            logger.error("Unexpected error exception", all)
+            return false
+        } finally {
+            clientSession?.close()
+        }
+
+        responseData.success = !(conflict || responseData.mergeToken)
+        render(responseData as JSON)
+
+        return false
+    }
+
+    /**
+     * Used for client-authoritative games. Supports game component data handling, and reports data version conflicts
+     * between devices connected to the same account. Uses multipart request/response to transmit component data.
+     */
     def save() {
         mongoService.runTransactionWithRetry({ saveTransaction() }, 1)
     }
