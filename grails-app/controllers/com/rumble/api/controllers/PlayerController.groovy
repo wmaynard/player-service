@@ -40,11 +40,10 @@ class PlayerController {
 
     def launchTransaction() {
 
-        def manifest = request.JSON
-        def identity = manifest.identity
+        def requestData = request.JSON
 
-        if (!identity?.installId) {
-            throw new BadRequestException('Required parameter identity.installId was not provided.')
+        if (!requestData.installId) {
+            throw new BadRequestException('Required parameter installId was not provided.')
         }
 
         def responseData = [
@@ -57,19 +56,19 @@ class PlayerController {
                 clientvars: [:]
         ]
 
-        def clientRequestId = identity?.requestId
+        def clientRequestId = requestData?.requestId
         def requestId = clientRequestId ?: UUID.randomUUID().toString()
         if (clientRequestId) {
             MDC.put("clientRequestId", clientRequestId)
         }
         responseData.requestId = requestId
-        responseData.accountId = identity.installId
-        if(identity) {
-            if(identity.installId) {
-                MDC.put('installId', identity.installId)
+        responseData.accountId = requestData.installId
+        if(requestData) {
+            if(requestData.installId) {
+                MDC.put('installId', requestData.installId)
             }
-            if(identity.clientVersion) {
-                MDC.put('clientVersion', identity.clientVersion)
+            if(requestData.clientVersion) {
+                MDC.put('clientVersion', requestData.clientVersion)
             }
         }
 
@@ -93,20 +92,20 @@ class PlayerController {
             }
         }
 
-        def channel = identity.channel ?: ""
+        def channel = requestData.channel ?: ""
         def channelScope = "channel:${channel}"
         def channelConfig = dynamicConfigService.getConfig(channelScope)
 
         //Map channel-specific game identifier to game gukey
-        if (identity.gameGukey) {
-            game = identity.gameGukey
+        if (requestData.gameGukey) {
+            game = requestData.gameGukey
         }
         String gameGukey = channelConfig["game.${game}.gukey"] ?: game
         def gameConfig = dynamicConfigService.getGameConfig(gameGukey)
 
         //This looks for variables with a certain prefix (eg_ kr:clientvars:) and puts them in the client_vars structure
         //The prefixes are in a json list, and will be applied in order, overlaying any variable that collides
-        def clientVersion = identity.clientVersion
+        def clientVersion = requestData.clientVersion
         def prefixes = gameConfig.list("clientVarPrefixes")
         def configs = [channelConfig, gameConfig]
         def clientvars = extractClientVars(clientVersion, prefixes, configs)
@@ -128,7 +127,7 @@ class PlayerController {
             try {
                 clientSession = mongoService.client().startSession()
                 clientSession.startTransaction()
-                def player = accountService.exists(clientSession, identity.installId, identity)
+                def player = accountService.exists(clientSession, requestData.installId, requestData)
                 if (!player) {
                     // Error 'cause upsert failed
                     responseData.errorCode = "dbError"
@@ -162,7 +161,7 @@ class PlayerController {
                 }
 
                 //TODO: Validate account
-                def validProfiles = profileService.validateProfile(identity)
+                def validProfiles = profileService.validateProfile(requestData)
                 /* validProfiles = [
                  *   facebook: FACEBOOK_ID,
                  *   gameCenter: GAMECENTER_ID,
@@ -183,14 +182,14 @@ class PlayerController {
                         responseData.accountId = id.toString()
                         responseData.createdDate = player.cd.toString()
 
-                        profileService.mergeInstallIdProfile(clientSession, id.toString(), identity.installId, identity)
+                        profileService.mergeInstallIdProfile(clientSession, id.toString(), requestData.installId, requestData)
 
                         // Save over data
                         validProfiles.each { profile, profileData ->
                             profileService.mergeProfile(clientSession, profile, id.toString(), profileData)
                         }
 
-                        accountService.updateAccountData(clientSession, id.toString(), identity, null, true)
+                        accountService.updateAccountData(clientSession, id.toString(), requestData, null, true)
 
                     } else {
                         responseData.errorCode = "mergeConflict"
@@ -231,7 +230,7 @@ class PlayerController {
                     }
 
                     // Check for install conflict
-                    if (!conflict && accountService.hasInstallConflict(player, manifest)) {
+                    if (!conflict && accountService.hasInstallConflict(player, requestData)) {
                         conflict = true
                         responseData.errorCode = "installConflict"
                         responseData.conflictingAccountId = id.toString()
@@ -245,7 +244,7 @@ class PlayerController {
                     } else {
                         // If we've gotten this far, there should be no conflicts, so save all the things
                         // Save Install ID profile
-                        profileService.saveInstallIdProfile(clientSession, id.toString(), identity.installId, identity)
+                        profileService.saveInstallIdProfile(clientSession, id.toString(), requestData.installId, requestData)
 
                         // Save social profiles
                         validProfiles.each { profile, profileData ->
@@ -253,7 +252,7 @@ class PlayerController {
                         }
 
                         // do we really need this update? maybe not on a new player?
-                        updatedAccount = accountService.updateAccountData(clientSession, id.toString(), identity, null)
+                        updatedAccount = accountService.updateAccountData(clientSession, id.toString(), requestData, null)
                         responseData.createdDate = updatedAccount.cd?.toString() ?: null
                     }
 
@@ -560,14 +559,14 @@ class PlayerController {
                     }
 
                     // Check for install conflict
-                    if (!conflict && accountService.hasInstallConflict(player, manifest)) {
+                    if (!conflict && accountService.hasInstallConflict(player, manifest.identity)) {
                         conflict = true
                         responseData.errorCode = "installConflict"
                         responseData.conflictingAccountId = id.toString()
                     }
 
                     // Check for version conflict
-                    if (!conflict && accountService.hasVersionConflict(player, manifest)) {
+                    if (!conflict && accountService.hasVersionConflict(player, manifest.identity)) {
                         conflict = true
                         responseData.errorCode = "versionConflict"
                         responseData.conflictingAccountId = id.toString()

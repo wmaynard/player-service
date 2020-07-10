@@ -306,12 +306,12 @@ class AccountService {
         return mergeToken
     }
 
-    def hasInstallConflict(player, manifest){
-        return (player.lsi != manifest.identity.installId)
+    def hasInstallConflict(player, identity){
+        return (player.lsi != identity.installId)
     }
 
-    def hasVersionConflict(player, manifest){
-        return (player.dv > manifest.identity.dataVersion)
+    def hasVersionConflict(player, identity){
+        return (player.dv > identity.dataVersion)
     }
 
     def extractInstallData(identityData) {
