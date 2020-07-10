@@ -169,14 +169,13 @@ class PlayerController {
                  * ]
                  */
 
-                if (params.mergeToken) {
+                if (requestData.mergeToken) {
                     // Validate merge token
-                    // TODO: params.accountId is a workaround because the client was sending this wrong; should be removed
-                    def mergeAccountId = params.mergeAccountId ?: params.accountId
+                    def mergeAccountId = requestData.mergeAccountId
                     if (!mergeAccountId) {
                         throw new BadRequestException('Required parameter mergeAccountId was not provided.')
                     }
-                    if (accountService.validateMergeToken(id as String, params.mergeToken, mergeAccountId)) {
+                    if (accountService.validateMergeToken(id as String, requestData.mergeToken, mergeAccountId)) {
                         logger.info("Merge token accepted", [accountId: id, mergeAccountId: responseData.mergeAccountId])
                         id = mergeAccountId
                         responseData.accountId = id.toString()
