@@ -35,7 +35,7 @@ class PlayerController {
      * Used for server-authoritative games.
      */
     def launch() {
-        mongoService.runTransactionWithRetry({ saveTransaction() }, 1)
+        mongoService.runTransactionWithRetry({ launchTransaction() }, 1)
     }
 
     def launchTransaction() {
