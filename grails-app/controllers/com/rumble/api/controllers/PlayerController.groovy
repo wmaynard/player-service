@@ -695,10 +695,15 @@ class PlayerController {
     }
 
     private extractClientVars(clientVersion, List<String> prefixes, configs) {
-        def clientVersions = [clientVersion]
+
+        def clientVersions = []
+        if (clientVersion) {
+            clientVersions += [clientVersion]
             while (clientVersion.lastIndexOf('.') > 0) {
                 clientVersions += clientVersion = clientVersion.substring(0, clientVersion.lastIndexOf('.'))
             }
+        }
+
         def clientvars = [:]
         prefixes.each { prefix ->
             def defaultVar = prefix + "default:"
