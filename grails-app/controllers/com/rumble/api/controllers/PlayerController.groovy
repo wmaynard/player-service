@@ -41,6 +41,7 @@ class PlayerController {
     def launchTransaction() {
 
         def manifest = request.JSON
+        def identity = manifest.identity
         def responseData = [
                 success   : false,
                 remoteAddr: request.remoteAddr,
@@ -51,19 +52,19 @@ class PlayerController {
                 clientvars: [:]
         ]
 
-        def clientRequestId = manifest.identity?.requestId
+        def clientRequestId = identity?.requestId
         def requestId = clientRequestId ?: UUID.randomUUID().toString()
         if (clientRequestId) {
             MDC.put("clientRequestId", clientRequestId)
         }
         responseData.requestId = requestId
-        responseData.accountId = manifest.identity.installId
-        if(manifest.identity) {
-            if(manifest.identity.installId) {
-                MDC.put('installId', manifest.identity.installId)
+        responseData.accountId = identity.installId
+        if(identity) {
+            if(identity.installId) {
+                MDC.put('installId', identity.installId)
             }
-            if(manifest.identity.clientVersion) {
-                MDC.put('clientVersion', manifest.identity.clientVersion)
+            if(identity.clientVersion) {
+                MDC.put('clientVersion', identity.clientVersion)
             }
         }
 
@@ -87,20 +88,20 @@ class PlayerController {
             }
         }
 
-        def channel = manifest.identity.channel ?: ""
+        def channel = identity.channel ?: ""
         def channelScope = "channel:${channel}"
         def channelConfig = dynamicConfigService.getConfig(channelScope)
 
         //Map channel-specific game identifier to game gukey
-        if (manifest.identity.gameGukey) {
-            game = manifest.identity.gameGukey
+        if (identity.gameGukey) {
+            game = identity.gameGukey
         }
         String gameGukey = channelConfig["game.${game}.gukey"] ?: game
         def gameConfig = dynamicConfigService.getGameConfig(gameGukey)
 
         //This looks for variables with a certain prefix (eg_ kr:clientvars:) and puts them in the client_vars structure
         //The prefixes are in a json list, and will be applied in order, overlaying any variable that collides
-        def clientVersion = manifest.identity.clientVersion
+        def clientVersion = identity.clientVersion
         def prefixes = gameConfig.list("clientVarPrefixes")
         def configs = [channelConfig, gameConfig]
         def clientvars = extractClientVars(clientVersion, prefixes, configs)
@@ -122,7 +123,7 @@ class PlayerController {
             try {
                 clientSession = mongoService.client().startSession()
                 clientSession.startTransaction()
-                def player = accountService.exists(clientSession, manifest.identity.installId, manifest.identity)
+                def player = accountService.exists(clientSession, identity.installId, identity)
                 if (!player) {
                     // Error 'cause upsert failed
                     responseData.errorCode = "dbError"
@@ -156,7 +157,7 @@ class PlayerController {
                 }
 
                 //TODO: Validate account
-                def validProfiles = profileService.validateProfile(manifest.identity)
+                def validProfiles = profileService.validateProfile(identity)
                 /* validProfiles = [
                  *   facebook: FACEBOOK_ID,
                  *   gameCenter: GAMECENTER_ID,
@@ -177,14 +178,14 @@ class PlayerController {
                         responseData.accountId = id.toString()
                         responseData.createdDate = player.cd.toString()
 
-                        profileService.mergeInstallIdProfile(clientSession, id.toString(), manifest.identity.installId, manifest.identity)
+                        profileService.mergeInstallIdProfile(clientSession, id.toString(), identity.installId, identity)
 
                         // Save over data
                         validProfiles.each { profile, profileData ->
                             profileService.mergeProfile(clientSession, profile, id.toString(), profileData)
                         }
 
-                        accountService.updateAccountData(clientSession, id.toString(), manifest.identity, null, true)
+                        accountService.updateAccountData(clientSession, id.toString(), identity, null, true)
 
                     } else {
                         responseData.errorCode = "mergeConflict"
@@ -239,7 +240,7 @@ class PlayerController {
                     } else {
                         // If we've gotten this far, there should be no conflicts, so save all the things
                         // Save Install ID profile
-                        profileService.saveInstallIdProfile(clientSession, id.toString(), manifest.identity.installId, manifest.identity)
+                        profileService.saveInstallIdProfile(clientSession, id.toString(), identity.installId, identity)
 
                         // Save social profiles
                         validProfiles.each { profile, profileData ->
@@ -247,7 +248,7 @@ class PlayerController {
                         }
 
                         // do we really need this update? maybe not on a new player?
-                        updatedAccount = accountService.updateAccountData(clientSession, id.toString(), manifest.identity, null)
+                        updatedAccount = accountService.updateAccountData(clientSession, id.toString(), identity, null)
                         responseData.createdDate = updatedAccount.cd?.toString() ?: null
                     }
 
@@ -301,6 +302,7 @@ class PlayerController {
 
     def saveTransaction() {
         def manifest
+        def identity = manifest.identity ?: [:]
         def responseData = [
                 success   : false,
                 remoteAddr: request.remoteAddr,
@@ -323,24 +325,24 @@ class PlayerController {
         } else {
             def slurper = new JsonSlurper()
             manifest = slurper.parseText(params.manifest)
-            def clientRequestId = manifest.identity?.requestId
+            def clientRequestId = identity?.requestId
             def requestId = clientRequestId ?: UUID.randomUUID().toString()
             if (clientRequestId) {
                 MDC.put("clientRequestId", clientRequestId)
             }
             responseData.requestId = requestId
-            responseData.accountId = manifest.identity.installId
-            if(manifest.identity) {
-                if(manifest.identity.installId) {
-                    MDC.put('installId', manifest.identity.installId)
+            responseData.accountId = identity.installId
+            if(identity) {
+                if(identity.installId) {
+                    MDC.put('installId', identity.installId)
                 }
-                if(manifest.identity.clientVersion) {
-                    MDC.put('clientVersion', manifest.identity.clientVersion)
+                if(identity.clientVersion) {
+                    MDC.put('clientVersion', identity.clientVersion)
                 }
             }
         }
 
-        def mac = checksumService.getChecksumGenerator(manifest.identity.installId)
+        def mac = checksumService.getChecksumGenerator(identity.installId)
         //TODO: Validate checksums
         def validChecksums = true
         if (!checksumService.validateChecksum(manifest.checksum, checksumService.generateMasterChecksum(manifest.entries, mac))) {
@@ -385,20 +387,20 @@ class PlayerController {
         //TODO: Remove, for testing only
         //manifest.identity.facebook.accessToken = "EAAGfjfXqzCIBAG57lgP2LHg91j96mw1a0kXWXWo9OqzqKGB0VDqQLkOFibrt86fRybpZBHuMZCJ6P7h03KT75wnwLUQPROjyE98iLincC0ZCRAfCvubC77cPoBtE0PGV2gsFjKnMMHKBDrwhGfeN3FZAoiZCEeNWlg91UR6njFZALQOEab7EAuyyH6WkKevYrCIiN5hnOtcGVZCEC82nGH4"
 
-        def channel = manifest.identity.channel ?: ""
+        def channel = identity.channel ?: ""
         def channelScope = "channel:${channel}"
         def channelConfig = dynamicConfigService.getConfig(channelScope)
 
         //Map channel-specific game identifier to game gukey
-        if (manifest.identity.gameGukey) {
-            game = manifest.identity.gameGukey
+        if (identity.gameGukey) {
+            game = identity.gameGukey
         }
         String gameGukey = channelConfig["game.${game}.gukey"] ?: game
         def gameConfig = dynamicConfigService.getGameConfig(gameGukey)
 
         //This looks for variables with a certain prefix (eg_ kr:clientvars:) and puts them in the client_vars structure
         //The prefixes are in a json list, and will be applied in order, overlaying any variable that collides
-        def clientVersion = manifest.identity.clientVersion
+        def clientVersion = identity.clientVersion
         def prefixes = gameConfig.list("clientVarPrefixes")
         def configs = [channelConfig, gameConfig]
         def clientvars = extractClientVars(clientVersion, prefixes, configs)
@@ -423,7 +425,7 @@ class PlayerController {
             try {
                 clientSession = mongoService.client().startSession()
                 clientSession.startTransaction()
-                def player = accountService.exists(clientSession, manifest.identity.installId, manifest.identity)
+                def player = accountService.exists(clientSession, identity.installId, identity)
                 if (!player) {
                     // Error 'cause upsert failed
                     responseData.errorCode = "dbError"
@@ -457,7 +459,7 @@ class PlayerController {
                 }
 
                 //TODO: Validate account
-                def validProfiles = profileService.validateProfile(manifest.identity)
+                def validProfiles = profileService.validateProfile(identity)
                 /* validProfiles = [
                  *   facebook: FACEBOOK_ID,
                  *   gameCenter: GAMECENTER_ID,
@@ -478,14 +480,14 @@ class PlayerController {
                         responseData.accountId = id.toString()
                         responseData.createdDate = player.cd.toString()
 
-                        profileService.mergeInstallIdProfile(clientSession, id.toString(), manifest.identity.installId, manifest.identity)
+                        profileService.mergeInstallIdProfile(clientSession, id.toString(), identity.installId, identity)
 
                         // Save over data
                         validProfiles.each { profile, profileData ->
                             profileService.mergeProfile(clientSession, profile, id.toString(), profileData)
                         }
 
-                        def updatedAccount = accountService.updateAccountData(clientSession, id.toString(), manifest.identity, manifest.manifestVersion, true)
+                        def updatedAccount = accountService.updateAccountData(clientSession, id.toString(), identity, manifest.manifestVersion, true)
 
                         // Send component responses based on entries in manifest
                         manifest.entries.each { component ->
@@ -504,7 +506,7 @@ class PlayerController {
 
                         // Recreate manifest to send back to the client
                         mani = [
-                                "identity"       : manifest.identity,
+                                "identity"       : identity,
                                 "entries"        : entriesChecksums,
                                 "manifestVersion": updatedAccount?.mv ?: "placeholder", //TODO: Save manifestVersion
                                 "checksum"       : checksumService.generateMasterChecksum(entriesChecksums, mac) ?: "placeholder"
@@ -569,7 +571,7 @@ class PlayerController {
                     } else {
                         // If we've gotten this far, there should be no conflicts, so save all the things
                         // Save Install ID profile
-                        profileService.saveInstallIdProfile(clientSession, id.toString(), manifest.identity.installId, manifest.identity)
+                        profileService.saveInstallIdProfile(clientSession, id.toString(), identity.installId, identity)
 
                         // Save social profiles
                         validProfiles.each { profile, profileData ->
@@ -577,7 +579,7 @@ class PlayerController {
                         }
 
                         // do we really need this update? maybe not on a new player?
-                        updatedAccount = accountService.updateAccountData(clientSession, id.toString(), manifest.identity, manifest.manifestVersion)
+                        updatedAccount = accountService.updateAccountData(clientSession, id.toString(), identity, manifest.manifestVersion)
                         responseData.createdDate = updatedAccount.cd?.toString() ?: null
                     }
 
@@ -606,7 +608,7 @@ class PlayerController {
 
                         // Recreate manifest to send back to the client
                         mani = [
-                                "identity"       : manifest.identity,
+                                "identity"       : identity,
                                 "entries"        : entriesChecksums,
                                 "manifestVersion": updatedAccount?.mv.toString() ?: "placeholder",
                                 "checksum"       : checksumService.generateMasterChecksum(entriesChecksums, mac) ?: "placeholder"
@@ -684,9 +686,9 @@ class PlayerController {
 
     private extractClientVars(clientVersion, List<String> prefixes, configs) {
         def clientVersions = [clientVersion]
-        while (clientVersion.lastIndexOf('.') > 0) {
-            clientVersions += clientVersion = clientVersion.substring(0, clientVersion.lastIndexOf('.'))
-        }
+            while (clientVersion.lastIndexOf('.') > 0) {
+                clientVersions += clientVersion = clientVersion.substring(0, clientVersion.lastIndexOf('.'))
+            }
         def clientvars = [:]
         prefixes.each { prefix ->
             def defaultVar = prefix + "default:"
