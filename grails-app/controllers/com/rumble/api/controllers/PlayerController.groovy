@@ -477,8 +477,7 @@ class PlayerController {
 
                 if (params.mergeToken) {
                     // Validate merge token
-                    // TODO: params.accountId is a workaround because the client was sending this wrong; should be removed
-                    def mergeAccountId = params.mergeAccountId ?: params.accountId
+                    def mergeAccountId = params.mergeAccountId
                     if (!mergeAccountId) {
                         throw new BadRequestException('Required parameter mergeAccountId was not provided.')
                     }
