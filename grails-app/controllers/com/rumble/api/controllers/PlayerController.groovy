@@ -42,6 +42,11 @@ class PlayerController {
 
         def manifest = request.JSON
         def identity = manifest.identity
+
+        if (!identity?.installId) {
+            throw new BadRequestException('Required parameter identity.installId was not provided.')
+        }
+
         def responseData = [
                 success   : false,
                 remoteAddr: request.remoteAddr,
@@ -303,6 +308,11 @@ class PlayerController {
     def saveTransaction() {
         def manifest
         def identity = manifest.identity ?: [:]
+
+        if (!identity?.installId) {
+            throw new BadRequestException('Required parameter identity.installId was not provided.')
+        }
+
         def responseData = [
                 success   : false,
                 remoteAddr: request.remoteAddr,
