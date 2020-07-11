@@ -131,6 +131,7 @@ class PlayerController {
                 if (!player) {
                     // Error 'cause upsert failed
                     responseData.errorCode = "dbError"
+                    responseData.debugText = err.response?.errmsg
                     logger.error("Probably impossible dbError")
                     throw new PlatformException('dbError', 'Probably impossible dbError', null, responseData)
                 }
@@ -259,11 +260,7 @@ class PlayerController {
                 }
             } catch (MongoCommandException e) {
                 clientSession.abortTransaction()
-                if (e.getErrorMessage().contains("Cannot create namespace")) {
-                    throw new ApplicationException("dbError", "Unknown component", e)
-                } else {
                     throw e
-                }
             } catch (all) {
                 clientSession?.abortTransaction()
                 throw all
@@ -272,6 +269,7 @@ class PlayerController {
             mongoService.commitWithRetry(clientSession, 1)
         } catch (MongoException err) {
             responseData.errorCode = "dbError"
+            responseData.debugText = err.response?.errmsg
             render(responseData as JSON)
             logger.error("MongoDB Error", err)
             return false
@@ -526,6 +524,7 @@ class PlayerController {
                 if (!player) {
                     // Error 'cause upsert failed
                     responseData.errorCode = "dbError"
+                    responseData.debugText = err.response?.errmsg
                     logger.error("Probably impossible dbError")
                     throw new PlatformException('dbError', 'Probably impossible dbError', null, responseData)
                 }
@@ -719,11 +718,7 @@ class PlayerController {
                 }
             } catch (MongoCommandException e) {
                 clientSession.abortTransaction()
-                if (e.getErrorMessage().contains("Cannot create namespace")) {
-                    throw new ApplicationException("dbError", "Unknown component", e)
-                } else {
                     throw e
-                }
             } catch (all) {
                 clientSession?.abortTransaction()
                 throw all
@@ -732,6 +727,7 @@ class PlayerController {
             mongoService.commitWithRetry(clientSession, 1)
         } catch (MongoException err) {
             responseData.errorCode = "dbError"
+            responseData.debugText = err.response?.errmsg
             sendError(out, boundary, responseData)
             logger.error("MongoDB Error", err)
             return false
