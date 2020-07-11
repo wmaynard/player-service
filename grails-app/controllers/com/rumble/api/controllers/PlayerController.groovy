@@ -295,6 +295,95 @@ class PlayerController {
         return false
     }
 
+    def update() {
+
+        mongoService.runTransactionWithRetry({ updateTransaction() }, 1)
+    }
+
+    /**
+     * support items
+     *
+     * add optimistic concurrency control with versioning?
+     */
+    def updateTransaction() {
+
+        def accountId = authService.requireClientAuth(request)
+
+        MDC.put('accountId', accountId)
+
+        def manifest
+
+        def responseData = [
+                success   : false,
+                serverTime: '\'' + System.currentTimeMillis() + '\''
+        ]
+
+        def boundary = MimeTypeUtils.generateMultipartBoundaryString()
+        response.setContentType('multipart/related; boundary="' + boundary + '"')
+        response.characterEncoding = StandardCharsets.UTF_8.name()
+        def out = response.writer
+
+        if (!params.manifest) {
+            throw new BadRequestException('Required parameter manifest was not provided.')
+        } else {
+            def slurper = new JsonSlurper()
+            manifest = slurper.parseText(params.manifest)
+            def clientRequestId = params.requestId
+            def requestId = clientRequestId ?: UUID.randomUUID().toString()
+            if (clientRequestId) {
+                MDC.put("clientRequestId", clientRequestId)
+            }
+            responseData.requestId = requestId
+        }
+
+        def clientSession
+        try {
+            try {
+                clientSession = mongoService.client().startSession()
+                clientSession.startTransaction()
+
+                if (manifest.entries) {
+                    manifest.entries.each { component ->
+                        // TODO: entries should contain version checking info
+                        accountService.saveComponentData(clientSession, accountId, component.key, request.getParameter(component.key)?:(component.value.data as String))
+                    }
+                }
+            } catch (MongoCommandException e) {
+                clientSession.abortTransaction()
+                throw e
+            } catch (all) {
+                clientSession?.abortTransaction()
+                throw all
+            }
+
+            mongoService.commitWithRetry(clientSession, 1)
+        } catch (MongoException err) {
+            responseData.errorCode = "dbError"
+            responseData.debugText = err.response?.errmsg
+            sendError(out, boundary, responseData)
+            logger.error("MongoDB Error", err)
+            return false
+        } catch (PlatformException err) {
+            responseData.errorCode = err.getErrorCode()
+            sendError(out, boundary, responseData)
+            logger.error(err.getMessage(), err)
+            return false
+        } catch (all) {
+            responseData.errorCode = "error"
+            sendError(out, boundary, responseData)
+            logger.error("Unexpected error exception", all)
+            return false
+        } finally {
+            clientSession?.close()
+        }
+
+        responseData.success = true
+
+        render(responseData as JSON)
+
+        return false
+    }
+
     /**
      * Used for client-authoritative games. Supports game component data handling, and reports data version conflicts
      * between devices connected to the same account. Uses multipart request/response to transmit component data.
