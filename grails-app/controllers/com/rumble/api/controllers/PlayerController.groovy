@@ -302,37 +302,49 @@ class PlayerController {
      * support items
      *
      * add optimistic concurrency control with versioning?
+     *
+     * Input data looks like this:
+     *
+     *   {
+     *      "components":
+     *       {
+     *           "account":
+     *           {
+     *               "data": "{\"foo\":\"bar\"}"
+     *           },
+     *           "wallet":
+     *           {
+     *               "data":
+     *               {
+     *                   "foo" : "bar"
+     *               }
+     *           }
+     *       }
+     *   }
+     *
+     * Note:
+     *  - Only components present in the request will be updated (missing ones will not be deleted).
+     *  - Component data can either be an embedded list or serialized JSON.
+     *
+     * TODO:
+     *  - Consider providing a way to delete component data. This is not clearly necessary or desirable.
      */
     def updateTransaction() {
+
+        if (!request.getHeader("content-type") == "application/json") {
+            throw new BadRequestException("expected content type application/json")
+        }
 
         def accountId = authService.requireClientAuth(request)
 
         MDC.put('accountId', accountId)
 
-        def manifest
+        def requestData = request.JSON
 
         def responseData = [
                 success   : false,
                 serverTime: '\'' + System.currentTimeMillis() + '\''
         ]
-
-        def boundary = MimeTypeUtils.generateMultipartBoundaryString()
-        response.setContentType('multipart/related; boundary="' + boundary + '"')
-        response.characterEncoding = StandardCharsets.UTF_8.name()
-        def out = response.writer
-
-        if (!params.manifest) {
-            throw new BadRequestException('Required parameter manifest was not provided.')
-        } else {
-            def slurper = new JsonSlurper()
-            manifest = slurper.parseText(params.manifest)
-            def clientRequestId = params.requestId
-            def requestId = clientRequestId ?: UUID.randomUUID().toString()
-            if (clientRequestId) {
-                MDC.put("clientRequestId", clientRequestId)
-            }
-            responseData.requestId = requestId
-        }
 
         def clientSession
         try {
@@ -340,10 +352,9 @@ class PlayerController {
                 clientSession = mongoService.client().startSession()
                 clientSession.startTransaction()
 
-                if (manifest.entries) {
-                    manifest.entries.each { component ->
-                        // TODO: entries should contain version checking info
-                        accountService.saveComponentData(clientSession, accountId, component.key, request.getParameter(component.key)?:(component.value.data as String))
+                if (requestData.components) {
+                    requestData.components.each { component ->
+                        accountService.saveComponentData(clientSession, accountId, component.key, component.value.data)
                     }
                 }
             } catch (MongoCommandException e) {
@@ -356,21 +367,7 @@ class PlayerController {
 
             mongoService.commitWithRetry(clientSession, 1)
         } catch (MongoException err) {
-            responseData.errorCode = "dbError"
-            responseData.debugText = err.response?.errmsg
-            sendError(out, boundary, responseData)
-            logger.error("MongoDB Error", err)
-            return false
-        } catch (PlatformException err) {
-            responseData.errorCode = err.getErrorCode()
-            sendError(out, boundary, responseData)
-            logger.error(err.getMessage(), err)
-            return false
-        } catch (all) {
-            responseData.errorCode = "error"
-            sendError(out, boundary, responseData)
-            logger.error("Unexpected error exception", all)
-            return false
+            throw new PlatformException('dbError', err.response?.errmsg)
         } finally {
             clientSession?.close()
         }

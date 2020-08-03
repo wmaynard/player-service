@@ -263,10 +263,12 @@ class AccountService {
     }
 
     def saveComponentData(ClientSession clientSession, accountId, String collection, data) {
+        if (data instanceof String) {
+            data = new JsonSlurper().parseText(data)
+        }
         def coll = mongoService.collection(getComponentCollectionName(collection))
         DBObject query = new BasicDBObject("aid", (accountId instanceof String) ? new ObjectId(accountId) : accountId)
-        def jsonSlurper = new JsonSlurper()
-        BasicDBObject doc = new BasicDBObject('$set', new BasicDBObject("data", jsonSlurper.parseText(data)))
+        BasicDBObject doc = new BasicDBObject('$set', new BasicDBObject("data", data))
                 .append('$setOnInsert', new BasicDBObject("aid", (accountId instanceof String) ? new ObjectId(accountId) : accountId))
         //System.out.println("saveComponentData" + doc.toString())
         coll.findOneAndUpdate(
