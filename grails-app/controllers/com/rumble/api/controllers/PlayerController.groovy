@@ -352,8 +352,10 @@ class PlayerController {
                 clientSession = mongoService.client().startSession()
                 clientSession.startTransaction()
 
-                if (requestData.components) {
-                    requestData.components.each { component ->
+                requestData.components?.each { component ->
+                    if (component.value.delete == true) {
+                        accountService.deleteComponentData(clientSession, accountId, component.key)
+                    } else {
                         accountService.saveComponentData(clientSession, accountId, component.key, component.value.data)
                     }
                 }

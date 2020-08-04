@@ -279,6 +279,12 @@ class AccountService {
         )
     }
 
+    def deleteComponentData(ClientSession clientSession, accountId, String collection) {
+        def coll = mongoService.collection(getComponentCollectionName(collection))
+        DBObject query = new BasicDBObject("aid", (accountId instanceof String) ? new ObjectId(accountId) : accountId)
+        coll.findOneAndDelete(clientSession, query)
+    }
+
     def validateMergeToken(String accountId, String mergeToken, String mergeAccountId) {
         def coll = mongoService.collection(COLLECTION_NAME)
         def query = new BasicDBObject("_id", (accountId instanceof String) ? new ObjectId(accountId) : accountId)
