@@ -800,6 +800,20 @@ class PlayerController {
         return clientvars
     }
 
+    def read() {
+
+        def accountId = authService.requireClientAuth(request)
+
+        def components = accountService.getDetails(accountId)
+
+        def responseData = [
+                success: true,
+                data: components
+        ]
+
+        render responseData as JSON
+    }
+
     def summary() {
 
         authService.requireClientAuth(request)
