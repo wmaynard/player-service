@@ -28,6 +28,7 @@ class PlayerController {
     def paramsService
     def profileService
     def checksumService
+    def itemService
 
     def game = System.getProperty("GAME_GUKEY")
 
@@ -260,7 +261,7 @@ class PlayerController {
                 }
             } catch (MongoCommandException e) {
                 clientSession.abortTransaction()
-                    throw e
+                throw e
             } catch (all) {
                 clientSession?.abortTransaction()
                 throw all
@@ -299,10 +300,6 @@ class PlayerController {
     }
 
     /**
-     * support items
-     *
-     * add optimistic concurrency control with versioning?
-     *
      * Input data looks like this:
      *
      *   {
@@ -318,16 +315,39 @@ class PlayerController {
      *               {
      *                   "foo" : "bar"
      *               }
+     *           },
+     *           "deprecated":
+     *           {
+     *               "delete": true
+     *           }
+     *       },
+     *       "items":
+     *       {
+     *           "8e6e8be9-8d66-4c54-914c-28a9664e8ff3":
+     *           {
+     *               "type": "hero",
+     *               "info":
+     *               {
+     *                   "anything": "the game needs"
+     *               }
+     *           },
+     *           "d037804d-de74-4b08-a939-25cba6e8ef9b":
+     *           {
+     *               "delete": true
      *           }
      *       }
      *   }
      *
      * Note:
      *  - Only components present in the request will be updated (missing ones will not be deleted).
+     *  - A component will be deleted if instead of data, the incoming data contains "delete": true
      *  - Component data can either be an embedded list or serialized JSON.
+     *  - Attempts to update/delete items that belong to another player will be ignored.
+     *  - Deletes of non-existent components and items are ignored. (This API is idempotent.)
      *
      * TODO:
-     *  - Consider providing a way to delete component data. This is not clearly necessary or desirable.
+     *  - Record a change log, whether in MongoDB or somewhere else, with automated retention management.
+     *  - Add optimistic concurrency control with versioning? Revoke prior auth tokens?
      */
     def updateTransaction() {
 
@@ -357,6 +377,14 @@ class PlayerController {
                         accountService.deleteComponentData(clientSession, accountId, component.key)
                     } else {
                         accountService.saveComponentData(clientSession, accountId, component.key, component.value.data)
+                    }
+                }
+
+                requestData.items?.each { item ->
+                    if (item.value.delete == true) {
+                        itemService.deleteItem(clientSession, accountId, item.key)
+                    } else {
+                        itemService.saveItem(clientSession, accountId, item.key, item.value.info)
                     }
                 }
             } catch (MongoCommandException e) {
@@ -717,7 +745,7 @@ class PlayerController {
                 }
             } catch (MongoCommandException e) {
                 clientSession.abortTransaction()
-                    throw e
+                throw e
             } catch (all) {
                 clientSession?.abortTransaction()
                 throw all
