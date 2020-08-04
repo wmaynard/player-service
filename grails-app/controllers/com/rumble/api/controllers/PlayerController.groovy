@@ -418,12 +418,6 @@ class PlayerController {
     }
 
     def saveTransaction() {
-        def manifest
-        def identity = manifest.identity ?: [:]
-
-        if (!identity?.installId) {
-            throw new BadRequestException('Required parameter identity.installId was not provided.')
-        }
 
         def responseData = [
                 success   : false,
@@ -440,27 +434,36 @@ class PlayerController {
         response.characterEncoding = StandardCharsets.UTF_8.name()
         def out = response.writer
 
+        def manifest
+
         if (!params.manifest) {
             responseData.errorCode = "authError"
             sendError(out, boundary, responseData)
             return false
-        } else {
-            def slurper = new JsonSlurper()
-            manifest = slurper.parseText(params.manifest)
-            def clientRequestId = identity?.requestId
+        }
+
+        def slurper = new JsonSlurper()
+        manifest = slurper.parseText(params.manifest)
+
+        def identity = manifest.identity ?: [:]
+
+        if (!identity?.installId) {
+            throw new BadRequestException('Required parameter identity.installId was not provided.')
+        }
+
+        def clientRequestId = identity?.requestId
             def requestId = clientRequestId ?: UUID.randomUUID().toString()
-            if (clientRequestId) {
-                MDC.put("clientRequestId", clientRequestId)
+        if (clientRequestId) {
+            MDC.put("clientRequestId", clientRequestId)
+        }
+        responseData.requestId = requestId
+        responseData.accountId = identity.installId
+        if(identity) {
+            if(identity.installId) {
+                MDC.put('installId', identity.installId)
             }
-            responseData.requestId = requestId
-            responseData.accountId = identity.installId
-            if(identity) {
-                if(identity.installId) {
-                    MDC.put('installId', identity.installId)
-                }
-                if(identity.clientVersion) {
-                    MDC.put('clientVersion', identity.clientVersion)
-                }
+            if(identity.clientVersion) {
+                MDC.put('clientVersion', identity.clientVersion)
             }
         }
 
