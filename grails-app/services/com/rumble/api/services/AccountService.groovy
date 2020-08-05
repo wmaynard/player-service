@@ -18,7 +18,9 @@ class AccountService {
 
     // TODO: this would benefit from some caching
     def getComponentNames() {
-        mongoService.collectionNames().findResults { it.startsWith('c_') ? it.substring(2) : null }
+        mongoService.collectionNames().findResults
+                { it.startsWith(COMPONENT_COLLECTION_NAME_PREFIX) ?
+                        it.substring(COMPONENT_COLLECTION_NAME_PREFIX.length()) : null }
     }
 
     def validateAccountId(accountId){
@@ -309,6 +311,7 @@ class AccountService {
         return (player.dv > identity.dataVersion)
     }
 
+    // TODO: change this to an allow list
     def extractInstallData(identityData) {
         def data = [:]
 
