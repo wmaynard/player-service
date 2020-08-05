@@ -302,40 +302,41 @@ class PlayerController {
     /**
      * Input data looks like this:
      *
-     *   {
+     *  {
      *      "components":
-     *       {
-     *           "account":
-     *           {
-     *               "data": "{\"foo\":\"bar\"}"
+     *      [
+     *          {
+     *              "name": "account",
+     *              "data": "{\"screenName\":\"Br13f\"}"
+     *          },
+     *          {
+     *              "name": "wallet",
+     *              "data":
+     *              {
+     *                  "currency:hard_currency": 455,
+     * 	                "currency:soft_currency": 1118
+     *              }
      *           },
-     *           "wallet":
      *           {
-     *               "data":
-     *               {
-     *                   "foo" : "bar"
-     *               }
-     *           },
-     *           "deprecated":
-     *           {
-     *               "delete": true
+     *              "name": "deprecated",
+     *              "delete": true
      *           }
-     *       },
+     *       ],
      *       "items":
-     *       {
-     *           "8e6e8be9-8d66-4c54-914c-28a9664e8ff3":
+     *       [
      *           {
-     *               "type": "hero",
-     *               "data":
-     *               {
-     *                   "anything": "the game needs"
-     *               }
+     *              "id": "8e6e8be9-8d66-4c54-914c-28a9664e8ff3"
+     *              "type": "hero",
+     *              "data":
+     *              {
+     *                  "anything": "the game needs"
+     *              }
      *           },
-     *           "d037804d-de74-4b08-a939-25cba6e8ef9b":
      *           {
-     *               "delete": true
+     *              "id": "d037804d-de74-4b08-a939-25cba6e8ef9b",
+     *              "delete": true
      *           }
-     *       }
+     *       ]
      *   }
      *
      * Note:
@@ -370,18 +371,18 @@ class PlayerController {
                 clientSession.startTransaction()
 
                 requestData.components?.each { component ->
-                    if (component.value.delete == true) {
-                        accountService.deleteComponentData(clientSession, accountId, component.key)
+                    if (component.delete == true) {
+                        accountService.deleteComponentData(clientSession, accountId, component.name)
                     } else {
-                        accountService.saveComponentData(clientSession, accountId, component.key, component.value.data)
+                        accountService.saveComponentData(clientSession, accountId, component.name, component.data)
                     }
                 }
 
                 requestData.items?.each { item ->
-                    if (item.value.delete == true) {
-                        itemService.deleteItem(clientSession, accountId, item.key)
+                    if (item.delete == true) {
+                        itemService.deleteItem(clientSession, accountId, item.id)
                     } else {
-                        itemService.saveItem(clientSession, accountId, item.key, item.value)
+                        itemService.saveItem(clientSession, accountId, item.id, item)
                     }
                 }
             } catch (MongoCommandException e) {
@@ -838,8 +839,11 @@ class PlayerController {
 
         def responseData = [
                 success: true,
-                data: components.collectEntries {
-                    [(it.key): [ data: it.value.data ] ]
+                components: components.collect {
+                    [
+                            name: it.key,
+                            data: it.value.data
+                    ]
                 }
         ]
 

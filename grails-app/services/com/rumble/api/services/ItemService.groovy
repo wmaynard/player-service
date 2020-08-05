@@ -5,8 +5,6 @@ import com.mongodb.DBObject
 import com.mongodb.client.model.FindOneAndUpdateOptions
 import com.mongodb.client.model.ReturnDocument
 import com.mongodb.session.ClientSession
-import com.rumble.platform.exception.ApplicationException
-import com.rumble.platform.exception.BadRequestException
 import groovy.json.JsonSlurper
 import org.bson.types.ObjectId
 
@@ -20,16 +18,17 @@ class ItemService {
 
     def collectionName = 'items'
 
-    def saveItem(ClientSession clientSession, accountId, itemId, data) {
+    def saveItem(ClientSession clientSession, accountId, itemId, item) {
         if (accountId instanceof String) {
             accountId = new ObjectId(accountId)
         }
+        def data = item.data
         if (data instanceof String) {
             data = new JsonSlurper().parseText(data)
         }
         def coll = mongoService.collection(collectionName)
         DBObject query = new BasicDBObject('aid', accountId).append('iid', itemId)
-        BasicDBObject doc = new BasicDBObject('$set', new BasicDBObject('data', data.data).append('type', data.type))
+        BasicDBObject doc = new BasicDBObject('$set', new BasicDBObject('data', data).append('type', item.type))
             .append('$setOnInsert', new BasicDBObject('aid', accountId).append('iid', itemId))
         coll.findOneAndUpdate(
                 clientSession,
@@ -57,12 +56,11 @@ class ItemService {
         if (types) {
             query.put('type', new BasicDBObject('$in', types))
         }
-        def items = coll.find(query).collectEntries { item ->
-            return [
-                    (item.iid) : [
-                            type: item.type,
-                            data: item.data
-                    ]
+        def items = coll.find(query).collect { item ->
+            [
+                    id  : item.iid,
+                    type: item.type,
+                    data: item.data
             ]
         }
         return items

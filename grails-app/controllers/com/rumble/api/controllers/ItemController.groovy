@@ -15,7 +15,7 @@ class ItemController {
 
         def responseData = [
                 success: true,
-                data: items
+                items: items
         ]
 
         render responseData as JSON
