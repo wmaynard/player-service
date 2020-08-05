@@ -841,7 +841,9 @@ class PlayerController {
 
         def responseData = [
                 success: true,
-                data: components
+                data: components.collectEntries {
+                    [(it.key): [ data: it.value.data ] ]
+                }
         ]
 
         render responseData as JSON
