@@ -16,6 +16,11 @@ class AccountService {
     private static def COMPONENT_COLLECTION_NAME_PREFIX = "c_"
     private static def COLLECTION_NAME = "player"
 
+    // TODO: this would benefit from some caching
+    def getComponentNames() {
+        mongoService.collectionNames().findResults { it.startsWith('c_') ? it.substring(2) : null }
+    }
+
     def validateAccountId(accountId){
         if(accountId instanceof String) {
             try {
@@ -100,25 +105,7 @@ class AccountService {
 
     def getDetails(String accountId) {
         def details = [:]
-
-        // TODO: Do not hardcode components
-        def components = [
-                "abtestgroups",
-                "account",
-                "chests",
-                "challenges",
-                "dailyquests",
-                "dailyrewards",
-                "heroes",
-                "inbox",
-                "store",
-                "summary",
-                "tracking",
-                "tutorials",
-                "wallet"
-        ]
-
-        components.each{ c ->
+        componentNames.each{ c ->
             def d = getComponentData(accountId, c)
             details[c] = (d.size() == 1) ? d.first() : d
         }

@@ -35,6 +35,11 @@ class MongoService {
         return db.getCollection(collectionName)
     }
 
+    def collectionNames() {
+        MongoDatabase db = client().getDatabase(databaseName)
+        return db.listCollectionNames().collect()
+    }
+
     def commitWithRetry(ClientSession clientSession, maxNumberOfRetries = 3) {
         def count = 0
         while (count <= maxNumberOfRetries) {
