@@ -10,12 +10,12 @@ class ItemController {
     def list() {
 
         def accountId = authService.requireClientAuth(request)
-
-        def components = itemService.getItems(accountId)
+        def types = params.types ? params.types.split(',') : null
+        def items = itemService.getItems(accountId, types)
 
         def responseData = [
                 success: true,
-                data: components
+                data: items
         ]
 
         render responseData as JSON

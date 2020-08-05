@@ -384,7 +384,7 @@ class PlayerController {
                     if (item.value.delete == true) {
                         itemService.deleteItem(clientSession, accountId, item.key)
                     } else {
-                        itemService.saveItem(clientSession, accountId, item.key, item.value.info)
+                        itemService.saveItem(clientSession, accountId, item.key, item.value)
                     }
                 }
             } catch (MongoCommandException e) {

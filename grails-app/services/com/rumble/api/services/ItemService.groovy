@@ -16,7 +16,7 @@ class ItemService {
     def logger = new com.rumble.platform.common.Log(this.class)
     def mongoService
 
-    def collectionName = "items"
+    def collectionName = 'items'
 
     def saveItem(ClientSession clientSession, accountId, itemId, data) {
         if (accountId instanceof String) {
@@ -26,10 +26,9 @@ class ItemService {
             data = new JsonSlurper().parseText(data)
         }
         def coll = mongoService.collection(collectionName)
-        DBObject query = new BasicDBObject("aid", accountId).append("iid", itemId)
-        BasicDBObject doc = new BasicDBObject('$set', new BasicDBObject("data", data))
-            .append('$setOnInsert', new BasicDBObject("aid", accountId))
-            .append('$setOnInsert', new BasicDBObject("iid",itemId))
+        DBObject query = new BasicDBObject('aid', accountId).append('iid', itemId)
+        BasicDBObject doc = new BasicDBObject('$set', new BasicDBObject('info', data.info).append('type', data.type))
+            .append('$setOnInsert', new BasicDBObject('aid', accountId).append('iid', itemId))
         coll.findOneAndUpdate(
                 clientSession,
                 query,
@@ -43,18 +42,26 @@ class ItemService {
         if (accountId instanceof String) {
             accountId = new ObjectId(accountId)
         }
-        DBObject query = new BasicDBObject("aid", accountId).append("iid", itemId)
+        DBObject query = new BasicDBObject('aid', accountId).append('iid', itemId)
         coll.findOneAndDelete(clientSession, query)
     }
 
-    def getItems(accountId) {
+    def getItems(accountId, types) {
         if (accountId instanceof String) {
             accountId = new ObjectId(accountId)
         }
         def coll = mongoService.collection(collectionName)
-        DBObject query = new BasicDBObject("aid", accountId)
+        DBObject query = new BasicDBObject('aid', accountId)
+        if (types) {
+            query.put('type', new BasicDBObject('$in', types))
+        }
         def items = coll.find(query).collectEntries { item ->
-            return [ (item.iid) : item.data]
+            return [
+                    (item.iid) : [
+                            type: item.type,
+                            info: item.info
+                    ]
+            ]
         }
         return items
     }
