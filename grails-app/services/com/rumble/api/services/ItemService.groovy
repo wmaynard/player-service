@@ -5,6 +5,8 @@ import com.mongodb.DBObject
 import com.mongodb.client.model.FindOneAndUpdateOptions
 import com.mongodb.client.model.ReturnDocument
 import com.mongodb.session.ClientSession
+import com.rumble.platform.exception.ApplicationException
+import com.rumble.platform.exception.BadRequestException
 import groovy.json.JsonSlurper
 import org.bson.types.ObjectId
 
@@ -27,7 +29,7 @@ class ItemService {
         }
         def coll = mongoService.collection(collectionName)
         DBObject query = new BasicDBObject('aid', accountId).append('iid', itemId)
-        BasicDBObject doc = new BasicDBObject('$set', new BasicDBObject('info', data.info).append('type', data.type))
+        BasicDBObject doc = new BasicDBObject('$set', new BasicDBObject('data', data.data).append('type', data.type))
             .append('$setOnInsert', new BasicDBObject('aid', accountId).append('iid', itemId))
         coll.findOneAndUpdate(
                 clientSession,
@@ -59,7 +61,7 @@ class ItemService {
             return [
                     (item.iid) : [
                             type: item.type,
-                            info: item.info
+                            data: item.data
                     ]
             ]
         }

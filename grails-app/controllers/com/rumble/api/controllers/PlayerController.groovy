@@ -326,7 +326,7 @@ class PlayerController {
      *           "8e6e8be9-8d66-4c54-914c-28a9664e8ff3":
      *           {
      *               "type": "hero",
-     *               "info":
+     *               "data":
      *               {
      *                   "anything": "the game needs"
      *               }
@@ -342,7 +342,7 @@ class PlayerController {
      *  - Only components present in the request will be updated (missing ones will not be deleted).
      *  - A component will be deleted if instead of data, the incoming data contains "delete": true
      *  - Component data can either be an embedded list or serialized JSON.
-     *  - Attempts to update/delete items that belong to another player will be ignored.
+     *  - Item ids are not globally unique; they are by player. There is no way to touch someone else's items.
      *  - Deletes of non-existent components and items are ignored. (This API is idempotent.)
      *
      * TODO:
@@ -350,13 +350,10 @@ class PlayerController {
      *  - Add optimistic concurrency control with versioning? Revoke prior auth tokens?
      */
     def updateTransaction() {
-
+        def accountId = authService.requireClientAuth(request)
         if (!request.getHeader("content-type") == "application/json") {
             throw new BadRequestException("expected content type application/json")
         }
-
-        def accountId = authService.requireClientAuth(request)
-
         MDC.put('accountId', accountId)
 
         def requestData = request.JSON
