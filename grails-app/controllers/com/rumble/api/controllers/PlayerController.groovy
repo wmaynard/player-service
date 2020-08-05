@@ -834,8 +834,8 @@ class PlayerController {
     def read() {
 
         def accountId = authService.requireClientAuth(request)
-
-        def components = accountService.getDetails(accountId)
+        def names = params.names ? params.names.split(',') : null
+        def components = accountService.getDetails(accountId, names)
 
         def responseData = [
                 success: true,

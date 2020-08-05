@@ -105,9 +105,9 @@ class AccountService {
         return cursor.toList()
     }
 
-    def getDetails(String accountId) {
+    def getDetails(String accountId, names) {
         def details = [:]
-        componentNames.each{ c ->
+        (names ?: componentNames).each{ c ->
             def d = getComponentData(accountId, c)
             details[c] = (d.size() == 1) ? d.first() : d
         }
