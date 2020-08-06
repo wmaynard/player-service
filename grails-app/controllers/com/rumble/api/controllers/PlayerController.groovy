@@ -52,7 +52,7 @@ class PlayerController {
                 remoteAddr: request.remoteAddr,
                 geoipAddr : request.remoteAddr,
                 country   : 'US',
-                serverTime: '\'' + System.currentTimeMillis() + '\'',
+                serverTime: System.currentTimeMillis() as String,
                 assetPath : 'https://rumble-game-alliance-dist.s3.amazonaws.com/client/',
                 clientvars: [:]
         ]
