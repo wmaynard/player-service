@@ -41,6 +41,10 @@ class PlayerController {
 
     def launchTransaction() {
 
+        if (!request.getHeader("content-type") == "application/json") {
+            throw new BadRequestException("expected content type application/json")
+        }
+
         def requestData = request.JSON
 
         if (!requestData.installId) {
