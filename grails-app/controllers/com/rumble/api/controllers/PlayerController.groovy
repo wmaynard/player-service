@@ -41,7 +41,7 @@ class PlayerController {
 
     def launchTransaction() {
 
-        if (!request.getHeader("content-type") == "application/json") {
+        if (!request.getHeader("content-type")?.startsWith("application/json")) {
             throw new BadRequestException("expected content type application/json")
         }
 
@@ -356,7 +356,7 @@ class PlayerController {
      */
     def updateTransaction() {
         def accountId = authService.requireClientAuth(request)
-        if (!request.getHeader("content-type") == "application/json") {
+        if (!request.getHeader("content-type")?.startsWith("application/json")) {
             throw new BadRequestException("expected content type application/json")
         }
         MDC.put('accountId', accountId)

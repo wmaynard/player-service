@@ -24,7 +24,7 @@ class AdminItemController {
 
     def save() {
         authService.checkServerAuth(request)
-        if (!request.getHeader("content-type") == "application/json") {
+        if (!request.getHeader("content-type")?.startsWith("application/json")) {
             throw new BadRequestException("expected content type application/json")
         }
         def requestData = request.JSON
