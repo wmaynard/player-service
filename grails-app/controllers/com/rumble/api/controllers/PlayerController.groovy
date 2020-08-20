@@ -840,14 +840,15 @@ class PlayerController {
         def accountId = authService.requireClientAuth(request)
         def names = params.names ? params.names.split(',') : null
         def components = accountService.getDetails(accountId, names)
-        def serialized = params.serialized as Boolean
+        def serialized = params.boolean('serialized')
 
         def responseData = [
                 success: true,
                 components: components.collect {
+                    def data = it.value.data ?: [:]
                     [
                             name: it.key,
-                            data: serialized ? (it.value.data as JSON).toString() : it.value.data
+                            data: serialized ? (data as JSON).toString() : data
                     ]
                 }
         ]
