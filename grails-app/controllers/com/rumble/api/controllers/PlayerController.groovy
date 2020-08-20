@@ -365,6 +365,7 @@ class PlayerController {
 
         def responseData = [
                 success   : false,
+                accountId: accountId,
                 serverTime: '\'' + System.currentTimeMillis() + '\''
         ]
 
@@ -844,6 +845,7 @@ class PlayerController {
 
         def responseData = [
                 success: true,
+                accountId: accountId,
                 components: components.collect {
                     def data = it.value.data ?: [:]
                     [
