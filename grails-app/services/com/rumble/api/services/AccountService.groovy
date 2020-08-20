@@ -109,7 +109,7 @@ class AccountService {
         def details = [:]
         (names ?: componentNames).each{ c ->
             def d = getComponentData(accountId, c)
-            details[c] = (d.size() == 1) ? d.first() : d
+            details[c] = d?d.first():[:]
         }
 
         return details
