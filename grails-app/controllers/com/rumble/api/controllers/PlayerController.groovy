@@ -3,13 +3,12 @@ package com.rumble.api.controllers
 import com.mongodb.MongoCommandException
 import com.mongodb.MongoException
 import com.rumble.api.services.ProfileTypes
-import com.rumble.platform.exception.AuthException
-import com.rumble.platform.exception.ApplicationException
 import com.rumble.platform.exception.BadRequestException
+import com.rumble.platform.exception.HttpMethodNotAllowedException
 import com.rumble.platform.exception.PlatformException
 import grails.converters.JSON
-import groovy.json.JsonSlurper
 import groovy.json.JsonOutput
+import groovy.json.JsonSlurper
 import org.bson.json.JsonMode
 import org.bson.json.JsonWriterSettings
 import org.slf4j.MDC
@@ -41,15 +40,17 @@ class PlayerController {
 
     def launchTransaction() {
 
+        if (request.method != 'POST') {
+            throw new HttpMethodNotAllowedException()
+        }
+
         if (!request.getHeader("content-type")?.startsWith("application/json")) {
             throw new BadRequestException("expected content type application/json")
         }
 
         def requestData = request.JSON
 
-        if (!requestData.installId) {
-            throw new BadRequestException('Required parameter installId was not provided.')
-        }
+        paramsService.require(requestData, 'installId')
 
         def responseData = [
                 success   : false,
@@ -299,7 +300,6 @@ class PlayerController {
     }
 
     def update() {
-
         mongoService.runTransactionWithRetry({ updateTransaction() }, 1)
     }
 
@@ -355,6 +355,9 @@ class PlayerController {
      *  - Add optimistic concurrency control with versioning? Revoke prior auth tokens?
      */
     def updateTransaction() {
+        if (request.method != 'POST') {
+            throw new HttpMethodNotAllowedException()
+        }
         def accountId = authService.requireClientAuth(request)
         if (!request.getHeader("content-type")?.startsWith("application/json")) {
             throw new BadRequestException("expected content type application/json")
@@ -375,7 +378,14 @@ class PlayerController {
                 clientSession = mongoService.client().startSession()
                 clientSession.startTransaction()
 
-                requestData.components?.each { component ->
+                requestData.components.each { component ->
+                    def unknownComponents = requestData.components.findAll
+                            { !accountService.componentNames.contains(it.name) }
+                    if (unknownComponents) {
+                        throw new BadRequestException('Unknown component(s)', null, [names: unknownComponents.collect {it.name}])
+                    }
+                }
+                requestData.components.each { component ->
                     if (component.delete == true) {
                         accountService.deleteComponentData(clientSession, accountId, component.name)
                     } else {
@@ -400,6 +410,7 @@ class PlayerController {
 
             mongoService.commitWithRetry(clientSession, 1)
         } catch (MongoException err) {
+            logger.error(err)
             throw new PlatformException('dbError', err.response?.errmsg)
         } finally {
             clientSession?.close()
@@ -417,6 +428,9 @@ class PlayerController {
      * between devices connected to the same account. Uses multipart request/response to transmit component data.
      */
     def save() {
+        if (request.method != 'POST') {
+            throw new HttpMethodNotAllowedException()
+        }
         mongoService.runTransactionWithRetry({ saveTransaction() }, 1)
     }
 
@@ -838,6 +852,10 @@ class PlayerController {
 
     def read() {
 
+        if (request.method != 'POST') {
+            throw new HttpMethodNotAllowedException()
+        }
+
         def accountId = authService.requireClientAuth(request)
         def names = params.names ? params.names.split(',') : null
         def components = accountService.getDetails(accountId, names)
@@ -859,6 +877,10 @@ class PlayerController {
     }
 
     def summary() {
+
+        if (request.method != 'POST') {
+            throw new HttpMethodNotAllowedException()
+        }
 
         authService.requireClientAuth(request)
 
