@@ -16,11 +16,23 @@ class AccountService {
     private static def COMPONENT_COLLECTION_NAME_PREFIX = "c_"
     private static def COLLECTION_NAME = "player"
 
+    def componentNamesCache = null
+    def componentNamesCacheExpire = 0L
+
     // TODO: this would benefit from some caching
     def getComponentNames() {
-        mongoService.collectionNames().findResults
-                { it.startsWith(COMPONENT_COLLECTION_NAME_PREFIX) ?
-                        it.substring(COMPONENT_COLLECTION_NAME_PREFIX.length()) : null }
+        if (componentNamesCacheExpire < System.currentTimeMillis()) {
+            synchronized(this) {
+                if (componentNamesCacheExpire < System.currentTimeMillis()) {
+                    componentNamesCache =
+                            mongoService.collectionNames().findResults
+                                    { it.startsWith(COMPONENT_COLLECTION_NAME_PREFIX) ?
+                                            it.substring(COMPONENT_COLLECTION_NAME_PREFIX.length()) : null }
+                    componentNamesCacheExpire = System.currentTimeMillis() + 60000L
+                }
+            }
+        }
+        return componentNamesCache
     }
 
     def validateAccountId(accountId){
