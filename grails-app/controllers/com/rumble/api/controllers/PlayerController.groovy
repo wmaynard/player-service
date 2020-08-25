@@ -878,6 +878,31 @@ class PlayerController {
         render responseData as JSON
     }
 
+    def readAll() {
+
+        if (request.method != 'POST') {
+            throw new HttpMethodNotAllowedException()
+        }
+
+        def accountId = authService.requireClientAuth(request)
+        def components = accountService.getDetails(accountId, null)
+        def serialized = params.boolean('serialized')
+
+        def responseData = [
+                success: true,
+                accountId: accountId,
+                components: components.collect {
+                    def data = it.value.data ?: [:]
+                    [
+                            name: it.key,
+                            data: serialized ? (data as JSON).toString() : data
+                    ]
+                }
+        ]
+
+        render responseData as JSON
+    }
+
     def summary() {
 
         if (request.method != 'POST') {
