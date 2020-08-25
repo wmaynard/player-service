@@ -856,8 +856,10 @@ class PlayerController {
             throw new HttpMethodNotAllowedException()
         }
 
+        paramsService.require(params, 'names')
+
         def accountId = authService.requireClientAuth(request)
-        def names = params.names ? params.names.split(',') : null
+        def names = params.names.split(',')
         def components = accountService.getDetails(accountId, names)
         def serialized = params.boolean('serialized')
 
