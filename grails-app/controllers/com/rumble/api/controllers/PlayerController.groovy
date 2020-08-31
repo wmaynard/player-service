@@ -147,7 +147,7 @@ class PlayerController {
 
                 def authHeader = request.getHeader('Authorization')
                 try {
-                    if (authHeader?.startsWith('Bearer ')) {
+                    if (authHeader?.toLower()?.startsWith('bearer ')) {
                         def accessToken = authHeader.substring(7)
                         def tokenAuth = accessTokenService.validateAccessToken(accessToken, false, false)
                         if ((tokenAuth.aud == game) && (tokenAuth.sub == id.toString())) {
