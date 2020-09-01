@@ -26,7 +26,13 @@ class GoogleService {
         GoogleIdTokenVerifier verifier = new GoogleIdTokenVerifier.Builder
                 (new NetHttpTransport(), new JacksonFactory()).setAudience(Collections.singletonList(GOOGLE_CLIENT_ID)).build();
 
-        GoogleIdToken idToken = verifier.verify(token?.idToken);
+        GoogleIdToken idToken = verifier.verify(token.idToken);
+
+        if (!idToken) {
+            logger.warn("Failed to verify google id token", [
+                clientId: GOOGLE_CLIENT_ID, idToken: token.idToken
+            ])
+        }
 
         return idToken?.payload?.getSubject()
     }
