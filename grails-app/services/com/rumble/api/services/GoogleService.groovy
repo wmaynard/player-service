@@ -24,16 +24,25 @@ class GoogleService {
         // https://developers.google.com/identity/sign-in/android/backend-auth
          */
         GoogleIdTokenVerifier verifier = new GoogleIdTokenVerifier.Builder
-                (new NetHttpTransport(), new JacksonFactory()).setAudience(Collections.singletonList(GOOGLE_CLIENT_ID)).build();
+                (new NetHttpTransport(), new JacksonFactory()).build();
 
         GoogleIdToken idToken = verifier.verify(token.idToken);
 
         if (!idToken) {
             logger.warn("Failed to verify google id token", [
-                clientId: GOOGLE_CLIENT_ID, idToken: token.idToken
+                clientId: GOOGLE_CLIENT_ID,
+                idToken: token.idToken
             ])
+            return null
+        } else if ((idToken.payload.azp != GOOGLE_CLIENT_ID) && (idToken.payload.aud != GOOGLE_CLIENT_ID)) {
+            logger.warn("Google play client id mismatch", [
+                    clientId: GOOGLE_CLIENT_ID,
+                    aud: idToken.payload.aud,
+                    azp: idToken.payload.azp
+            ])
+            return null
+        } else {
+            return idToken.payload.getSubject()
         }
-
-        return idToken?.payload?.getSubject()
     }
 }

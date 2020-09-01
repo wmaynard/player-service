@@ -27,9 +27,7 @@ class BootStrap {
         requireSystemProperty('FB_APP_SECRET')
 
         // Google Play
-        requireSystemProperty('GOOGLE_VALIDATE_TOKEN_URL')
-        requireSystemProperty('GOOGLE_APP_ID')
-        requireSystemProperty('GOOGLE_APP_SECRET')
+        requireSystemProperty('GOOGLE_CLIENT_ID')
 
         // geo-ip
         requireSystemProperty('GEO_IP_S3_REGION')
