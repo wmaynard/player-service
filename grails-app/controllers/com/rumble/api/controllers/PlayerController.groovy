@@ -98,22 +98,13 @@ class PlayerController {
             }
         }
 
-        def channel = requestData.channel ?: ""
-        def channelScope = "channel:${channel}"
-        def channelConfig = dynamicConfigService.getConfig(channelScope)
-
-        //Map channel-specific game identifier to game gukey
-        if (requestData.gameGukey) {
-            game = requestData.gameGukey
-        }
-        String gameGukey = channelConfig["game.${game}.gukey"] ?: game
-        def gameConfig = dynamicConfigService.getGameConfig(gameGukey)
+        def gameConfig = dynamicConfigService.getGameConfig(game)
 
         //This looks for variables with a certain prefix (eg_ kr:clientvars:) and puts them in the client_vars structure
         //The prefixes are in a json list, and will be applied in order, overlaying any variable that collides
         def clientVersion = requestData.clientVersion
         def prefixes = gameConfig.list("clientVarPrefixes")
-        def configs = [channelConfig, gameConfig]
+        def configs = [gameConfig]
         def clientvars = extractClientVars(clientVersion, prefixes, configs)
         if (clientvars) {
             responseData.clientvars = clientvars
@@ -164,7 +155,7 @@ class PlayerController {
 
                 if (!responseData.accessToken) {
                     responseData.accessToken = accessTokenService.generateAccessToken(
-                            gameGukey, id.toString(), null, gameConfig.long('auth:maxTokenLifeSeconds', 345600L)) // 4d
+                            game, id.toString(), null, gameConfig.long('auth:maxTokenLifeSeconds', 345600L)) // 4d
                 }
 
                 //TODO: Validate account
@@ -529,22 +520,13 @@ class PlayerController {
         //TODO: Remove, for testing only
         //manifest.identity.facebook.accessToken = "EAAGfjfXqzCIBAG57lgP2LHg91j96mw1a0kXWXWo9OqzqKGB0VDqQLkOFibrt86fRybpZBHuMZCJ6P7h03KT75wnwLUQPROjyE98iLincC0ZCRAfCvubC77cPoBtE0PGV2gsFjKnMMHKBDrwhGfeN3FZAoiZCEeNWlg91UR6njFZALQOEab7EAuyyH6WkKevYrCIiN5hnOtcGVZCEC82nGH4"
 
-        def channel = identity.channel ?: ""
-        def channelScope = "channel:${channel}"
-        def channelConfig = dynamicConfigService.getConfig(channelScope)
-
-        //Map channel-specific game identifier to game gukey
-        if (identity.gameGukey) {
-            game = identity.gameGukey
-        }
-        String gameGukey = channelConfig["game.${game}.gukey"] ?: game
-        def gameConfig = dynamicConfigService.getGameConfig(gameGukey)
+        def gameConfig = dynamicConfigService.getGameConfig(game)
 
         //This looks for variables with a certain prefix (eg_ kr:clientvars:) and puts them in the client_vars structure
         //The prefixes are in a json list, and will be applied in order, overlaying any variable that collides
         def clientVersion = identity.clientVersion
         def prefixes = gameConfig.list("clientVarPrefixes")
-        def configs = [channelConfig, gameConfig]
+        def configs = [gameConfig]
         def clientvars = extractClientVars(clientVersion, prefixes, configs)
         if (clientvars) {
             responseData.clientvars = clientvars
@@ -598,7 +580,7 @@ class PlayerController {
 
                 if (!responseData.accessToken) {
                     responseData.accessToken = accessTokenService.generateAccessToken(
-                            gameGukey, id.toString(), null, gameConfig.long('auth:maxTokenLifeSeconds', 345600L)) // 4d
+                            game, id.toString(), null, gameConfig.long('auth:maxTokenLifeSeconds', 345600L)) // 4d
                 }
 
                 //TODO: Validate account
