@@ -906,13 +906,13 @@ class PlayerController {
         def accounts = []
         def slurper = new JsonSlurper()
         if (params.accounts) {
-            def a = slurper.parseText(params.accounts)
+            def a = params.accounts.split(',') as List
             accounts = accountService.validateAccountId(a)
         }
 
 
         if (params.facebook) {
-            def facebookIds = slurper.parseText(params.facebook)
+            def facebookIds = params.facebook.split(',') as List
             facebookProfiles = profileService.getProfilesFromList(ProfileTypes.FACEBOOK, facebookIds)
             accounts += accountService.validateAccountId(facebookProfiles.collect { it.aid })
         }
