@@ -348,7 +348,6 @@ class PlayerController {
         if (request.method != 'POST') {
             throw new HttpMethodNotAllowedException()
         }
-        authService.enforceServerAuth(request)
         def accountId = authService.requireClientAuth(request)
         if (!request.getHeader("content-type")?.startsWith("application/json")) {
             throw new BadRequestException("expected content type application/json")
@@ -356,6 +355,8 @@ class PlayerController {
         MDC.put('accountId', accountId)
 
         def requestData = request.JSON
+
+        authService.enforceServerAuth(request, requestData)
 
         def responseData = [
                 success   : false,
