@@ -9,6 +9,7 @@ class ItemController {
 
     def list() {
 
+        authService.enforceServerAuth(request)
         def accountId = authService.requireClientAuth(request)
         def types = params.types ? params.types.split(',') : null
         def items = itemService.getItems(accountId, types)

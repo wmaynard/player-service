@@ -348,6 +348,7 @@ class PlayerController {
         if (request.method != 'POST') {
             throw new HttpMethodNotAllowedException()
         }
+        authService.enforceServerAuth(request)
         def accountId = authService.requireClientAuth(request)
         if (!request.getHeader("content-type")?.startsWith("application/json")) {
             throw new BadRequestException("expected content type application/json")
@@ -838,6 +839,7 @@ class PlayerController {
 
         paramsService.require(params, 'names')
 
+        authService.enforceServerAuth(request)
         def accountId = authService.requireClientAuth(request)
         def names = params.names.split(',')
         def components = accountService.getDetails(accountId, names)
@@ -864,6 +866,7 @@ class PlayerController {
             throw new HttpMethodNotAllowedException()
         }
 
+        authService.enforceServerAuth(request)
         def accountId = authService.requireClientAuth(request)
         def components = accountService.getDetails(accountId, null)
         def serialized = params.boolean('serialized')
@@ -889,6 +892,7 @@ class PlayerController {
             throw new HttpMethodNotAllowedException()
         }
 
+        authService.enforceServerAuth(request)
         authService.requireClientAuth(request)
 
         def facebookProfiles
