@@ -855,7 +855,7 @@ class PlayerController {
                 }
         ]
 
-        render responseData as JSON
+        render (responseData as JSON)
     }
 
     def readAll() {
@@ -880,7 +880,7 @@ class PlayerController {
                 }
         ]
 
-        render responseData as JSON
+        render (responseData as JSON)
     }
 
     def summary() {
@@ -935,7 +935,7 @@ class PlayerController {
             responseData.accounts = []
         }
 
-        render responseData as JSON
+        render (responseData as JSON)
     }
 
     private def sendError(out, boundary, responseData) {
