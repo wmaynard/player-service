@@ -65,7 +65,7 @@ class AdminPlayerController {
 
         def responseData = [:]
         if(account) {
-            def components = accountService.getDetails(params.id)
+            def components = accountService.getDetails(params.id, null)
             def profiles = profileService.getProfilesForAccount(params.id)
 
             responseData = [
