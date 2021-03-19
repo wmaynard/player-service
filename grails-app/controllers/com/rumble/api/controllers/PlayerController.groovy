@@ -370,13 +370,17 @@ class PlayerController {
                 clientSession = mongoService.client().startSession()
                 clientSession.startTransaction()
 
+                // Verify all components we're modifying exist
                 requestData.components.each { component ->
-                    def unknownComponents = requestData.components.findAll
-                            { !accountService.componentNames.contains(it.name) }
+                    def unknownComponents = requestData.components.findAll{
+                        !accountService.componentNames.contains(it.name)
+                    }
                     if (unknownComponents) {
                         throw new BadRequestException('Unknown component(s)', null, [names: unknownComponents.collect {it.name}])
                     }
                 }
+
+                // Update components
                 requestData.components.each { component ->
                     if (component.delete == true) {
                         accountService.deleteComponentData(clientSession, accountId, component.name)
@@ -385,6 +389,7 @@ class PlayerController {
                     }
                 }
 
+                // Update items
                 requestData.items?.each { item ->
                     if (item.delete == true) {
                         itemService.deleteItem(clientSession, accountId, item.id)
@@ -392,6 +397,9 @@ class PlayerController {
                         itemService.saveItem(clientSession, accountId, item.id, item)
                     }
                 }
+
+                // Update account data
+                accountService.updateAccountData(clientSession, accountId, requestData)
             } catch (MongoCommandException e) {
                 clientSession.abortTransaction()
                 throw e
