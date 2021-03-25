@@ -830,7 +830,9 @@ class PlayerController {
             configs.each { config ->
                 config.each {
                     k, v ->
-                        if (k.startsWith(defaultVar)) clientvars.put(k.replace(defaultVar, ''), v)
+                        // set default if variable hasn't been set already
+                        def defaultKey = k.replace(defaultVar, '')
+                        if (k.startsWith(defaultVar) && !clientvars.containsKey(defaultKey)) clientvars.put(defaultKey, v)
                         versionVars.each {
                             if (k.startsWith(it)) clientvars.put(k.replace(it, ''), v)
                         }
