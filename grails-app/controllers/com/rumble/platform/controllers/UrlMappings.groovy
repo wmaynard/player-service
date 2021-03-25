@@ -4,6 +4,7 @@ class UrlMappings {
 
     static mappings = {
         "/admin/player/$action"(controller: 'adminPlayer')
+        "/admin/player/item/$action"(controller: 'adminItem')
 
         "/$controller/$action?/$id?(.$format)?"{
             constraints {
