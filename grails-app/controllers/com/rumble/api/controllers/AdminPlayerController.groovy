@@ -49,6 +49,7 @@ class AdminPlayerController {
             responseData.errorText = "Player '${params.s}' not found."
         }
 
+        logger.info("Player search", params + responseData)
         render responseData as JSON
     }
 
@@ -84,6 +85,7 @@ class AdminPlayerController {
             ]
         }
 
+        logger.info("Player details", params + responseData)
         render responseData as JSON
     }
 
