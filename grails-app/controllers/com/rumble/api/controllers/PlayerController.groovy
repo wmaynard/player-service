@@ -267,7 +267,15 @@ class PlayerController {
             responseData.errorCode = "dbError"
             responseData.debugText = err.response?.errmsg
             render(responseData as JSON)
-            logger.error("MongoDB Error", err)
+
+            if(err.code == 112) //write transaction error. This happens and isn't a real error
+            {
+                logger.warn("MonogoDB Warning", err)
+            }
+            else
+            {
+                logger.error("MonogoDB Error", err)
+            }
             return false
         } catch (PlatformException err) {
             responseData.errorCode = err.getErrorCode()
@@ -766,7 +774,15 @@ class PlayerController {
             responseData.errorCode = "dbError"
             responseData.debugText = err.response?.errmsg
             sendError(out, boundary, responseData)
-            logger.error("MongoDB Error", err)
+
+            if(err.code == 112) //write transaction error. This happens and isn't a real error
+            {
+                logger.warn("MonogoDB Warning", err)
+            }
+            else
+            {
+                logger.error("MonogoDB Error", err)
+            }
             return false
         } catch (PlatformException err) {
             responseData.errorCode = err.getErrorCode()
