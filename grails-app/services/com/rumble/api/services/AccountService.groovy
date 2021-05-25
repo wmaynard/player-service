@@ -15,6 +15,7 @@ class AccountService {
 
     private static def COMPONENT_COLLECTION_NAME_PREFIX = "c_"
     private static def COLLECTION_NAME = "player"
+    private static def FORCE_LOGOUT_FLAG = "forceLogout"
 
     def componentNamesCache = null
     def componentNamesCacheExpire = 0L
@@ -317,6 +318,29 @@ class AccountService {
         return mergeToken
     }
 
+    // Fix for PLATF-5247/5248 | Publishing App data is overwritten by active clients
+    // Sets a flag under Player > Components > Data.  If the flag is set, forces /player/update to fail and force the
+    // client to relaunch.  Flag is cleared in /player/launch.
+    private def getForcedLogout(session, accountId) {
+        def output = false
+        try {
+            def collection = mongoService.collection(getComponentCollectionName("account"))
+            DBObject query = new BasicDBObject("aid", toObjectId(accountId))
+            def result = collection.find(query)
+            output = result[0].get("data").get(FORCE_LOGOUT_FLAG)
+        }
+        catch (e) {
+//            System.println("Couldn't retrieve forced logout flag")
+        }
+        return output
+    }
+    private def setForcedLogout(session, accountId, value) {
+        def collection = mongoService.collection(getComponentCollectionName("account"))
+        DBObject query = new BasicDBObject("aid", toObjectId(accountId))
+        BasicDBObject doc = new BasicDBObject('$set', new BasicDBObject("data.forceLogout", value))
+        collection.findOneAndUpdate(session, query, doc)
+    }
+
     def hasInstallConflict(player, identity){
         return (player.lsi != identity.installId)
     }
@@ -337,5 +361,10 @@ class AccountService {
         }
 
         return data
+    }
+    private def toObjectId(value) {
+        if (value instanceof String)
+            return new ObjectId(value)
+        return value
     }
 }

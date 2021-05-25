@@ -90,7 +90,6 @@ class AdminPlayerController {
     }
 
     def updateAccount() {
-        //TODO: Ability to force an update
         authService.checkServerAuth(request)
 
         paramsService.require(params, 'aid', 'data')
@@ -143,6 +142,8 @@ class AdminPlayerController {
                 identityData += ["dataVersion": "PUBLISHING_APP"]
             }
 
+            // Require active users to re-login to accept server-authoritative changes
+            accountService.setForcedLogout(clientSession, id, true)
             def account = accountService.updateAccountData(clientSession, id, identityData)
             clientSession.commitTransaction()
             responseData.success = true
@@ -161,7 +162,6 @@ class AdminPlayerController {
 
     // Update player component data
     def updateComponent(){
-        //TODO: Ability to force an update
         authService.checkServerAuth(request)
 
         paramsService.require(params, 'aid', 'data')
@@ -187,6 +187,9 @@ class AdminPlayerController {
             if(forceConflict.toBoolean()) {
                 def account = accountService.updateAccountData(clientSession, id, ["dataVersion": "PUBLISHING_APP"])
             }
+
+            // Require active users to re-login to accept server-authoritative changes
+            accountService.setForcedLogout(clientSession, id, true)
             clientSession.commitTransaction()
             responseData.success = true
         } catch(all) {

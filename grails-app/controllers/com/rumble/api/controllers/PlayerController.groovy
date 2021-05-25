@@ -39,7 +39,6 @@ class PlayerController {
     }
 
     def launchTransaction() {
-
         if (request.method != 'POST') {
             throw new HttpMethodNotAllowedException()
         }
@@ -250,6 +249,9 @@ class PlayerController {
                         // do we really need this update? maybe not on a new player?
                         updatedAccount = accountService.updateAccountData(clientSession, id.toString(), requestData, null)
                         responseData.createdDate = updatedAccount.cd?.toString() ?: null
+
+                        // Everything has succeeded; mark the flag for forced logout to false
+                        accountService.setForcedLogout(clientSession, id, false)
                     }
 
                     responseData.accountId = id.toString()
@@ -377,6 +379,10 @@ class PlayerController {
             try {
                 clientSession = mongoService.client().startSession()
                 clientSession.startTransaction()
+
+                if (accountService.getForcedLogout(clientSession, accountId)) {
+                    throw new BadRequestException("Your token has expired.")
+                }
 
                 // Verify all components we're modifying exist
                 requestData.components.each { component ->
