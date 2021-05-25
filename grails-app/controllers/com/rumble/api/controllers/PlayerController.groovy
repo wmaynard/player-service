@@ -381,7 +381,8 @@ class PlayerController {
                 clientSession.startTransaction()
 
                 if (accountService.getForcedLogout(clientSession, accountId)) {
-                    throw new BadRequestException("Your token has expired.")
+                    // Add extra responseData field for better frontend error handling
+                    throw new BadRequestException("Your token has expired.", null, [ sessionExpired: true ])
                 }
 
                 // Verify all components we're modifying exist
