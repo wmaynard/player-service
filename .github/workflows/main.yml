@@ -38,11 +38,6 @@ jobs:
 # Run gradlew
     - name: Build with Gradle
       run: ./gradlew assemble
-# Upload Artifact of build
-    - uses: actions/upload-artifact@v2
-      with:
-        name: player-service
-        path: build/libs/*.war
 # Clean up some files before saving Gradle cache
     - name: Cleanup Gradle Cache
       run: |
@@ -68,3 +63,4 @@ jobs:
       run: |
         docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
         docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+        docker push $ECR_REGISTRY/$ECR_REPOSITORY:latest
