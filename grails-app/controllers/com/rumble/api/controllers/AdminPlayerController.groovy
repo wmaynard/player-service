@@ -12,6 +12,7 @@ class AdminPlayerController {
     def mongoService
     def paramsService
     def profileService
+    def itemService
 
     def search() {
         authService.checkServerAuth(request)
@@ -68,13 +69,15 @@ class AdminPlayerController {
         if(account) {
             def components = accountService.getDetails(params.id, null)
             def profiles = profileService.getProfilesForAccount(params.id)
+            def items = itemService.getItems(params.id, null)
 
             responseData = [
                     success: true,
                     'data': [
                             account   : account,
                             components: components,
-                            profiles  : profiles
+                            profiles  : profiles,
+                            items     : items
                     ]
             ]
         } else {
