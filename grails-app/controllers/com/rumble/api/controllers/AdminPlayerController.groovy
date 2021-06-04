@@ -207,4 +207,42 @@ class AdminPlayerController {
         render responseData as JSON
     }
 
+    def updateItems() {
+        authService.checkServerAuth(request)
+
+        paramsService.require(params, 'aid', 'data')
+
+        def id = params.aid.trim()
+        def data = params.data.trim()
+        def forceConflict = params.forceConfict?.trim() ?: true
+        def responseData = [:]
+        def clientSession
+        try {
+            clientSession = mongoService.client().startSession()
+            clientSession.startTransaction()
+
+            def jsonSlurper = new JsonSlurper()
+            data = jsonSlurper.parseText(data)
+
+            System.println("Saving items!")
+            data.each { item ->
+                itemService.saveItem(clientSession, id, item.id, item)
+            }
+
+            // Require active users to re-login to accept server-authoritative changes
+            accountService.setForcedLogout(clientSession, id, true)
+            clientSession.commitTransaction()
+            responseData.success = true
+        } catch(all) {
+            logger.error(all.getMessage(), all)
+            clientSession.abortTransaction()
+            responseData.success = false
+            responseData.errorText = all.getMessage()
+        } finally {
+            clientSession?.close()
+        }
+
+        render responseData as JSON
+    }
+
 }
