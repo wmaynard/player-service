@@ -11,7 +11,7 @@ grails:
 info:
     app:
         name: '@info.app.name@'
-        version: '@info.app.version@'
+        Ωversion: '@info.app.version@'
         grailsVersion: '@info.app.grailsVersion@'
 spring:
     main:

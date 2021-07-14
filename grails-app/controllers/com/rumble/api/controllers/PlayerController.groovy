@@ -31,6 +31,38 @@ class PlayerController {
 
     def game = System.getProperty("GAME_GUKEY")
 
+    // AccessTokenService is not a service.  It's just a class in a lib used only in player-service.
+    // While the intention was probably to break it out into its own service, it didn't make it there.
+    // In order to get past a roadblock in Chat V1 authentication, this new endpoint will be exposed to
+    // allow Chat to validate tokens issued by player-service.  Perhaps it makes sense that only player-service
+    // can generate and validate tokens, however - at least until a token-service exists that can issue admin-only
+    // tokens to Rumblers with elevated privileges (e.g. CS).
+    def verify() {
+        def responseData = [
+            success: false
+        ]
+        def authHeader = request.getHeader('Authorization')
+        try {
+            if (authHeader?.startsWith('Bearer ')) {
+                def accessToken = authHeader.substring(7)
+                def tokenAuth = accessTokenService.validateAccessToken(accessToken, false, false)
+                def aid = tokenAuth.sub;
+                def audience = tokenAuth.aud;
+
+                if (audience != game)
+                    throw new Exception("Audience mismatch")
+
+                responseData.success = true
+                responseData.aid = aid
+                responseData.expiration = tokenAuth.exp;
+                responseData.issuer = tokenAuth.iss;
+            }
+        } catch (Exception e) {
+            response.error = "authentication";
+            logger.error("Invalid token: " + e.message)
+        }
+        render(responseData as JSON)
+    }
     /**
      * Used for server-authoritative games.
      */
