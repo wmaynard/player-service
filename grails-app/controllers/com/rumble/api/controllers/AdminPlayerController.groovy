@@ -86,9 +86,10 @@ class AdminPlayerController {
                     errorCode: "notFound",
                     errorText: "Player '${params.id}' not found"
             ]
+
+            logger.info("Player details", params + responseData)
         }
 
-        logger.info("Player details", params + responseData)
         render responseData as JSON
     }
 
