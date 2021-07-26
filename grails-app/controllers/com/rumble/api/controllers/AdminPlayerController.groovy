@@ -98,7 +98,7 @@ class AdminPlayerController {
     }
 
     def generateToken() {
-        authService.checkServerAuth(request)
+        authService.checkServerAuth(request, request.JSON)
 
         def gameConfig = dynamicConfigService.getGameConfig(game)
         def lifetime = 60 * 60 * 24 * 400; // 60s * 60m * 24h * {number of days}
