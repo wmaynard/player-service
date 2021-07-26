@@ -6,6 +6,7 @@ import groovy.json.JsonOutput
 import groovy.json.JsonSlurper
 
 class AdminPlayerController {
+    def accessTokenService
     def accountService
     def authService
     def logger = new com.rumble.platform.common.Log(this.class)
@@ -13,6 +14,48 @@ class AdminPlayerController {
     def paramsService
     def profileService
     def itemService
+    def dynamicConfigService
+
+    def game = System.getProperty("GAME_GUKEY")
+
+    def details(){
+        authService.checkServerAuth(request)
+
+        paramsService.require(params, 'id')
+
+        def account
+        def accounts = accountService.find(params.id)
+        if(accounts && accounts.size() > 0) {
+            account = accounts.first()
+        }
+
+        def responseData = [:]
+        if(account) {
+            def components = accountService.getDetails(params.id, null)
+            def profiles = profileService.getProfilesForAccount(params.id)
+            def items = itemService.getItems(params.id, null)
+
+            responseData = [
+                    success: true,
+                    'data': [
+                            account   : account,
+                            components: components,
+                            profiles  : profiles,
+                            items     : items
+                    ]
+            ]
+        } else {
+            responseData = [
+                    success: false,
+                    errorCode: "notFound",
+                    errorText: "Player '${params.id}' not found"
+            ]
+
+            logger.info("Player details", params + responseData)
+        }
+
+        render responseData as JSON
+    }
 
     def search() {
         authService.checkServerAuth(request)
@@ -54,42 +97,18 @@ class AdminPlayerController {
         render responseData as JSON
     }
 
-    def details(){
+    def generateToken() {
         authService.checkServerAuth(request)
 
-        paramsService.require(params, 'id')
+        def gameConfig = dynamicConfigService.getGameConfig(game)
+        def lifetime = 60 * 60 * 24 * 400; // 60s * 60m * 24h * {number of days}
+        def token = accessTokenService.generateAccessToken(
+                game, "RumbleAdmin", [admin: true], gameConfig.long('auth:maxTokenLifeSeconds', lifetime)) // 4d
 
-        def account
-        def accounts = accountService.find(params.id)
-        if(accounts && accounts.size() > 0) {
-            account = accounts.first()
-        }
-
-        def responseData = [:]
-        if(account) {
-            def components = accountService.getDetails(params.id, null)
-            def profiles = profileService.getProfilesForAccount(params.id)
-            def items = itemService.getItems(params.id, null)
-
-            responseData = [
-                    success: true,
-                    'data': [
-                            account   : account,
-                            components: components,
-                            profiles  : profiles,
-                            items     : items
-                    ]
-            ]
-        } else {
-            responseData = [
-                    success: false,
-                    errorCode: "notFound",
-                    errorText: "Player '${params.id}' not found"
-            ]
-
-            logger.info("Player details", params + responseData)
-        }
-
+        def responseData = [
+            success: true,
+            token: token
+        ]
         render responseData as JSON
     }
 

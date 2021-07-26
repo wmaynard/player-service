@@ -56,6 +56,9 @@ class PlayerController {
                 responseData.aid = aid
                 responseData.expiration = tokenAuth.exp;
                 responseData.issuer = tokenAuth.iss;
+
+                if (tokenAuth.admin)
+                    responseData.isAdmin = true
             }
         } catch (Exception e) {
             response.error = "authentication";
