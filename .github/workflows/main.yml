@@ -35,7 +35,7 @@ jobs:
       run: chmod +x gradlew
 # Run gradlew
     - name: Build with Gradle
-      run: ./gradlew assembleRelease
+      run: ./gradlew assemble
 # Clean up some files before saving Gradle cache
     - name: Cleanup Gradle Cache
       run: |
