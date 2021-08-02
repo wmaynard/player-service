@@ -51,17 +51,21 @@ class PlayerController {
 
                 if (audience != game)
                     throw new Exception("Audience mismatch")
+                def secondsRemaining = tokenAuth.exp - new Date().getTime() / 1000L
+                if (secondsRemaining <= 0)
+                    throw new Exception("Token is expired")
 
                 responseData.success = true
                 responseData.aid = aid
-                responseData.expiration = tokenAuth.exp;
-                responseData.issuer = tokenAuth.iss;
+                responseData.expiration = tokenAuth.exp
+                responseData.secondsRemaining = secondsRemaining
+                responseData.issuer = tokenAuth.iss
 
                 if (tokenAuth.admin)
                     responseData.isAdmin = true
             }
         } catch (Exception e) {
-            response.error = "authentication";
+            responseData.error = e.message;
             logger.error("Invalid token: " + e.message)
         }
         render(responseData as JSON)
@@ -298,6 +302,8 @@ class PlayerController {
                 clientSession?.abortTransaction()
                 throw all
             }
+
+            throw new Exception("foo")
 
             mongoService.commitWithRetry(clientSession, 1)
         } catch (MongoException err) {

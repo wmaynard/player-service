@@ -100,10 +100,14 @@ class AdminPlayerController {
     def generateToken() {
         authService.checkServerAuth(request, request.JSON)
 
+        def days = Integer.parseInt(request.getParameter("days") ?: "5")
+        def aid = request.getParameter("aid")
+        def claims = [admin: aid == null]
+        aid = aid ?: "RumbleAdmin"
         def gameConfig = dynamicConfigService.getGameConfig(game)
-        def lifetime = 60 * 60 * 24 * 400; // 60s * 60m * 24h * {number of days}
+        def lifetime = 60 * 60 * 24 * days; // 60s * 60m * 24h * {number of days}
         def token = accessTokenService.generateAccessToken(
-                game, "RumbleAdmin", [admin: true], gameConfig.long('auth:maxTokenLifeSeconds', lifetime)) // 4d
+                game, aid, claims, gameConfig.long('auth:maxTokenLifeSeconds', lifetime)) // 4d
 
         def responseData = [
             success: true,

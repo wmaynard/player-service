@@ -133,6 +133,7 @@ class AccountService {
     def exists(ClientSession clientSession, String installId, upsertData = null) {
         def coll = mongoService.collection(COLLECTION_NAME)
         DBObject query = new BasicDBObject("lsi", installId)
+
         if(upsertData) {
             def now = System.currentTimeMillis()
             def setOnInsertObj = new BasicDBObject()
