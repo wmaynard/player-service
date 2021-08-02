@@ -303,8 +303,6 @@ class PlayerController {
                 throw all
             }
 
-            throw new Exception("foo")
-
             mongoService.commitWithRetry(clientSession, 1)
         } catch (MongoException err) {
             responseData.errorCode = "dbError"
