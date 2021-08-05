@@ -1,7 +1,12 @@
 package com.rumble.api.controllers
 
+import com.mongodb.BasicDBObject
+import com.mongodb.DBObject
 import com.mongodb.MongoCommandException
 import com.mongodb.MongoException
+import com.mongodb.client.FindIterable
+import com.mongodb.client.MongoCollection
+import com.mongodb.client.result.DeleteResult
 import com.rumble.api.services.ProfileTypes
 import com.rumble.platform.exception.BadRequestException
 import com.rumble.platform.exception.HttpMethodNotAllowedException
@@ -9,8 +14,10 @@ import com.rumble.platform.exception.PlatformException
 import grails.converters.JSON
 import groovy.json.JsonOutput
 import groovy.json.JsonSlurper
+import org.bson.Document
 import org.bson.json.JsonMode
 import org.bson.json.JsonWriterSettings
+import org.bson.types.ObjectId
 import org.slf4j.MDC
 import org.springframework.util.MimeTypeUtils
 
@@ -30,6 +37,99 @@ class PlayerController {
     def itemService
 
     def game = System.getProperty("GAME_GUKEY")
+
+    private def random(int max) {
+        return (int) (Math.random() * max)
+    }
+
+    def postmanDiscriminator() {
+        try {
+            render([
+                    success      : true,
+                    discriminator: discriminator(request.JSON.aid, request.JSON.sn, request.JSON.number ?: -1)
+            ] as JSON)
+        }
+        catch(Exception) {
+        }
+        render([success:false] as JSON)
+    }
+    private int discriminator(String aid, String screenName, int inputRando) {
+        final int RETRY_COUNT = 3
+        final int DEDUP_RANGE = 5
+        // TODO: Check discriminator when changing username
+        // TODO: Check for any existing record to erase when new one is assigned
+        def responseData = [
+            success: false
+        ]
+        try {
+            MongoCollection coll = mongoService.collection("discriminators")
+            def retries = RETRY_COUNT;
+            while (retries-- > 0) {
+                int rando = inputRando >= 0 ? inputRando : random(DEDUP_RANGE)
+                String dedup = screenName + "#" + rando
+                System.out.println("Checking '$dedup' ($retries attempts remaining)")
+                BasicDBObject numExistsQuery = new BasicDBObject("number", rando)
+                BasicDBObject numTakenQuery = new BasicDBObject("\$and", [
+                    new BasicDBObject("number", rando),
+                    new BasicDBObject("members.sn", screenName)
+                ]);
+                Object result = coll.find(numExistsQuery).first()
+                Object taken = coll.find(numTakenQuery).first()
+                if (result == null) { // We haven't yet encountered this discriminator
+                    Document doc = new Document("_id", new ObjectId())
+                    doc.append("number", rando)
+                    doc.append("members", [[sn: screenName, aid: aid]])
+                    coll.insertOne(doc)
+                    responseData.success = true
+                    responseData.discriminator = rando
+                    responseData.dedupName = dedup
+                    render(responseData as JSON)
+                    return rando
+                } else { // The discriminator exists.  Check to see if the username is taken.
+                    boolean found = false
+                    for (Object member : result.members) {
+                        found = member.sn == screenName
+                        if (found) { // number is taken
+                            if (member.aid == aid)  { // it's us
+                                System.out.println("I already have that dedup ID!")
+                                responseData.success = true
+                                responseData.discriminator = rando
+                                responseData.dedupName = dedup
+                                render(responseData as JSON)
+                                return rando
+                            }
+                            else {
+                                System.out.println("$dedup already belongs to $member.aid not $aid")
+                                break
+                            } // We found the screenname, but it's taken by someone else.  Try again with a new number
+                        }
+                    }
+                    if (!found) { //
+                        System.out.println("Yay!  $dedup is new!")
+                        DBObject item = new BasicDBObject("members", [sn: screenName, aid: aid])
+                        DBObject update = new BasicDBObject("\$push", item)
+                        coll.updateOne(numExistsQuery, update)
+                        responseData.success = true
+                        responseData.discriminator = rando
+                        responseData.dedupName = dedup
+                        return rando
+                    }
+                }
+            }
+        } catch (Exception e) {
+            System.out.println(e);
+        }
+        System.out.println("Couldn't assign a new discriminator.  Try a different screenname!")
+        render(responseData as JSON)
+    }
+    private def erasePreviousDiscriminator(String aid, MongoCollection coll) {
+        def query = new BasicDBObject("members.aid", aid)
+        DeleteResult result = coll.deleteMany(query)
+        System.out.println("Deleted $result.deletedCount records.")
+    }
+    def getDiscriminator() {
+
+    }
 
     // AccessTokenService is not a service.  It's just a class in a lib used only in player-service.
     // While the intention was probably to break it out into its own service, it didn't make it there.
