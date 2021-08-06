@@ -43,92 +43,64 @@ class PlayerController {
     }
 
     def postmanDiscriminator() {
-        try {
-            render([
-                    success      : true,
-                    discriminator: discriminator(request.JSON.aid, request.JSON.sn, request.JSON.number ?: -1)
-            ] as JSON)
-        }
-        catch(Exception) {
-        }
-        render([success:false] as JSON)
+        def assigned = generateDiscriminator(request.JSON.aid, request.JSON.sn)
+        def name = assigned != null ? "$request.JSON.sn#$assigned" : null
+        render([
+                success         : assigned != null,
+                discriminator   : assigned,
+                dedup           : name
+        ] as JSON)
     }
-    private int discriminator(String aid, String screenName, int inputRando) {
-        final int RETRY_COUNT = 3
-        final int DEDUP_RANGE = 5
-        // TODO: Check discriminator when changing username
-        // TODO: Check for any existing record to erase when new one is assigned
-        def responseData = [
-            success: false
-        ]
+    private def generateDiscriminator(String aid, String screenName) {
+        final int RETRY_COUNT = 50
+        final int DEDUP_RANGE = 10_000
+
         try {
             MongoCollection coll = mongoService.collection("discriminators")
             def retries = RETRY_COUNT;
             while (retries-- > 0) {
-                int rando = inputRando >= 0 ? inputRando : random(DEDUP_RANGE)
+                int rando = random(DEDUP_RANGE)
                 String dedup = screenName + "#" + rando
                 System.out.println("Checking '$dedup' ($retries attempts remaining)")
+
                 BasicDBObject numExistsQuery = new BasicDBObject("number", rando)
                 BasicDBObject numTakenQuery = new BasicDBObject("\$and", [
                     new BasicDBObject("number", rando),
                     new BasicDBObject("members.sn", screenName)
-                ]);
+                ])
+
                 Object result = coll.find(numExistsQuery).first()
-                Object taken = coll.find(numTakenQuery).first()
-                if (result == null) { // We haven't yet encountered this discriminator
+                boolean exists = result != null;
+                boolean taken = coll.find(numTakenQuery).first() != null
+
+                if (!exists) { // We haven't yet encountered this discriminator
                     Document doc = new Document("_id", new ObjectId())
                     doc.append("number", rando)
                     doc.append("members", [[sn: screenName, aid: aid]])
+                    erasePreviousDiscriminator(aid, coll)
                     coll.insertOne(doc)
-                    responseData.success = true
-                    responseData.discriminator = rando
-                    responseData.dedupName = dedup
-                    render(responseData as JSON)
                     return rando
-                } else { // The discriminator exists.  Check to see if the username is taken.
-                    boolean found = false
-                    for (Object member : result.members) {
-                        found = member.sn == screenName
-                        if (found) { // number is taken
-                            if (member.aid == aid)  { // it's us
-                                System.out.println("I already have that dedup ID!")
-                                responseData.success = true
-                                responseData.discriminator = rando
-                                responseData.dedupName = dedup
-                                render(responseData as JSON)
-                                return rando
-                            }
-                            else {
-                                System.out.println("$dedup already belongs to $member.aid not $aid")
-                                break
-                            } // We found the screenname, but it's taken by someone else.  Try again with a new number
-                        }
-                    }
-                    if (!found) { //
-                        System.out.println("Yay!  $dedup is new!")
-                        DBObject item = new BasicDBObject("members", [sn: screenName, aid: aid])
-                        DBObject update = new BasicDBObject("\$push", item)
-                        coll.updateOne(numExistsQuery, update)
-                        responseData.success = true
-                        responseData.discriminator = rando
-                        responseData.dedupName = dedup
-                        return rando
-                    }
+                } else if (!taken) { // The discriminator exists.  Check to see if the username is taken.
+                    System.out.println("Yay!  $dedup is new!")
+                    DBObject item = new BasicDBObject("members", [sn: screenName, aid: aid])
+                    DBObject update = new BasicDBObject("\$push", item)
+                    erasePreviousDiscriminator(aid, coll)
+                    coll.updateOne(numExistsQuery, update)
+                    return rando
                 }
+                else
+                    System.out.println("$dedup taken.")
             }
         } catch (Exception e) {
             System.out.println(e);
         }
         System.out.println("Couldn't assign a new discriminator.  Try a different screenname!")
-        render(responseData as JSON)
+        return null
     }
     private def erasePreviousDiscriminator(String aid, MongoCollection coll) {
         def query = new BasicDBObject("members.aid", aid)
         DeleteResult result = coll.deleteMany(query)
         System.out.println("Deleted $result.deletedCount records.")
-    }
-    def getDiscriminator() {
-
     }
 
     // AccessTokenService is not a service.  It's just a class in a lib used only in player-service.
