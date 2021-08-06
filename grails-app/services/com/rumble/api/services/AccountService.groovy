@@ -2,10 +2,15 @@ package com.rumble.api.services
 
 import com.mongodb.BasicDBObject
 import com.mongodb.DBObject
+import com.mongodb.client.MongoCollection
 import com.mongodb.client.model.FindOneAndUpdateOptions
 import com.mongodb.client.model.ReturnDocument
+import com.mongodb.client.result.DeleteResult
 import com.mongodb.session.ClientSession
+import com.rumble.platform.exception.BadRequestException
+import com.rumble.platform.exception.PlatformException
 import groovy.json.JsonSlurper
+import org.bson.Document
 import org.bson.types.ObjectId
 
 class AccountService {
@@ -217,6 +222,8 @@ class AccountService {
             updateDoc.append("sn", identityData.screenName)
         }
 
+
+
         if(manifestVersion) {
             updateDoc.append("mv", manifestVersion)
         }
@@ -271,11 +278,30 @@ class AccountService {
         if (data instanceof String) {
             data = new JsonSlurper().parseText(data)
         }
+
+        // Check for the account discriminator.  Add it if it doesn't have one, or attempt to change the screenName with the same discriminator.
+        // Assign a new discriminator, if possible, for that screenName.
+        if (collection == "account") {
+            def existingData = getComponentData(accountId, "account")[0].data
+
+            if (!existingData.discriminator                                 // We don't have a discriminator for this aid yet
+                    || data.accountName != existingData.accountName         // The user is changing their screenname
+                    || data.discriminator != existingData.discriminator) {  // There's a discriminator mismatch from client and server.  Use the client's version.
+                def newDescriminator = generateDiscriminator(accountId, data.accountName, existingData.discriminator ?: -1)
+
+                // This should only happen if, for example, there are a *ton* of people with the same screenname, and all the retries failed.
+                if (newDescriminator == null)
+                    throw new BadRequestException("Could not create a new discriminator for $accountId.", "new sn: $data.accountName, old sn: $existingData.accountName, old discriminator: $existingData.discriminator")
+                data.discriminator = newDescriminator
+            }
+        }
+
         def coll = mongoService.collection(getComponentCollectionName(collection))
         DBObject query = new BasicDBObject("aid", (accountId instanceof String) ? new ObjectId(accountId) : accountId)
         BasicDBObject doc = new BasicDBObject('$set', new BasicDBObject("data", data))
                 .append('$setOnInsert', new BasicDBObject("aid", (accountId instanceof String) ? new ObjectId(accountId) : accountId))
         //System.out.println("saveComponentData" + doc.toString())
+
         coll.findOneAndUpdate(
                 clientSession,
                 query,            // query
@@ -367,5 +393,63 @@ class AccountService {
         if (value instanceof String)
             return new ObjectId(value)
         return value
+    }
+
+    private def random(int max) {
+        return (int) (Math.random() * max)
+    }
+
+    private def generateDiscriminator(String aid, String screenName, int desiredNumber = -1) {
+        final int RETRY_COUNT = 50
+        final int DEDUP_RANGE = 10_000
+
+        try {
+            MongoCollection coll = mongoService.collection("discriminators")
+            int retries = RETRY_COUNT;
+            while (retries-- > 0) {
+                int rando = desiredNumber >= 0 ? desiredNumber : random(DEDUP_RANGE)
+                String dedup = screenName + "#" + rando
+//                System.out.println("Checking '$dedup' ($retries attempts remaining)")
+
+                BasicDBObject numExistsQuery = new BasicDBObject("number", rando)
+                BasicDBObject numTakenQuery = new BasicDBObject("\$and", [
+                        new BasicDBObject("number", rando),
+                        new BasicDBObject("members.sn", screenName)
+                ])
+
+                Object result = coll.find(numExistsQuery).first()
+                boolean exists = result != null;
+                boolean taken = coll.find(numTakenQuery).first() != null
+
+                if (!exists) { // We haven't yet encountered this discriminator
+                    Document doc = new Document("_id", new ObjectId())
+                    doc.append("number", rando)
+                    doc.append("members", [[sn: screenName, aid: aid]])
+                    erasePreviousDiscriminator(aid, coll)
+                    coll.insertOne(doc)
+                    return rando
+                } else if (!taken) { // The discriminator exists.  Check to see if the username is taken.
+//                    System.out.println("Yay!  $dedup is new!")
+                    DBObject item = new BasicDBObject("members", [sn: screenName, aid: aid])
+                    DBObject update = new BasicDBObject("\$push", item)
+                    erasePreviousDiscriminator(aid, coll)
+                    coll.updateOne(numExistsQuery, update)
+                    return rando
+                }
+                else {
+//                    System.out.println("$dedup taken.")
+                    rando = random(DEDUP_RANGE)
+                }
+            }
+        } catch (Exception e) {
+//            System.out.println(e);
+        }
+        logger.info("Couldn't assign a new discriminator for $aid#$desiredNumber")
+        return null
+    }
+    private def erasePreviousDiscriminator(String aid, MongoCollection coll) {
+        def query = new BasicDBObject("members.aid", aid)
+        DeleteResult result = coll.deleteMany(query)
+        System.out.println("Deleted $result.deletedCount records.")
     }
 }

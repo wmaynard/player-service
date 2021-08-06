@@ -38,70 +38,7 @@ class PlayerController {
 
     def game = System.getProperty("GAME_GUKEY")
 
-    private def random(int max) {
-        return (int) (Math.random() * max)
-    }
 
-    def postmanDiscriminator() {
-        def assigned = generateDiscriminator(request.JSON.aid, request.JSON.sn)
-        def name = assigned != null ? "$request.JSON.sn#$assigned" : null
-        render([
-                success         : assigned != null,
-                discriminator   : assigned,
-                dedup           : name
-        ] as JSON)
-    }
-    private def generateDiscriminator(String aid, String screenName) {
-        final int RETRY_COUNT = 50
-        final int DEDUP_RANGE = 10_000
-
-        try {
-            MongoCollection coll = mongoService.collection("discriminators")
-            def retries = RETRY_COUNT;
-            while (retries-- > 0) {
-                int rando = random(DEDUP_RANGE)
-                String dedup = screenName + "#" + rando
-                System.out.println("Checking '$dedup' ($retries attempts remaining)")
-
-                BasicDBObject numExistsQuery = new BasicDBObject("number", rando)
-                BasicDBObject numTakenQuery = new BasicDBObject("\$and", [
-                    new BasicDBObject("number", rando),
-                    new BasicDBObject("members.sn", screenName)
-                ])
-
-                Object result = coll.find(numExistsQuery).first()
-                boolean exists = result != null;
-                boolean taken = coll.find(numTakenQuery).first() != null
-
-                if (!exists) { // We haven't yet encountered this discriminator
-                    Document doc = new Document("_id", new ObjectId())
-                    doc.append("number", rando)
-                    doc.append("members", [[sn: screenName, aid: aid]])
-                    erasePreviousDiscriminator(aid, coll)
-                    coll.insertOne(doc)
-                    return rando
-                } else if (!taken) { // The discriminator exists.  Check to see if the username is taken.
-                    System.out.println("Yay!  $dedup is new!")
-                    DBObject item = new BasicDBObject("members", [sn: screenName, aid: aid])
-                    DBObject update = new BasicDBObject("\$push", item)
-                    erasePreviousDiscriminator(aid, coll)
-                    coll.updateOne(numExistsQuery, update)
-                    return rando
-                }
-                else
-                    System.out.println("$dedup taken.")
-            }
-        } catch (Exception e) {
-            System.out.println(e);
-        }
-        System.out.println("Couldn't assign a new discriminator.  Try a different screenname!")
-        return null
-    }
-    private def erasePreviousDiscriminator(String aid, MongoCollection coll) {
-        def query = new BasicDBObject("members.aid", aid)
-        DeleteResult result = coll.deleteMany(query)
-        System.out.println("Deleted $result.deletedCount records.")
-    }
 
     // AccessTokenService is not a service.  It's just a class in a lib used only in player-service.
     // While the intention was probably to break it out into its own service, it didn't make it there.
@@ -247,7 +184,16 @@ class PlayerController {
 
                 def authHeader = request.getHeader('Authorization')
                 try {
-                    if (authHeader?.toLower()?.startsWith('bearer ')) {
+                    try {
+                        // (Will on 2021.08.05) I don't recall toLower() throwing exceptions before, this block is a kluge
+                        // It seems like /launch is not intended to be called with an Authorization header since it generates tokens,
+                        // so this may have been forgotten.
+                        authHeader = authHeader?.toLower()
+                    }
+                    catch (Exception) {
+                        authHeader = authHeader?.toLowerCase()
+                    }
+                    if (authHeader?.startsWith('bearer ')) {
                         def accessToken = authHeader.substring(7)
                         def tokenAuth = accessTokenService.validateAccessToken(accessToken, false, false)
                         if ((tokenAuth.aud == game) && (tokenAuth.sub == id.toString())) {
@@ -357,7 +303,7 @@ class PlayerController {
                             profileService.saveProfile(clientSession, profile, id.toString(), profileData)
                         }
 
-                        // do we really need this update? maybe not on a new player?
+                        requestData._pulledAid = id;
                         updatedAccount = accountService.updateAccountData(clientSession, id.toString(), requestData, null)
                         responseData.createdDate = updatedAccount.cd?.toString() ?: null
 
