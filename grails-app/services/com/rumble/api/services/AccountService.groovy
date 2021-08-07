@@ -286,12 +286,13 @@ class AccountService {
 
             if (!existingData.discriminator                                 // We don't have a discriminator for this aid yet
                     || data.accountName != existingData.accountName         // The user is changing their screenname
-                    || data.discriminator != existingData.discriminator) {  // There's a discriminator mismatch from client and server.  Use the client's version.
+                    || data.discriminator != existingData.discriminator) {  // There's a discriminator mismatch from client and server.  Use the server's version to avoid hacked clients generating IDs and forces a reroll.
                 def newDescriminator = generateDiscriminator(accountId, data.accountName, existingData.discriminator ?: -1)
 
                 // This should only happen if, for example, there are a *ton* of people with the same screenname, and all the retries failed.
+                // We need to throw an exception, though, because we need to guarantee screenName + discriminator combinations are unique.
                 if (newDescriminator == null)
-                    throw new BadRequestException("Could not create a new discriminator for $accountId.", "new sn: $data.accountName, old sn: $existingData.accountName, old discriminator: $existingData.discriminator")
+                    throw new PlatformException("Could not create a new discriminator for $accountId.", "new sn: $data.accountName, old sn: $existingData.accountName, old discriminator: $existingData.discriminator")
                 data.discriminator = newDescriminator
             }
         }
@@ -406,8 +407,8 @@ class AccountService {
         try {
             MongoCollection coll = mongoService.collection("discriminators")
             int retries = RETRY_COUNT;
+            int rando = desiredNumber >= 0 ? desiredNumber : random(DEDUP_RANGE)
             while (retries-- > 0) {
-                int rando = desiredNumber >= 0 ? desiredNumber : random(DEDUP_RANGE)
                 String dedup = screenName + "#" + rando
 //                System.out.println("Checking '$dedup' ($retries attempts remaining)")
 
