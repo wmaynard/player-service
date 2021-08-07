@@ -282,18 +282,27 @@ class AccountService {
         // Check for the account discriminator.  Add it if it doesn't have one, or attempt to change the screenName with the same discriminator.
         // Assign a new discriminator, if possible, for that screenName.
         if (collection == "account") {
-            def existingData = getComponentData(accountId, "account")[0].data
+            def existingData
+            try {
+                existingData = getComponentData(accountId, "account")[0].data
+            }
+            catch (Exception){} // This is a new account
 
-            if (!existingData.discriminator                                 // We don't have a discriminator for this aid yet
-                    || data.accountName != existingData.accountName         // The user is changing their screenname
-                    || data.discriminator != existingData.discriminator) {  // There's a discriminator mismatch from client and server.  Use the server's version to avoid hacked clients generating IDs and forces a reroll.
-                def newDescriminator = generateDiscriminator(accountId, data.accountName, existingData.discriminator ?: -1)
+            if (!existingData?.discriminator                                 // We don't have a discriminator for this aid yet
+                    || data.accountName != existingData?.accountName         // The user is changing their screenname
+                    || data.discriminator != existingData?.discriminator) {  // There's a discriminator mismatch from client and server.  Use the server's version to avoid hacked clients generating IDs and forces a reroll.
+                try {
+                    def newDescriminator = generateDiscriminator(accountId, data.accountName, existingData?.discriminator ?: -1)
 
-                // This should only happen if, for example, there are a *ton* of people with the same screenname, and all the retries failed.
-                // We need to throw an exception, though, because we need to guarantee screenName + discriminator combinations are unique.
-                if (newDescriminator == null)
-                    throw new PlatformException("Could not create a new discriminator for $accountId.", "new sn: $data.accountName, old sn: $existingData.accountName, old discriminator: $existingData.discriminator")
-                data.discriminator = newDescriminator
+                    // This should only happen if, for example, there are a *ton* of people with the same screenname, and all the retries failed.
+                    // We need to throw an exception, though, because we need to guarantee screenName + discriminator combinations are unique.
+                    if (newDescriminator == null)
+                        logger.info("Could not create a new discriminator for $accountId.")
+                    data.discriminator = newDescriminator
+                }
+                catch (Exception e) {
+                    logger.error("Discriminator generation failed." + e.message)
+                }
             }
         }
 
