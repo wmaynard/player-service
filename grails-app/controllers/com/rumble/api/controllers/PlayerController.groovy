@@ -69,6 +69,8 @@ class PlayerController {
                 responseData.expiration = tokenAuth.exp
                 responseData.secondsRemaining = secondsRemaining
                 responseData.issuer = tokenAuth.iss
+                responseData.screenName = tokenAuth.sn
+                responseData.discriminator = tokenAuth.disc
 
                 if (tokenAuth.admin)
                     responseData.isAdmin = true
@@ -180,6 +182,7 @@ class PlayerController {
                 }
 
                 def id = player.getObjectId("_id")
+                def discriminator = accountService.getDiscriminator(id?.toString(), player.sn)
                 MDC.put('accountId', id?.toString())
 
                 def authHeader = request.getHeader('Authorization')
@@ -210,7 +213,7 @@ class PlayerController {
 
                 if (!responseData.accessToken) {
                     responseData.accessToken = accessTokenService.generateAccessToken(
-                            game, id.toString(), null, gameConfig.long('auth:maxTokenLifeSeconds', 345600L)) // 4d
+                            game, id.toString(), [disc: discriminator, sn: player.sn], gameConfig.long('auth:maxTokenLifeSeconds', 345600L)) // 4d
                 }
 
                 //TODO: Validate account
@@ -457,7 +460,22 @@ class PlayerController {
                     if (component.delete == true) {
                         accountService.deleteComponentData(clientSession, accountId, component.name)
                     } else {
-                        accountService.saveComponentData(clientSession, accountId, component.name, component.data)
+                        if (component.name == "account") {
+                            try {
+                                // Pull out the discriminator (if it exists) from the token.  This is server-authoritative,
+                                // so override whatever the client is sending.
+                                def accessToken = request.getHeader('Authorization').substring(7)
+                                def tokenAuth = accessTokenService.validateAccessToken(accessToken, false, false)
+                                component.data.discriminator = tokenAuth.disc ?: component.data.discriminator
+                            }
+                            catch (Exception) {}
+                        }
+                        def output = accountService.saveComponentData(clientSession, accountId, component.name, component.data)
+                        if (output?.identityChanged) {
+                            responseData.accessToken = accessTokenService.generateAccessToken(
+                                game, accountId, [disc: output.discriminator, sn: output.screenName], 345600L) // 4d
+                            responseData.discriminator = output.discriminator
+                        }
                     }
                 }
 
@@ -639,6 +657,7 @@ class PlayerController {
                 }
 
                 def id = player.getObjectId("_id")
+                def discriminator = accountService.getDiscriminator(id?.toString(), player.sn)
                 MDC.put('accountId', id?.toString())
 
                 def authHeader = request.getHeader('Authorization')
@@ -658,9 +677,11 @@ class PlayerController {
                     logger.error("Exception examining authorization header", e, [header: authHeader])
                 }
 
+                // (Will on 2021.08.09) | Is this ever used?  Tokens should always be generated on /player/launch...
+                // Backcompat maybe?
                 if (!responseData.accessToken) {
                     responseData.accessToken = accessTokenService.generateAccessToken(
-                            game, id.toString(), null, gameConfig.long('auth:maxTokenLifeSeconds', 345600L)) // 4d
+                        game, id.toString(), [disc: discriminator, sn: player.sn], gameConfig.long('auth:maxTokenLifeSeconds', 345600L)) // 4d
                 }
 
                 //TODO: Validate account

@@ -222,8 +222,6 @@ class AccountService {
             updateDoc.append("sn", identityData.screenName)
         }
 
-
-
         if(manifestVersion) {
             updateDoc.append("mv", manifestVersion)
         }
@@ -275,6 +273,7 @@ class AccountService {
     }
 
     def saveComponentData(ClientSession clientSession, accountId, String collection, data) {
+        def output = [:]
         if (data instanceof String) {
             data = new JsonSlurper().parseText(data)
         }
@@ -282,23 +281,32 @@ class AccountService {
         // Check for the account discriminator.  Add it if it doesn't have one, or attempt to change the screenName with the same discriminator.
         // Assign a new discriminator, if possible, for that screenName.
         if (collection == "account") {
+            boolean newAccount = false
             def existingData
             try {
-                existingData = getComponentData(accountId, "account")[0].data
+                existingData = getComponentData(accountId, collection)[0].data
             }
-            catch (Exception){} // This is a new account
+            catch (Exception) {
+                newAccount = true
+            }
 
-            if (!existingData?.discriminator                                 // We don't have a discriminator for this aid yet
+            if (!newAccount &&
+                    (!existingData?.discriminator                            // We don't have a discriminator for this aid yet
                     || data.accountName != existingData?.accountName         // The user is changing their screenname
-                    || data.discriminator != existingData?.discriminator) {  // There's a discriminator mismatch from client and server.  Use the server's version to avoid hacked clients generating IDs and forces a reroll.
+                    || data.discriminator != existingData?.discriminator)) { // There's a discriminator mismatch from client and server.  Use the server's version to avoid hacked clients generating IDs and forces a reroll.
                 try {
-                    def newDescriminator = generateDiscriminator(accountId, data.accountName, existingData?.discriminator ?: -1)
+                    def newDiscriminator = generateDiscriminator(accountId, data.accountName, (int)existingData?.discriminator ?: -1)
 
                     // This should only happen if, for example, there are a *ton* of people with the same screenname, and all the retries failed.
                     // We need to throw an exception, though, because we need to guarantee screenName + discriminator combinations are unique.
-                    if (newDescriminator == null)
+                    if (newDiscriminator == null)
                         logger.info("Could not create a new discriminator for $accountId.")
-                    data.discriminator = newDescriminator
+                    data.discriminator = newDiscriminator
+                    output = [
+                        identityChanged: true,
+                        screenName: data.accountName,
+                        discriminator: newDiscriminator
+                    ]
                 }
                 catch (Exception e) {
                     logger.error("Discriminator generation failed." + e.message)
@@ -318,6 +326,7 @@ class AccountService {
                 doc,                            // update
                 new FindOneAndUpdateOptions().upsert(true).returnDocument(ReturnDocument.AFTER)
         )
+        return output
     }
 
     def deleteComponentData(ClientSession clientSession, accountId, String collection) {
@@ -409,6 +418,18 @@ class AccountService {
         return (int) (Math.random() * max)
     }
 
+    def getDiscriminator(String aid, String screenname) {
+        if (aid == null || screenname == null)
+            return null
+        try {
+            MongoCollection coll = mongoService.collection("discriminators")
+            BasicDBObject query = new BasicDBObject("members.aid", aid)
+            Object result = coll.find(query).first()
+            return result?.number ?: generateDiscriminator(aid, screenname)
+        }
+        catch (Exception) {}
+        return null
+    }
     private def generateDiscriminator(String aid, String screenName, int desiredNumber = -1) {
         final int RETRY_COUNT = 50
         final int DEDUP_RANGE = 10_000
