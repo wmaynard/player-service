@@ -1,9 +1,13 @@
 package com.rumble.api.controllers
 
+import com.mongodb.BasicDBObject
+import com.mongodb.DBObject
+import com.mongodb.client.MongoCollection
 import com.rumble.api.services.ProfileTypes
 import grails.converters.JSON
 import groovy.json.JsonOutput
 import groovy.json.JsonSlurper
+import groovyx.net.http.HTTPBuilder
 
 class AdminPlayerController {
     def accessTokenService
@@ -18,6 +22,18 @@ class AdminPlayerController {
 
     def game = System.getProperty("GAME_GUKEY")
 
+    private def getReports(String aid) {
+        MongoCollection coll = mongoService.collection("reports")
+        BasicDBObject query = new BasicDBObject("players.aid", aid)
+        def results = coll.find(query).toList()
+        return results
+    }
+    private def getBans(String aid) {
+        MongoCollection coll = mongoService.collection("bans")
+        BasicDBObject query = new BasicDBObject("AccountId", aid)
+        def results = coll.find(query).toList()
+        return results
+    }
     def details(){
         authService.checkServerAuth(request)
 
@@ -34,21 +50,26 @@ class AdminPlayerController {
             def components = accountService.getDetails(params.id, null)
             def profiles = profileService.getProfilesForAccount(params.id)
             def items = itemService.getItems(params.id, null)
+            def chat = [
+                reports: getReports(params.id),
+                bans: getBans(params.id)
+            ]
 
             responseData = [
-                    success: true,
-                    'data': [
-                            account   : account,
-                            components: components,
-                            profiles  : profiles,
-                            items     : items
-                    ]
+                success: true,
+                'data': [
+                    account   : account,
+                    components: components,
+                    profiles  : profiles,
+                    items     : items,
+                    chat      : chat
+                ]
             ]
         } else {
             responseData = [
-                    success: false,
-                    errorCode: "notFound",
-                    errorText: "Player '${params.id}' not found"
+                success: false,
+                errorCode: "notFound",
+                errorText: "Player '${params.id}' not found"
             ]
 
             logger.info("Player details", params + responseData)
