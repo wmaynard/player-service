@@ -111,7 +111,7 @@ dev:
     - zip -r $CI_PROJECT_NAME.zip .ebextensions/ build/
     - echo $(ls)
     - gem install dpl --pre
-    - dpl --provider=elasticbeanstalk --zip_file=./$CI_PROJECT_NAME.zip --access_key_id=$EB_DEPLOY_ACCESS_KEY --secret_access_key=$EB_DEPLOY_SECRET_KEY --bucket=rumble-gitlab-eb-platform-deploy --bucket_path=player-service --region=us-east-1 --app=player-service --env=PlayerService-Dev --wait_until_deployed --wait_until_deployed_timeout=900
+    - dpl --provider=elasticbeanstalk --zip_file=./$CI_PROJECT_NAME.zip --access_key_id=$EB_DEPLOY_ACCESS_KEY --secret_access_key=$EB_DEPLOY_SECRET_KEY --bucket=rumble-gitlab-eb-platform-deploy --bucket_path=player-service --region=us-east-1 --app=player-service --env=PlayerService-Dev --wait_until_deployed --wait_until_deployed_timeout=1200
   environment:
     name: dev
   needs:
@@ -128,7 +128,7 @@ stage-a:
     - apt-get install -y ruby-dev zip git
     - zip -r $CI_PROJECT_NAME.zip .ebextensions/ build/
     - gem install dpl --pre
-    - dpl --provider=elasticbeanstalk --zip_file=./$CI_PROJECT_NAME.zip --access_key_id=$EB_DEPLOY_ACCESS_KEY --secret_access_key=$EB_DEPLOY_SECRET_KEY --bucket=rumble-gitlab-eb-platform-deploy --bucket_path=player-service --region=us-east-1 --app=player-service --env=PlayerService-Stage-A --wait_until_deployed --wait_until_deployed_timeout=900
+    - dpl --provider=elasticbeanstalk --zip_file=./$CI_PROJECT_NAME.zip --access_key_id=$EB_DEPLOY_ACCESS_KEY --secret_access_key=$EB_DEPLOY_SECRET_KEY --bucket=rumble-gitlab-eb-platform-deploy --bucket_path=player-service --region=us-east-1 --app=player-service --env=PlayerService-Stage-A --wait_until_deployed --wait_until_deployed_timeout=1200
   environment:
     name: stage-a
   needs:
@@ -145,7 +145,7 @@ stage-b:
     - apt-get install -y ruby-dev zip git
     - zip -r $CI_PROJECT_NAME.zip .ebextensions/ build/
     - gem install dpl --pre
-    - dpl --provider=elasticbeanstalk --zip_file=./$CI_PROJECT_NAME.zip --access_key_id=$EB_DEPLOY_ACCESS_KEY --secret_access_key=$EB_DEPLOY_SECRET_KEY --bucket=rumble-gitlab-eb-platform-deploy --bucket_path=player-service --region=us-east-1 --app=player-service --env=Player-Service-Stage-B --wait_until_deployed --wait_until_deployed_timeout=900
+    - dpl --provider=elasticbeanstalk --zip_file=./$CI_PROJECT_NAME.zip --access_key_id=$EB_DEPLOY_ACCESS_KEY --secret_access_key=$EB_DEPLOY_SECRET_KEY --bucket=rumble-gitlab-eb-platform-deploy --bucket_path=player-service --region=us-east-1 --app=player-service --env=Player-Service-Stage-B --wait_until_deployed --wait_until_deployed_timeout=1200
   environment:
     name: stage-b
   needs:
