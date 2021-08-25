@@ -23,14 +23,14 @@ class AdminPlayerController {
     def game = System.getProperty("GAME_GUKEY")
 
     private def getReports(String aid) {
-        MongoCollection coll = mongoService.collection("reports")
-        BasicDBObject query = new BasicDBObject("players.aid", aid)
+        MongoCollection coll = mongoService.collection("chat_reports")
+        BasicDBObject query = new BasicDBObject("rptd.aid", aid)
         def results = coll.find(query).toList()
         return results
     }
     private def getBans(String aid) {
-        MongoCollection coll = mongoService.collection("bans")
-        BasicDBObject query = new BasicDBObject("AccountId", aid)
+        MongoCollection coll = mongoService.collection("chat_bans")
+        BasicDBObject query = new BasicDBObject("aid", aid)
         def results = coll.find(query).toList()
         return results
     }
