@@ -54,6 +54,8 @@ ingress:
   paths: 
     - "/player"
     - "/admin/player"
+    - "/item"
+    - "/admin/item"
   tls:
     enabled: true
     acme: true
