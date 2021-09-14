@@ -16,7 +16,8 @@ lifecycle: {}
 # preStop:
 #   exec:
 #     command: ["/bin/sh", "-c", "sleep 10"]
-podAnnotations: {}
+podAnnotations: 
+  linkerd.io/inject: enabled
 nodeSelector: {}
 affinity: {}
 tolerations: []
