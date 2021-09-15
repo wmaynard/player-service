@@ -309,12 +309,12 @@ class AccountService {
                     ]
                 }
                 catch (Exception e) {
-                    logger.info("Discriminator generation failed.", [
-                        message: e.message,
-                        accountId: accountId,
-                        accountName: data.accountName,
-                        exception: e
-                    ])
+                    logger.info("Discriminator generation failed ("
+                            + e.message + ", "
+                            + (accountId ?: "null") + ", "
+                            + (data?.accountName ?: "null")
+                            + ")"
+                    )
                 }
             }
         }
