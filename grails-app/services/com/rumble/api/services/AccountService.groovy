@@ -295,7 +295,7 @@ class AccountService {
                     || data.accountName != existingData?.accountName         // The user is changing their screenname
                     || data.discriminator != existingData?.discriminator)) { // There's a discriminator mismatch from client and server.  Use the server's version to avoid hacked clients generating IDs and forces a reroll.
                 try {
-                    def newDiscriminator = generateDiscriminator(accountId, data.accountName, (int)existingData?.discriminator ?: -1)
+                    def newDiscriminator = generateDiscriminator(accountId, data.accountName, (int)(existingData?.discriminator ?: -1))
 
                     // This should only happen if, for example, there are a *ton* of people with the same screenname, and all the retries failed.
                     // We need to throw an exception, though, because we need to guarantee screenName + discriminator combinations are unique.
@@ -309,11 +309,15 @@ class AccountService {
                     ]
                 }
                 catch (Exception e) {
-                    logger.info("Discriminator generation failed ("
-                            + e.message + ", "
-                            + (accountId ?: "null") + ", "
-                            + (data?.accountName ?: "null")
-                            + ")"
+                    logger.info("Discriminator generation failed (aid: "
+                        + (accountId ?: "null") + " | screenName: "
+                        + (data?.accountName ?: "null") + " | existingDiscriminator: "
+                        + (existingData?.discriminator ?: "null")
+                        + ") ["
+                        + e.message
+                        + ", "
+                        + e.stackTrace
+                        + "]"
                     )
                 }
             }
