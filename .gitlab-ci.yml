@@ -2,13 +2,36 @@ image: alpine:latest
 
 variables:
   # KUBE_INGRESS_BASE_DOMAIN is the application deployment domain and should be set as a variable at the group or project level.
-  # KUBE_INGRESS_BASE_DOMAIN: domain.example.com
+  KUBE_INGRESS_BASE_DOMAIN: nonprod.tower.cdrentertainment.com
   POSTGRES_ENABLED: "false"
   HELM_SCALE_EXTRA_ARGS: --set postgresql.enabled="false" 
-  #HELM_UPGRADE_EXTRA_ARGS: --set "imagePullSecrets={gitlab-registry-platform-services-player-service}"
+  K8S_SECRET_XMS: "256m"
+  K8S_SECRET_XMX: "256m"
+  K8S_SECRET_MAXPERM: "64m"
+  K8S_SECRET_RUMBLE_CONFIG_SERVICE_URL: "https://config-service.cdrentertainment.com/"
+  K8S_SECRET_RUMBLE_COMPONENT: "player-service"
+  K8S_SECRET_RUMBLE_DEPLOYMENT: "107"
+  K8S_SECRET_LOGGLY_URL: "https://logs-01.loggly.com/bulk/f91d5019-e31d-4955-812c-31891b64b8d9/tag/player-service/"
+  K8S_SECRET_GRAPHITE: "graphite.rumblegames.com:2003"
+  K8S_SECRET_GOOGLE_APP_ID: "5861154319-vcerqf8f392hj9q7dphljk1d70hdsm3l.apps.googleusercontent.com"
+  K8S_SECRET_GOOGLE_CLIENT_ID: "5861154319-vcerqf8f392hj9q7dphljk1d70hdsm3l.apps.googleusercontent.com"
+  K8S_SECRET_GOOGLE_VALIDATE_TOKEN_URL: "https://www.googleapis.com/games/v1/applications/"
+  K8S_SECRET_MONGODB_NAME: "player-service-107"
+  K8S_SECRET_FB_APP_ID: "NOT_AVAILABLE"
+  K8S_SECRET_FB_APP_SECRET: "NOT_AVAILABLE"
+  K8S_SECRET_FB_VALIDATE_TOKEN_URL: "https://graph.facebook.com/me"
+  K8S_SECRET_GEO_IP_S3_BUCKET: "rumble-lab-geoip"
+  K8S_SECRET_GEO_IP_S3_KEY: "GeoIP2-Country.mmdb"
+  K8S_SECRET_GEO_IP_S3_REGION: "us-east-1"
+  # from gitlab project ci variables
   K8S_SECRET_RUMBLE_KEY: "$RUMBLE_KEY"
-  K8S_SECRET_REDIS_PASSWORD: "$REDIS_PASSWORD"
+  K8S_SECRET_GAME_GUKEY: "$GAME_GUKEY"
+  K8S_SECRET_GOOGLE_APP_SECRET: "$GOOGLE_APP_SECRET"
+  K8S_SECRET_MONGODB_URI: "$MONGODB_URI"
+
+
   DOCKER_DRIVER: overlay2
+  DEPLOY_TYPE: "kubernetes" # "kubernetes"
 
   ROLLOUT_RESOURCE_TYPE: deployment
 
@@ -24,178 +47,50 @@ stages:
   - performance
   - cleanup
 
-workflow:
-  rules:
-    - if: '$BUILDPACK_URL || $AUTO_DEVOPS_EXPLICITLY_ENABLED == "1" || $DOCKERFILE_PATH'
-    - exists:
-        - Dockerfile
-    # https://github.com/heroku/heroku-buildpack-gradle
-    - exists:
-        - gradlew
-        - build.gradle
-        - settings.gradle
-    # https://github.com/heroku/heroku-buildpack-multi
-    - exists:
-        - .buildpacks
-    # https://github.com/heroku/heroku-buildpack-python
-    # TODO: detect script checks that all of these exist, not any
-    - exists:
-        - requirements.txt
-        - setup.py
-        - Pipfile
-
 build_app:
   stage: app_build
   image: gradle:6-jdk8
+  allow_failure: false
   tags:
     - kubernetes
   cache:
     key: player-service
     paths:
-      - .gradle/caches
-      - .gradle/wrapper
+      - .gradle
   script:
     - apt-get update -yq
     - apt install zip
     - chmod +x ./gradlew
     - ./gradlew assemble
+    - rm -f ~/.gradle/caches/modules-2/modules-2.lock
+    - rm -f ~/.gradle/caches/modules-2/gc.properties
   artifacts:
     paths:
       - build/libs/*.war
 
 
-# build_image:
-#   stage: build
-#   image: 'registry.gitlab.com/gitlab-org/cluster-integration/auto-build-image:v1.0.0'
-#   tags:
-#     - kubernetes
-#   variables:
-#     DOCKER_TLS_CERTDIR: ''
-#   services:
-#     - name: 'docker:20.10.6-dind'
-#       command: ['--tls=false', '--host=tcp://0.0.0.0:2375']
-#   script:
-#     - |
-#       if [[ -z "$CI_COMMIT_TAG" ]]; then
-#         export CI_APPLICATION_REPOSITORY=${CI_APPLICATION_REPOSITORY:-$CI_REGISTRY_IMAGE/$CI_COMMIT_REF_SLUG}
-#         export CI_APPLICATION_TAG=${CI_APPLICATION_TAG:-$CI_COMMIT_SHA}
-#       else
-#         export CI_APPLICATION_REPOSITORY=${CI_APPLICATION_REPOSITORY:-$CI_REGISTRY_IMAGE}
-#         export CI_APPLICATION_TAG=${CI_APPLICATION_TAG:-$CI_COMMIT_TAG}
-#       fi
-#     - /build/build.sh
-#   rules:
-#     - if: '$BUILD_DISABLED'
-#       when: never
-#     - if: '$AUTO_DEVOPS_PLATFORM_TARGET == "EC2"'
-#       when: never
-#     - if: '$CI_COMMIT_TAG || $CI_COMMIT_BRANCH'
-#   needs:
-#     - job: build_app
-#       artifacts: true
-
-
-
-# Staging deploys are disabled by default since
-# continuous deployment to production is enabled by default
-# If you prefer to automatically deploy to staging and
-# only manually promote to production, enable this job by setting
-# STAGING_ENABLED.
-
-dev:
-  stage: dev
-  image: ubuntu:latest
-  script:
-    - apt-get update -yq
-    - apt-get install -y ruby-dev zip git
-    - zip -r $CI_PROJECT_NAME.zip .ebextensions/ build/
-    - echo $(ls)
-    - gem install dpl --pre
-    - dpl --provider=elasticbeanstalk --zip_file=./$CI_PROJECT_NAME.zip --access_key_id=$EB_DEPLOY_ACCESS_KEY --secret_access_key=$EB_DEPLOY_SECRET_KEY --bucket=rumble-gitlab-eb-platform-deploy --bucket_path=player-service --region=us-east-1 --app=player-service --env=PlayerService-Dev --wait_until_deployed --wait_until_deployed_timeout=1200
-  environment:
-    name: dev
-  needs:
-    - job: build_app
-      artifacts: true
-
-stage-a: 
-  image: ubuntu:latest
-  stage: staging
+build_image:
+  stage: build
   allow_failure: false
-  when: manual
+  image:
+    name: gcr.io/kaniko-project/executor:debug
+    entrypoint: [""]
   script:
-    - apt-get update -yq
-    - apt-get install -y ruby-dev zip git
-    - zip -r $CI_PROJECT_NAME.zip .ebextensions/ build/
-    - gem install dpl --pre
-    - dpl --provider=elasticbeanstalk --zip_file=./$CI_PROJECT_NAME.zip --access_key_id=$EB_DEPLOY_ACCESS_KEY --secret_access_key=$EB_DEPLOY_SECRET_KEY --bucket=rumble-gitlab-eb-platform-deploy --bucket_path=player-service --region=us-east-1 --app=player-service --env=PlayerService-Stage-A --wait_until_deployed --wait_until_deployed_timeout=1200
-  environment:
-    name: stage-a
+    - mkdir -p /kaniko/.docker
+    - echo "{\"auths\":{\"$CI_REGISTRY\":{\"auth\":\"$(echo -n ${CI_REGISTRY_USER}:${CI_REGISTRY_PASSWORD} | base64)\"}}}" > /kaniko/.docker/config.json
+    - /kaniko/executor --context $CI_PROJECT_DIR --dockerfile $CI_PROJECT_DIR/Dockerfile --destination $CI_REGISTRY_IMAGE/$CI_COMMIT_REF_SLUG:$CI_COMMIT_SHA
+  rules:
+    - if: '$BUILD_DISABLED'
+      when: never
+    - if: $DEPLOY_TYPE == "beanstalk"
+      when: never
+    - if: '$CI_COMMIT_TAG || $CI_COMMIT_BRANCH'
+    - if: $DEPLOY_TYPE == "kubernetes"
+      when: always
   needs:
     - job: build_app
       artifacts: true
 
-stage-b: 
-  image: ubuntu:latest
-  stage: staging
-  allow_failure: false
-  when: manual
-  script:
-    - apt-get update -yq
-    - apt-get install -y ruby-dev zip git
-    - zip -r $CI_PROJECT_NAME.zip .ebextensions/ build/
-    - gem install dpl --pre
-    - dpl --provider=elasticbeanstalk --zip_file=./$CI_PROJECT_NAME.zip --access_key_id=$EB_DEPLOY_ACCESS_KEY --secret_access_key=$EB_DEPLOY_SECRET_KEY --bucket=rumble-gitlab-eb-platform-deploy --bucket_path=player-service --region=us-east-1 --app=player-service --env=Player-Service-Stage-B --wait_until_deployed --wait_until_deployed_timeout=1200
-  environment:
-    name: stage-b
-  needs:
-    - job: build_app
-      artifacts: true
-
-
-# .production: &production_template
-#   extends: .auto-deploy
-#   stage: production
-#   tags:
-#     - kubernetes
-#   script:
-#     - apt-get update -yq
-#     - apt-get install -y ruby-dev
-#     - gem install dpl
-#     - dpl --provider=elasticbeanstalk --zip_file player-service.zip --access_key_id id --secret_access_key key --bucket name --region us-east-1 --app name
-#   environment:
-#     name: production
-#   needs:
-#     - job: build_app
-#       artifacts: true
-
-# production:
-#   <<: *production_template
-#   rules:
-#     - if: '$CI_KUBERNETES_ACTIVE == null || $CI_KUBERNETES_ACTIVE == ""'
-#       when: never
-#     - if: '$STAGING_ENABLED'
-#       when: never
-#     - if: '$CANARY_ENABLED'
-#       when: never
-#     - if: '$INCREMENTAL_ROLLOUT_ENABLED'
-#       when: never
-#     - if: '$INCREMENTAL_ROLLOUT_MODE'
-#       when: never
-#     - if: '$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH'
-
-# production_manual:
-#   <<: *production_template
-#   allow_failure: false
-#   rules:
-#     - if: '$CI_KUBERNETES_ACTIVE == null || $CI_KUBERNETES_ACTIVE == ""'
-#       when: never
-#     - if: '$INCREMENTAL_ROLLOUT_ENABLED'
-#       when: never
-#     - if: '$INCREMENTAL_ROLLOUT_MODE'
-#       when: never
-#     - if: '$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH && $STAGING_ENABLED'
-#       when: manual
-#     - if: '$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH && $CANARY_ENABLED'
-#       when: manual
-
+include: 
+  - '/.gitlab/deploy-eb.yaml'
+  - '/.gitlab/deploy-k8s.yaml'
