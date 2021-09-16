@@ -19,7 +19,7 @@ dev-eb:
   rules:
     - if: $DEPLOY_TYPE == "kubernetes"
       when: never
-    - if: $DEPLOY_TYPE == "beanstalk"
+    - if: $DEPLOY_TYPE == "beanstalk" || $DEPLOY_TYPE == "both"
       when: always
 
 stage-a-eb: 
@@ -40,7 +40,7 @@ stage-a-eb:
   rules:
     - if: $DEPLOY_TYPE == "kubernetes"
       when: never
-    - if: $DEPLOY_TYPE == "beanstalk"
+    - if: $DEPLOY_TYPE == "beanstalk" || $DEPLOY_TYPE == "both"
       when: manual
 
 stage-b-eb: 
@@ -82,5 +82,5 @@ prod-eb:
   rules:
     - if: $DEPLOY_TYPE == "kubernetes"
       when: never
-    - if: $DEPLOY_TYPE == "beanstalk"
+    - if: $DEPLOY_TYPE == "beanstalk" || $DEPLOY_TYPE == "both"
       when: manual
