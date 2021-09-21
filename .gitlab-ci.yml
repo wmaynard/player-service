@@ -2,28 +2,28 @@ image: alpine:latest
 
 variables:
   # KUBE_INGRESS_BASE_DOMAIN is the application deployment domain and should be set as a variable at the group or project level.
+  # from gitlab project ci variables
   KUBE_INGRESS_BASE_DOMAIN: nonprod.tower.cdrentertainment.com
   POSTGRES_ENABLED: "false"
   HELM_SCALE_EXTRA_ARGS: --set postgresql.enabled="false" 
-  K8S_SECRET_XMS: "256m"
-  K8S_SECRET_XMX: "256m"
-  K8S_SECRET_MAXPERM: "64m"
-  K8S_SECRET_RUMBLE_CONFIG_SERVICE_URL: "https://config-service.cdrentertainment.com/"
-  K8S_SECRET_RUMBLE_COMPONENT: "player-service"
-  K8S_SECRET_RUMBLE_DEPLOYMENT: "107"
-  K8S_SECRET_LOGGLY_URL: "https://logs-01.loggly.com/bulk/f91d5019-e31d-4955-812c-31891b64b8d9/tag/player-service/"
-  K8S_SECRET_GRAPHITE: "graphite.rumblegames.com:2003"
-  K8S_SECRET_GOOGLE_APP_ID: "5861154319-vcerqf8f392hj9q7dphljk1d70hdsm3l.apps.googleusercontent.com"
-  K8S_SECRET_GOOGLE_CLIENT_ID: "5861154319-vcerqf8f392hj9q7dphljk1d70hdsm3l.apps.googleusercontent.com"
-  K8S_SECRET_GOOGLE_VALIDATE_TOKEN_URL: "https://www.googleapis.com/games/v1/applications/"
-  K8S_SECRET_MONGODB_NAME: "player-service-107"
+  K8S_SECRET_XMS: "$XMS"
+  K8S_SECRET_XMX: "$XMX"
+  K8S_SECRET_MAXPERM: "$MAXPERM"
+  K8S_SECRET_RUMBLE_CONFIG_SERVICE_URL: "$CONFIG_SERVICE_RUL"
+  K8S_SECRET_RUMBLE_COMPONENT: "$RUMBLE_COMPONENT"
+  K8S_SECRET_RUMBLE_DEPLOYMENT: "$RUMBLE_DEPLOYMENT"
+  K8S_SECRET_LOGGLY_URL: "$LOGGLY_RUL"
+  K8S_SECRET_GRAPHITE: "$GRAPHITE"
+  K8S_SECRET_GOOGLE_APP_ID: "$GOOGLE_APP_ID"
+  K8S_SECRET_GOOGLE_CLIENT_ID: "$GOOGLE_APP_ID"
+  K8S_SECRET_GOOGLE_VALIDATE_TOKEN_URL: "$GOOGLE_VALIDATE_TOKEN_URL"
+  K8S_SECRET_MONGODB_NAME: "$RUMBLE_COMPONENT-$RUMBLE_DEPLOYMENT"
   K8S_SECRET_FB_APP_ID: "NOT_AVAILABLE"
   K8S_SECRET_FB_APP_SECRET: "NOT_AVAILABLE"
   K8S_SECRET_FB_VALIDATE_TOKEN_URL: "https://graph.facebook.com/me"
-  K8S_SECRET_GEO_IP_S3_BUCKET: "rumble-lab-geoip"
-  K8S_SECRET_GEO_IP_S3_KEY: "GeoIP2-Country.mmdb"
-  K8S_SECRET_GEO_IP_S3_REGION: "us-east-1"
-  # from gitlab project ci variables
+  K8S_SECRET_GEO_IP_S3_BUCKET: "$GEO_IP_S3_BUCKET"
+  K8S_SECRET_GEO_IP_S3_KEY: "$GEO_IP_S3_KEY"
+  K8S_SECRET_GEO_IP_S3_REGION: "$GEO_IP_S3_REGION"
   K8S_SECRET_RUMBLE_KEY: "$RUMBLE_KEY"
   K8S_SECRET_GAME_GUKEY: "$GAME_GUKEY"
   K8S_SECRET_GOOGLE_APP_SECRET: "$GOOGLE_APP_SECRET"
@@ -31,7 +31,7 @@ variables:
 
 
   DOCKER_DRIVER: overlay2
-  DEPLOY_TYPE: "both" # "kubernetes","beanstalk","both"
+  DEPLOY_TYPE: "kubernetes" # "kubernetes","beanstalk","both"
 
   ROLLOUT_RESOURCE_TYPE: deployment
 
