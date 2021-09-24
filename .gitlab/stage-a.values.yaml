@@ -17,7 +17,6 @@ lifecycle: {}
 #   exec:
 #     command: ["/bin/sh", "-c", "sleep 10"]
 podAnnotations: 
-  linkerd.io/inject: enabled
 nodeSelector: {}
 affinity: {}
 tolerations: []
@@ -65,7 +64,6 @@ ingress:
   annotations:
     cert-manager.io/cluster-issuer: "letsencrypt-prod"
     kubernetes.io/ingress.class: "nginx"
-    nginx.ingress.kubernetes.io/service-upstream: "true"
   modSecurity:
     enabled: true
     secRuleEngine: "On"
