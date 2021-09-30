@@ -42,10 +42,12 @@ class MongoService {
 
     def commitWithRetry(ClientSession clientSession, maxNumberOfRetries = 3) {
         def count = 0
+        boolean success = false;
         while (count <= maxNumberOfRetries) {
             try {
                 clientSession.commitTransaction()
-                logger.info("Transaction committed");
+//                logger.info("Transaction committed");
+                success = true;
                 break
             } catch (MongoException e) {
                 // can retry commit
@@ -59,6 +61,9 @@ class MongoService {
                     throw e
                 }
             }
+        }
+        if (!success) {
+            logger.error("Something went wrong when committing a transaction!")
         }
     }
 

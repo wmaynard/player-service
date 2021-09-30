@@ -271,8 +271,7 @@ class PlayerController {
                         if (conflictProfiles && conflictProfiles.size() > 0) {
                             conflict = true
                             responseData.errorCode = "accountConflict"
-                            logger.info("Account conflict", [accountId: id.toString()])
-                            //TODO: Include which accounts are conflicting? Security concerns?
+                            logger.warn("Account conflict", [accountId: id.toString(), conflictProfiles: conflictProfiles])
                             def conflictingAccountIds = conflictProfiles.collect {
                                 if (it.aid.toString() != id.toString()) {
                                     return it.aid
@@ -761,8 +760,8 @@ class PlayerController {
                         if (conflictProfiles && conflictProfiles.size() > 0) {
                             conflict = true
                             responseData.errorCode = "accountConflict"
-                            logger.info("Account conflict", [accountId: id.toString()])
-                            //TODO: Include which accounts are conflicting? Security concerns?
+                            logger.warn("Account conflict", [accountId: id.toString(), conflictProfiles: conflictProfiles])
+                            // TODO: include request.JSON to see the body request?
                             def conflictingAccountIds = conflictProfiles.collect {
                                 if (it.aid.toString() != id.toString()) {
                                     return it.aid

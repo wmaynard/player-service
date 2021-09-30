@@ -233,7 +233,7 @@ class AccountService {
             updateDoc = new BasicDBObject('$set', updateDoc)
         }
 
-        logger.info("AccountService:updateAccountData")//, [updateDoc: updateDoc])
+//        logger.info("AccountService:updateAccountData")//, [updateDoc: updateDoc])
         def account = coll.findOneAndUpdate(
                 clientSession,
                 new BasicDBObject("_id", (accountId instanceof String) ? new ObjectId(accountId) : accountId),    // query
@@ -289,18 +289,24 @@ class AccountService {
             catch (Exception) {
                 newAccount = true
             }
+            if (existingData?.discriminator && existingData.discriminator != data.discriminator) {
+                logger.warn("The discriminator from the request body and the backend discriminator don't match.  The client may not have updated correctly.", [
+                    aid: accountId,
+                    dataDiscriminator: data.discriminator,
+                    existingDiscriminator: existingData.discriminator
+                ])
+            }
 
             if (!newAccount &&
                     (!existingData?.discriminator                            // We don't have a discriminator for this aid yet
-                    || data.accountName != existingData?.accountName         // The user is changing their screenname
-                    || data.discriminator != existingData?.discriminator)) { // There's a discriminator mismatch from client and server.  Use the server's version to avoid hacked clients generating IDs and forces a reroll.
+                    || data.accountName != existingData?.accountName)) {     // The user is changing their screenname
                 try {
                     def newDiscriminator = generateDiscriminator(accountId, data.accountName, (int)(existingData?.discriminator ?: -1))
 
                     // This should only happen if, for example, there are a *ton* of people with the same screenname, and all the retries failed.
                     // We need to throw an exception, though, because we need to guarantee screenName + discriminator combinations are unique.
                     if (newDiscriminator == null)
-                        logger.info("Could not create a new discriminator for $accountId.")
+                        logger.error("Could not create a new discriminator for $accountId.")
                     data.discriminator = newDiscriminator
                     output = [
                         identityChanged: true,
@@ -445,6 +451,7 @@ class AccountService {
 
         try {
             MongoCollection coll = mongoService.collection("discriminators")
+
             int retries = RETRY_COUNT;
             int rando = desiredNumber >= 0 ? desiredNumber : random(DEDUP_RANGE)
             while (retries-- > 0) {
@@ -453,8 +460,8 @@ class AccountService {
 
                 BasicDBObject numExistsQuery = new BasicDBObject("number", rando)
                 BasicDBObject numTakenQuery = new BasicDBObject("\$and", [
-                        new BasicDBObject("number", rando),
-                        new BasicDBObject("members.sn", screenName)
+                    new BasicDBObject("number", rando),
+                    new BasicDBObject("members.sn", screenName)
                 ])
 
                 Object result = coll.find(numExistsQuery).first()
