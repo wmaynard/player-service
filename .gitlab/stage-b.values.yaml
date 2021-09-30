@@ -42,11 +42,11 @@ gitlab:
 service:
   enabled: true
   annotations: {}
-  name: ps-dev # 15 character limit..
+  name: ps-stage-b # 15 character limit..
   type: NodePort
-  url: https://dev.nonprod.tower.cdrentertainment.com/
+  url: https://stage-b.nonprod.tower.cdrentertainment.com/
   additionalHosts:
-  commonName: dev.nonprod.tower.cdrentertainment.com
+  commonName: stage-b.nonprod.tower.cdrentertainment.com
   externalPort: 80
   internalPort: 8080
 ingress:
@@ -59,14 +59,14 @@ ingress:
   tls:
     enabled: true
     acme: true
-    secretName: "player-service-dev"
+    secretName: "player-service-stage-b"
     useDefaultSecret: false
   annotations:
     cert-manager.io/cluster-issuer: "letsencrypt-prod"
     kubernetes.io/ingress.class: "nginx"
   modSecurity:
     enabled: true
-    secRuleEngine: "DetectionOnly"
+    secRuleEngine: "On"
     # secRules:
     #   - variable: ""
     #     operator: ""
