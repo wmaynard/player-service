@@ -1,27 +1,6 @@
 variables:
   EB_DEPLOY_WAIT_TIME: 1200
 
-dev-eb:
-  stage: dev
-  image: ubuntu:latest
-  script:
-    - apt-get update -yq
-    - apt-get install -y ruby-dev zip git
-    - zip -r $CI_PROJECT_NAME.zip .ebextensions/ build/
-    - echo $(ls)
-    - gem install dpl --pre
-    - dpl --provider=elasticbeanstalk --zip_file=./$CI_PROJECT_NAME.zip --access_key_id=$EB_DEPLOY_ACCESS_KEY --secret_access_key=$EB_DEPLOY_SECRET_KEY --bucket=rumble-gitlab-eb-platform-deploy --bucket_path=player-service --region=us-east-1 --app=player-service --env=PlayerService-Dev --wait_until_deployed --wait_until_deployed_timeout=$EB_DEPLOY_WAIT_TIME
-  environment:
-    name: dev-eb
-  needs:
-    - job: build_app
-      artifacts: true
-  rules:
-    - if: $DEPLOY_TYPE == "kubernetes"
-      when: never
-    - if: $DEPLOY_TYPE == "beanstalk" || $DEPLOY_TYPE == "both"
-      when: always
-
 stage-a-eb: 
   image: ubuntu:latest
   stage: staging
