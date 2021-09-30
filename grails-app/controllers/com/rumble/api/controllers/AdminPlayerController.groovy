@@ -22,14 +22,14 @@ class AdminPlayerController {
 
     def game = System.getProperty("GAME_GUKEY")
 
-    private def getReports(String aid) {
-        MongoCollection coll = mongoService.collection("chat_reports")
+    private def getReports(String aid) { // TODO: These should really be calling chat-service to get them, but groovy didn't play nice with the API earlier.  Investigate more later.
+        MongoCollection coll = mongoService.collection("reports")
         BasicDBObject query = new BasicDBObject("rptd.aid", aid)
         def results = coll.find(query).toList()
         return results
     }
     private def getBans(String aid) {
-        MongoCollection coll = mongoService.collection("chat_bans")
+        MongoCollection coll = mongoService.collection("bans")
         BasicDBObject query = new BasicDBObject("aid", aid)
         def results = coll.find(query).toList()
         return results
@@ -49,10 +49,14 @@ class AdminPlayerController {
         if(account) {
             def components = accountService.getDetails(params.id, null)
             def profiles = profileService.getProfilesForAccount(params.id)
-            def items = itemService.getItems(params.id, null)
+            // 2021.09.30
+            // levelRunInfo && autoplay records added a ton of bloat and aren't useful for CS.
+            // The sheer amount of bloat means we can't save items from pubapp.
+            // TODO: Eventually would be nice to have separate tabs for these two, especially with a .NET player-service rewrite.
+            def items = itemService.getItems(params.id, ["hero", "equipment"])
             def chat = [
-                reports: getReports(params.id),
-                bans: getBans(params.id)
+                    reports: getReports(params.id),
+                    bans: getBans(params.id)
             ]
 
             responseData = [
