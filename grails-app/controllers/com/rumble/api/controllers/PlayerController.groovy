@@ -12,6 +12,7 @@ import com.rumble.platform.exception.BadRequestException
 import com.rumble.platform.exception.HttpMethodNotAllowedException
 import com.rumble.platform.exception.PlatformException
 import grails.converters.JSON
+import groovy.json.JsonBuilder
 import groovy.json.JsonOutput
 import groovy.json.JsonSlurper
 import org.bson.Document
@@ -38,7 +39,60 @@ class PlayerController {
 
     def game = System.getProperty("GAME_GUKEY")
 
+    // The logger.info call hasn't been yielding expected results and is a confusing mess to understand,
+    // so we'll use a standard Java post call to Loggly instead, just to get by until we get to a .NET rewrite.
+    String logglyPost(String message, def map) {
 
+        def payload = [:];
+        payload.env = System.getProperty("RUMBLE_DEPLOYMENT");
+        payload.message = message;
+        payload.severity = "INFO";
+        payload.component = "player-service";
+        payload.data = map;
+
+        String json = new JsonBuilder(payload).toString();
+
+        String targetURL = System.getProperty("LOGGLY_URL");
+        HttpURLConnection connection = null;
+
+        try {
+            //Create connection
+            URL url = new URL(targetURL);
+            connection = (HttpURLConnection) url.openConnection();
+            connection.setRequestMethod("POST");
+            connection.setRequestProperty("Content-Type", "application/json");
+
+            connection.setRequestProperty("Content-Length", Integer.toString(json.getBytes().length));
+            connection.setRequestProperty("Content-Language", "en-US");
+
+            connection.setUseCaches(false);
+            connection.setDoOutput(true);
+
+            //Send request
+            DataOutputStream wr = new DataOutputStream (connection.getOutputStream());
+            wr.writeBytes(json);
+            wr.close();
+
+            //Get Response
+            InputStream is = connection.getInputStream();
+            BufferedReader rd = new BufferedReader(new InputStreamReader(is));
+            StringBuilder response = new StringBuilder(); // or StringBuffer if Java version 5+
+            String line;
+            while ((line = rd.readLine()) != null) {
+                response.append(line);
+                response.append('\r');
+            }
+            rd.close();
+            return response.toString();
+        } catch (Exception e) {
+            e.printStackTrace();
+            return null;
+        } finally {
+            if (connection != null) {
+                connection.disconnect();
+            }
+        }
+    }
 
     // AccessTokenService is not a service.  It's just a class in a lib used only in player-service.
     // While the intention was probably to break it out into its own service, it didn't make it there.
@@ -51,10 +105,12 @@ class PlayerController {
             success: false
         ]
         def authHeader = request.getHeader('Authorization')
+        def accessToken;
+        def tokenAuth;
         try {
             if (authHeader?.startsWith('Bearer ')) {
-                def accessToken = authHeader.substring(7)
-                def tokenAuth = accessTokenService.validateAccessToken(accessToken, false, false)
+                accessToken = authHeader.substring(7)
+                tokenAuth = accessTokenService.validateAccessToken(accessToken, false, false)
                 def aid = tokenAuth.sub;
                 def audience = tokenAuth.aud;
 
@@ -77,6 +133,11 @@ class PlayerController {
             }
         } catch (Exception e) {
             responseData.error = e.message;
+            logglyPost("Invalid token (" + e.message + ")", [
+                encryptedToken: accessToken,
+                token: tokenAuth,
+                exception: e
+            ])
             logger.error("Invalid token: " + e.message)
         }
         render(responseData as JSON)
@@ -271,7 +332,13 @@ class PlayerController {
                         if (conflictProfiles && conflictProfiles.size() > 0) {
                             conflict = true
                             responseData.errorCode = "accountConflict"
-                            logger.warn("Account conflict", [accountId: id.toString(), conflictProfiles: conflictProfiles])
+                            logglyPost("Account conflict", [
+                                accountId: id,
+                                profiles: playerProfiles,
+                                conflictProfiles: conflictProfiles
+                            ])
+                            logger.info("Account conflict", [accountId: id.toString()])
+                            //TODO: Include which accounts are conflicting? Security concerns?
                             def conflictingAccountIds = conflictProfiles.collect {
                                 if (it.aid.toString() != id.toString()) {
                                     return it.aid
@@ -428,9 +495,9 @@ class PlayerController {
         authService.enforceServerAuth(request, requestData)
 
         def responseData = [
-                success   : false,
-                accountId: accountId,
-                serverTime: '\'' + System.currentTimeMillis() + '\''
+            success   : false,
+            accountId: accountId,
+            serverTime: '\'' + System.currentTimeMillis() + '\''
         ]
 
         def clientSession
@@ -526,12 +593,12 @@ class PlayerController {
     def saveTransaction() {
 
         def responseData = [
-                success   : false,
-                remoteAddr: request.remoteAddr,
-                geoipAddr : request.remoteAddr,
-                country   : 'US',
-                serverTime: '\'' + System.currentTimeMillis() + '\'',
-                clientvars: [:]
+            success   : false,
+            remoteAddr: request.remoteAddr,
+            geoipAddr : request.remoteAddr,
+            country   : 'US',
+            serverTime: '\'' + System.currentTimeMillis() + '\'',
+            clientvars: [:]
         ]
 
         def boundary = MimeTypeUtils.generateMultipartBoundaryString()
@@ -557,7 +624,7 @@ class PlayerController {
         }
 
         def clientRequestId = identity?.requestId
-            def requestId = clientRequestId ?: UUID.randomUUID().toString()
+        def requestId = clientRequestId ?: UUID.randomUUID().toString()
         if (clientRequestId) {
             MDC.put("clientRequestId", clientRequestId)
         }
@@ -722,18 +789,18 @@ class PlayerController {
 
                             //TODO: Generate new checksums
                             def cs = [
-                                    "name"    : component.name,
-                                    "checksum": checksumService.generateComponentChecksum(component, mac) ?: "placeholder"
+                                "name"    : component.name,
+                                "checksum": checksumService.generateComponentChecksum(component, mac) ?: "placeholder"
                             ]
                             entriesChecksums.add(cs)
                         }
 
                         // Recreate manifest to send back to the client
                         mani = [
-                                "identity"       : identity,
-                                "entries"        : entriesChecksums,
-                                "manifestVersion": updatedAccount?.mv ?: "placeholder", //TODO: Save manifestVersion
-                                "checksum"       : checksumService.generateMasterChecksum(entriesChecksums, mac) ?: "placeholder"
+                            "identity"       : identity,
+                            "entries"        : entriesChecksums,
+                            "manifestVersion": updatedAccount?.mv ?: "placeholder", //TODO: Save manifestVersion
+                            "checksum"       : checksumService.generateMasterChecksum(entriesChecksums, mac) ?: "placeholder"
                         ]
                     } else {
                         responseData.errorCode = "mergeConflict"
@@ -760,8 +827,13 @@ class PlayerController {
                         if (conflictProfiles && conflictProfiles.size() > 0) {
                             conflict = true
                             responseData.errorCode = "accountConflict"
-                            logger.warn("Account conflict", [accountId: id.toString(), conflictProfiles: conflictProfiles])
-                            // TODO: include request.JSON to see the body request?
+                            logglyPost("Account conflict", [
+                                accountId: id,
+                                profiles: playerProfiles,
+                                conflictProfiles: conflictProfiles
+                            ])
+                            logger.info("Account conflict", [accountId: id.toString()])
+                            //TODO: Include which accounts are conflicting? Security concerns?
                             def conflictingAccountIds = conflictProfiles.collect {
                                 if (it.aid.toString() != id.toString()) {
                                     return it.aid
@@ -824,18 +896,18 @@ class PlayerController {
                             entries[component.name] = content
 
                             def cs = [
-                                    "name"    : component.name,
-                                    "checksum": checksumService.generateComponentChecksum(content.toString(), mac) ?: "placeholder"
+                                "name"    : component.name,
+                                "checksum": checksumService.generateComponentChecksum(content.toString(), mac) ?: "placeholder"
                             ]
                             entriesChecksums.add(cs)
                         }
 
                         // Recreate manifest to send back to the client
                         mani = [
-                                "identity"       : identity,
-                                "entries"        : entriesChecksums,
-                                "manifestVersion": updatedAccount?.mv.toString() ?: "placeholder",
-                                "checksum"       : checksumService.generateMasterChecksum(entriesChecksums, mac) ?: "placeholder"
+                            "identity"       : identity,
+                            "entries"        : entriesChecksums,
+                            "manifestVersion": updatedAccount?.mv.toString() ?: "placeholder",
+                            "checksum"       : checksumService.generateMasterChecksum(entriesChecksums, mac) ?: "placeholder"
                         ]
                     } else {
                         if (manifest.entries) {
@@ -957,15 +1029,15 @@ class PlayerController {
         def serialized = params.boolean('serialized')
 
         def responseData = [
-                success: true,
-                accountId: accountId,
-                components: components.collect {
-                    def data = it.value.data ?: [:]
-                    [
-                            name: it.key,
-                            data: serialized ? (data as JSON).toString() : data
-                    ]
-                }
+            success: true,
+            accountId: accountId,
+            components: components.collect {
+                def data = it.value.data ?: [:]
+                [
+                    name: it.key,
+                    data: serialized ? (data as JSON).toString() : data
+                ]
+            }
         ]
 
         render (responseData as JSON)
@@ -1008,13 +1080,13 @@ class PlayerController {
 
         def facebookProfiles
         def responseData = [
-                success: true
+            success: true
         ]
 
         if (!params.accounts && !params.facebook) {
             responseData = [
-                    success  : false,
-                    errorCode: "invalidRequest"
+                success  : false,
+                errorCode: "invalidRequest"
             ]
         }
 
@@ -1039,9 +1111,9 @@ class PlayerController {
             // Format summary data and map with fb ids
             def formattedSummaries = summaries.collect { s ->
                 def f = [
-                        id  : s.aid,
-                        fb  : (facebookProfiles.find { s.aid == it.aid })?.pid ?: "",
-                        data: s.data
+                    id  : s.aid,
+                    fb  : (facebookProfiles.find { s.aid == it.aid })?.pid ?: "",
+                    data: s.data
                 ]
                 return f
             }
