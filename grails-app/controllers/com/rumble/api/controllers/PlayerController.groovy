@@ -335,7 +335,9 @@ class PlayerController {
                             logglyPost("Account conflict", [
                                 accountId: id,
                                 profiles: playerProfiles,
-                                conflictProfiles: conflictProfiles
+                                conflictProfiles: conflictProfiles,
+                                validProfiles: validProfiles,
+                                requestData: requestData
                             ])
                             logger.info("Account conflict", [accountId: id.toString()])
                             //TODO: Include which accounts are conflicting? Security concerns?
