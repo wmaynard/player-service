@@ -3,6 +3,10 @@
 # Declare variables to be passed into your templates.
 replicaCount: 1
 strategyType:
+  rollingUpdate:
+    maxSurge: 1
+    maxUnavailable: 0
+  type: RollingUpdate
 # `serviceAccountName` is deprecated in favor of `serviceAccount.name`
 serviceAccountName:
 image:
@@ -28,11 +32,11 @@ application:
   secretName: 
   secretChecksum:
 hpa:
-  enabled: false
+  enabled: true
   minReplicas: 1
   maxReplicas: 5
   CPUUtilizationPercentage: 60
-  MemUtilizationPercentage: 60
+  MemUtilizationPercentage: 83
 gitlab:
   app:
   env:
@@ -102,10 +106,10 @@ postgresql:
 resources:
   limits:
     cpu: 512m
-    memory: 1024Mi
-  requests:
-    cpu: 256m
     memory: 600Mi
+  requests:
+    cpu: 100m
+    memory: 485Mi
 
 ## Configure PodDisruptionBudget
 ## ref: https://kubernetes.io/docs/concepts/workloads/pods/disruptions/
