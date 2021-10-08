@@ -103,9 +103,9 @@ resources:
   limits:
     cpu: 512m
     memory: 600Mi
-  # requests:
-  #   cpu: 100m
-  #   memory: 485Mi
+  requests:
+    cpu: 512m
+    memory: 600Mi
 
 ## Configure PodDisruptionBudget
 ## ref: https://kubernetes.io/docs/concepts/workloads/pods/disruptions/

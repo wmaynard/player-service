@@ -6,6 +6,9 @@ metadata:
   labels:
 {{ include "sharedlabels" . | indent 4 }}
 spec:
+  behavior:
+    scaleUp:
+      stabilizationWindowSeconds: 60
   scaleTargetRef:
     kind: Deployment
     name: {{ template "appname" . }}
