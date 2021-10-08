@@ -5,6 +5,7 @@ import com.mongodb.DBObject
 import com.mongodb.client.MongoCollection
 import com.rumble.api.services.ProfileTypes
 import grails.converters.JSON
+import groovy.json.JsonBuilder
 import groovy.json.JsonOutput
 import groovy.json.JsonSlurper
 import groovyx.net.http.HTTPBuilder
@@ -54,10 +55,16 @@ class AdminPlayerController {
             // The sheer amount of bloat means we can't save items from pubapp.
             // TODO: Eventually would be nice to have separate tabs for these two, especially with a .NET player-service rewrite.
             def items = itemService.getItems(params.id, ["hero", "equipment"])
+
+            def chatData = JSON.parse(chatPlayerDetails(params.id));
             def chat = [
-                    reports: getReports(params.id),
-                    bans: getBans(params.id)
+                bans: chatData.bans,
+                reports: chatData.reports
             ]
+//            def chat = [
+//                    reports: getReports(params.id),
+//                    bans: getBans(params.id)
+//            ]
 
             responseData = [
                 success: true,
@@ -293,5 +300,57 @@ class AdminPlayerController {
 
         render responseData as JSON
     }
+    // The logger.info call hasn't been yielding expected results and is a confusing mess to understand,
+    // so we'll use a standard Java post call to Loggly instead, just to get by until we get to a .NET rewrite.
+    String chatPlayerDetails(String aid) {
 
+        String token = dynamicConfigService.getGameConfig(game).chatToken;
+
+        def payload = [:];
+        payload.aid = aid;
+
+        String json = new JsonBuilder(payload).toString();
+
+        String targetURL = dynamicConfigService.getGameConfig(game).platformUrl + "chat/admin/playerDetails";
+        HttpURLConnection connection = null;
+
+        try {
+            //Create connection
+            URL url = new URL(targetURL);
+            connection = (HttpURLConnection) url.openConnection();
+            connection.setRequestMethod("POST");
+            connection.setRequestProperty("Content-Type", "application/json");
+
+            connection.setRequestProperty("Content-Length", Integer.toString(json.getBytes().length));
+            connection.setRequestProperty("Content-Language", "en-US");
+            connection.setRequestProperty("Authorization", "Bearer " + token);
+
+            connection.setUseCaches(false);
+            connection.setDoOutput(true);
+
+            //Send request
+            DataOutputStream wr = new DataOutputStream (connection.getOutputStream());
+            wr.writeBytes(json);
+            wr.close();
+
+            //Get Response
+            InputStream is = connection.getInputStream();
+            BufferedReader rd = new BufferedReader(new InputStreamReader(is));
+            StringBuilder response = new StringBuilder(); // or StringBuffer if Java version 5+
+            String line;
+            while ((line = rd.readLine()) != null) {
+                response.append(line);
+                response.append('\r');
+            }
+            rd.close();
+            return response.toString();
+        } catch (Exception e) {
+            e.printStackTrace();
+            return null;
+        } finally {
+            if (connection != null) {
+                connection.disconnect();
+            }
+        }
+    }
 }
