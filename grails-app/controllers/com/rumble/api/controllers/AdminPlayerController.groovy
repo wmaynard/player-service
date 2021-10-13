@@ -56,11 +56,19 @@ class AdminPlayerController {
             // TODO: Eventually would be nice to have separate tabs for these two, especially with a .NET player-service rewrite.
             def items = itemService.getItems(params.id, ["hero", "equipment"])
 
-            def chatData = JSON.parse(chatPlayerDetails(params.id));
+            def chatData
             def chat = [
-                bans: chatData.bans,
-                reports: chatData.reports
+                bans: [:],
+                reports: [:]
             ]
+            try {
+                chatData = JSON.parse(chatPlayerDetails(params.id));
+                chat = [
+                    bans: chatData.bans,
+                    reports: chatData.reports
+                ]
+            }
+            catch (e){}
 //            def chat = [
 //                    reports: getReports(params.id),
 //                    bans: getBans(params.id)

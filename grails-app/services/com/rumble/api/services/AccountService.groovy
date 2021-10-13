@@ -300,7 +300,7 @@ class AccountService {
 
             if (!newAccount &&
                     (!existingData?.discriminator                            // We don't have a discriminator for this aid yet
-                    || data.accountName != existingData?.accountName)) {     // The user is changing their screenname
+                    || (data.accountName != null && data.accountName != existingData?.accountName))) {     // The user is changing their screenname
                 try {
                     def newDiscriminator = generateDiscriminator(accountId, data.accountName, (int)(existingData?.discriminator ?: -1))
 
