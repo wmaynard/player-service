@@ -28,11 +28,11 @@ application:
   secretName: 
   secretChecksum:
 hpa:
-  enabled: false
+  enabled: true
   minReplicas: 1
   maxReplicas: 5
   CPUUtilizationPercentage: 60
-  MemUtilizationPercentage: 60
+  MemUtilizationPercentage: 83
 gitlab:
   app:
   env:
@@ -107,9 +107,9 @@ postgresql:
 resources:
   limits:
     cpu: 512m
-    memory: 1024Mi
+    memory: 600Mi
   requests:
-    cpu: 256m
+    cpu: 512m
     memory: 600Mi
 
 ## Configure PodDisruptionBudget
