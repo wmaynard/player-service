@@ -311,13 +311,15 @@ class AccountService {
                 try {
                     def newDiscriminator = generateDiscriminator(accountId, data.accountName, (int)(existingData?.discriminator ?: -1))
 
-
-                    logglyPost("discriminator generation", [
+                    logglyPost("possible discriminator generation", [
                         aid: accountId,
                         collection: collection,
-                        existingData: existingData,
                         dataName: data?.accountName,
-                        existingName: existingData?.accountName
+                        dataDiscriminator: data?.discriminator,
+                        existingName: existingData?.accountName,
+                        existingDiscriminator: existingData?.discriminator,
+                        newDiscriminator: newDiscriminator,
+                        existingData: existingData
                     ])
 
                     // This should only happen if, for example, there are a *ton* of people with the same screenname, and all the retries failed.
