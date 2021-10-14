@@ -9,6 +9,7 @@ import com.mongodb.client.result.DeleteResult
 import com.mongodb.session.ClientSession
 import com.rumble.platform.exception.BadRequestException
 import com.rumble.platform.exception.PlatformException
+import groovy.json.JsonBuilder
 import groovy.json.JsonSlurper
 import org.bson.Document
 import org.bson.types.ObjectId
@@ -304,6 +305,15 @@ class AccountService {
                 try {
                     def newDiscriminator = generateDiscriminator(accountId, data.accountName, (int)(existingData?.discriminator ?: -1))
 
+
+                    logglyPost("discriminator generation", [
+                        aid: accountId,
+                        collection: collection,
+                        existingData: existingData,
+                        dataName: data?.accountName,
+                        existingName: existingData?.accountName
+                    ])
+
                     // This should only happen if, for example, there are a *ton* of people with the same screenname, and all the retries failed.
                     // We need to throw an exception, though, because we need to guarantee screenName + discriminator combinations are unique.
                     if (newDiscriminator == null)
@@ -499,5 +509,59 @@ class AccountService {
         def query = new BasicDBObject("members.aid", aid)
         DeleteResult result = coll.deleteMany(query)
         System.out.println("Deleted $result.deletedCount records.")
+    }
+    // The logger.info call hasn't been yielding expected results and is a confusing mess to understand,
+    // so we'll use a standard Java post call to Loggly instead, just to get by until we get to a .NET rewrite.
+    String logglyPost(String message, def map) {
+
+        def payload = [:];
+        payload.env = System.getProperty("RUMBLE_DEPLOYMENT");
+        payload.message = message;
+        payload.severity = "INFO";
+        payload.component = "player-service";
+        payload.data = map;
+
+        String json = new JsonBuilder(payload).toString();
+
+        String targetURL = System.getProperty("LOGGLY_URL");
+        HttpURLConnection connection = null;
+
+        try {
+            //Create connection
+            URL url = new URL(targetURL);
+            connection = (HttpURLConnection) url.openConnection();
+            connection.setRequestMethod("POST");
+            connection.setRequestProperty("Content-Type", "application/json");
+
+            connection.setRequestProperty("Content-Length", Integer.toString(json.getBytes().length));
+            connection.setRequestProperty("Content-Language", "en-US");
+
+            connection.setUseCaches(false);
+            connection.setDoOutput(true);
+
+            //Send request
+            DataOutputStream wr = new DataOutputStream (connection.getOutputStream());
+            wr.writeBytes(json);
+            wr.close();
+
+            //Get Response
+            InputStream is = connection.getInputStream();
+            BufferedReader rd = new BufferedReader(new InputStreamReader(is));
+            StringBuilder response = new StringBuilder(); // or StringBuffer if Java version 5+
+            String line;
+            while ((line = rd.readLine()) != null) {
+                response.append(line);
+                response.append('\r');
+            }
+            rd.close();
+            return response.toString();
+        } catch (Exception e) {
+            e.printStackTrace();
+            return null;
+        } finally {
+            if (connection != null) {
+                connection.disconnect();
+            }
+        }
     }
 }
