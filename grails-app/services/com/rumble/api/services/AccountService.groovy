@@ -290,20 +290,11 @@ class AccountService {
             }
             catch (Exception) {
                 newAccount = true
-                logglyPost("Couldn't find existing account data", [
+                logglyPost("Couldn't find existing account data when looking for a discriminator.", [
                     aid: accountId,
-                    collection: collection,
-                    data: data
+                    collection: collection
                 ])
             }
-            // This created a ton of log-spam, so it doesn't catch what I thought it did.
-//            if (existingData?.discriminator && existingData.discriminator != data.discriminator) {
-//                logger.warn("The discriminator from the request body and the backend discriminator don't match.  The client may not have updated correctly.", [
-//                    aid: accountId,
-//                    dataDiscriminator: data.discriminator,
-//                    existingDiscriminator: existingData.discriminator
-//                ])
-//            }
 
             if (!newAccount &&
                     (!existingData?.discriminator                            // We don't have a discriminator for this aid yet
@@ -318,8 +309,7 @@ class AccountService {
                         dataDiscriminator: data?.discriminator,
                         existingName: existingData?.accountName,
                         existingDiscriminator: existingData?.discriminator,
-                        newDiscriminator: newDiscriminator,
-                        existingData: existingData
+                        newDiscriminator: newDiscriminator
                     ])
 
                     // This should only happen if, for example, there are a *ton* of people with the same screenname, and all the retries failed.
