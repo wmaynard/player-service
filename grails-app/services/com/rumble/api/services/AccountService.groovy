@@ -286,9 +286,15 @@ class AccountService {
             def existingData
             try {
                 existingData = getComponentData(accountId, collection)[0].data
+                data.discriminator = existingData.discriminator
             }
             catch (Exception) {
                 newAccount = true
+                logglyPost("Couldn't find existing account data", [
+                    aid: accountId,
+                    collection: collection,
+                    data: data
+                ])
             }
             // This created a ton of log-spam, so it doesn't catch what I thought it did.
 //            if (existingData?.discriminator && existingData.discriminator != data.discriminator) {
