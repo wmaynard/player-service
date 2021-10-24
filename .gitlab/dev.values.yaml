@@ -28,11 +28,15 @@ application:
   secretName: 
   secretChecksum:
 hpa:
-  enabled: true
+  enabled: false
   minReplicas: 1
   maxReplicas: 5
   CPUUtilizationPercentage: 60
   MemUtilizationPercentage: 83
+  keda:
+    enabled: true
+    requestsPerSecond: "500"
+    serverAddress: http://prometheus-prometheus-server.gitlab-managed-apps.svc:80
 gitlab:
   app:
   env:
@@ -66,7 +70,7 @@ ingress:
     kubernetes.io/ingress.class: "nginx"
   modSecurity:
     enabled: true
-    secRuleEngine: "DetectionOnly"
+    secRuleEngine: "On"
     # secRules:
     #   - variable: ""
     #     operator: ""
