@@ -110,12 +110,12 @@ class PlayerController {
         try {
             if (authHeader?.startsWith('Bearer ')) {
                 accessToken = authHeader.substring(7)
-                tokenAuth = accessTokenService.validateAccessToken(accessToken, false, false)
+                tokenAuth = accessTokenService.validateAccessToken(accessToken)
                 def aid = tokenAuth.sub;
-                def audience = tokenAuth.aud;
-
-                if (audience != game)
-                    throw new Exception("Audience mismatch")
+//                def audience = tokenAuth.aud;
+//
+//                if (audience != game)
+//                    throw new Exception("Audience mismatch")
                 def secondsRemaining = tokenAuth.exp - new Date().getTime() / 1000L
                 if (secondsRemaining <= 0)
                     throw new Exception("Token is expired")
