@@ -115,6 +115,7 @@ commit_scan_results:
     name: ubuntu
   script:
     - apt update
+    - apt install -y git
     - git clone https://eric.sheris:${NUGET_PAT}@gitlab.cdrentertainment.com/platform-services/$CI_PROJECT_NAME.wiki.git
     - mkdir -p $CI_PROJECT_DIR/receipt-service.wiki/securityscans/
     - cp $CI_PROJECT_DIR/trivy/$CI_COMMIT_REF_SLUG-$CI_COMMIT_SHA.html $CI_PROJECT_NAME.wiki/securityscans/$CI_COMMIT_REF_SLUG-$CI_COMMIT_SHA.md
