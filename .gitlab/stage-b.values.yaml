@@ -61,8 +61,8 @@ ingress:
     - "/item"
     - "/admin/item"
   tls:
-    enabled: false
-    acme: galse
+    enabled: true
+    acme: true
     secretName: "player-service-stage-b"
     useDefaultSecret: false
   annotations:
