@@ -10,3 +10,7 @@ out/
 .project
 .settings
 .classpath
+*bin/
+*obj/
+environment.json
+nuget.config
