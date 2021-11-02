@@ -5,4 +5,13 @@
 		<RootNamespace>PlayerService</RootNamespace>
 	</PropertyGroup>
 
+	<ItemGroup>
+	  <ProjectReference Include="..\platform-csharp-common\platform-csharp-common.csproj" />
+	</ItemGroup>
+
+	<ItemGroup>
+	  <Folder Include="Exceptions" />
+	  <Folder Include="Utilities" />
+	</ItemGroup>
+
 </Project>
