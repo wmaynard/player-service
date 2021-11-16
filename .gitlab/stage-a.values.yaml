@@ -117,7 +117,6 @@ resources: # cpu can be throttled, memory will oom and crash the pod
 podDisruptionBudget:
   enabled: true
   minAvailable: 1
-  # maxUnavailable:
 
 ## Configure NetworkPolicy
 ## ref: https://kubernetes.io/docs/concepts/services-networking/network-policies/
