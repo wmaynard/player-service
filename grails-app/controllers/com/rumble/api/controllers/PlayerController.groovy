@@ -1017,7 +1017,6 @@ class PlayerController {
     }
 
     def read() {
-
         if (request.method != 'POST') {
             throw new HttpMethodNotAllowedException()
         }

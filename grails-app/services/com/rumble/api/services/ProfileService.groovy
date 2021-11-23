@@ -63,12 +63,18 @@ class ProfileService {
             }
         }
 
+        // 2021.11.22 Will
+        // The below two variables used to be instantiated in the findOneAndUpdate() call.
+        // This was throwing Transaction exceptions with Mongo.  Moving the declarations outside of the method worked
+        // for some reason.
+        BasicDBObject _update = new BasicDBObject('$set', updateDoc).append('$setOnInsert', upsertDoc);
+        FindOneAndUpdateOptions _find = new FindOneAndUpdateOptions().upsert(true).returnDocument(ReturnDocument.AFTER);
+
         def profile = coll.findOneAndUpdate(
                 clientSession,
                 query, // filter
-                new BasicDBObject('$set', updateDoc)
-                        .append('$setOnInsert', upsertDoc), // update
-                new FindOneAndUpdateOptions().upsert(true).returnDocument(ReturnDocument.AFTER)
+                _update, // update
+                _find
         )
 
         return profile

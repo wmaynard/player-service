@@ -16,8 +16,11 @@ class AppleService {
         if(!tokenData.playerId && !tokenData.publicKeyUrl && !tokenData.signature && !tokenData.salt && !tokenData.timestamp && !tokenData.bundleId) {
             return false
         }
+        // TODO: Still needs to be verified by Apple, and the rest of our code expects the playerId to be returned, *not* a boolean value.
+        return tokenData.playerId;
 
         def signedData = generateEncodedSignedDataForAppleVerify(tokenData.playerId, tokenData.bundleId, tokenData.timestamp, tokenData.salt)
+
 
         return verifyGamecenterUser(tokenData.publicKeyUrl, signedData, tokenData.signature)
     }
@@ -29,6 +32,67 @@ class AppleService {
                 bundle_id.getBytes(),
                 ByteBuffer.allocate(8).putLong(Long.parseLong(timestamp)).array(),
                 decoder.decode(salt))))
+    }
+
+    def gamecenterUserVerify(String publicKeyUrl, String signedData, String signature){
+        try{
+            URL url = new URL(publicKeyUrl);
+
+            HttpURLConnection urlConn = (HttpURLConnection) url.openConnection();
+            HttpURLConnection httpConn = (HttpURLConnection) urlConn;
+            httpConn.setAllowUserInteraction(false);
+            httpConn.connect();
+
+            InputStream _in = httpConn.getInputStream();
+            BufferedInputStream bis = new BufferedInputStream(_in);
+            org.apache.http.util.ByteArrayBuffer baf = new org.apache.http.util.ByteArrayBuffer(99999);
+            int read = 0;
+            int bufSize = 512;
+            byte[] buffer = new byte[bufSize];
+            while(true){
+                read = bis.read(buffer);
+                if(read==-1){
+                    break;
+                }
+                baf.append(buffer, 0, read);
+            }
+
+            byte[] bytes =baf.toByteArray();
+            bis.close();
+            _in.close();
+            httpConn.disconnect();
+
+            CertificateFactory cf =   CertificateFactory.getInstance("X509");
+            def cert = cf.generateCertificate(new ByteArrayInputStream(bytes))
+            X509Certificate c = (X509Certificate)cf.generateCertificate(new ByteArrayInputStream(bytes) );
+
+            PublicKey key22 = c.getPublicKey();
+
+            byte[] result = Base64.decodeBase64(signedData);//;
+            byte[] decodedSignature = Base64.decodeBase64(signature);
+
+            Signature sig;
+            try {
+                sig = Signature.getInstance("SHA256withRSA");
+                sig.initVerify(key22);
+                sig.update(result);
+                if (!sig.verify(decodedSignature)) {
+                    return false;
+                }else{
+                    return true;
+                }
+            } catch (NoSuchAlgorithmException e) {
+                e.printStackTrace();
+            } catch (InvalidKeyException e) {
+                e.printStackTrace();
+            } catch (SignatureException e) {
+                e.printStackTrace();
+            }
+        }catch(Exception e){
+            e.printStackTrace();
+        }
+
+        return false;
     }
 
     def getCertificate(publicKeyUrl) {
