@@ -6,7 +6,7 @@ using PlayerService.Models;
 using Rumble.Platform.Common.Utilities;
 using Rumble.Platform.Common.Web;
 
-namespace PlayerService.Services
+namespace PlayerService.Services.ComponentServices
 {
 	public class ComponentAccountService : PlatformMongoService<Component>
 	{

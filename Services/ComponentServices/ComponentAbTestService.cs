@@ -1,7 +1,7 @@
 using PlayerService.Models;
 using Rumble.Platform.Common.Web;
 
-namespace PlayerService.Services
+namespace PlayerService.Services.ComponentServices
 {
 	public class ComponentAbTestService : PlatformMongoService<Component>
 	{

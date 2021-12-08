@@ -8,6 +8,7 @@ using Microsoft.AspNetCore.Components.Web.Virtualization;
 using MongoDB.Bson.Serialization.Attributes;
 using MongoDB.Bson.Serialization.Serializers;
 using PlayerService.Exceptions;
+using PlayerService.Services.ComponentServices;
 using Rumble.Platform.Common.Web;
 
 namespace PlayerService.Services
