@@ -19,9 +19,9 @@ namespace PlayerService.Services
 		private const int MAXIMUM_VALUE = 9_999;
 		private const int MAX_ASSIGNMENT_ATTEMPTS = 50;
 
-		private readonly ComponentAccountService _accountService;
+		private readonly AccountService _accountService;
 
-		public DiscriminatorService(ComponentAccountService accountService) : base("discriminators")
+		public DiscriminatorService(AccountService accountService) : base("discriminators")
 		{
 			_accountService = accountService;
 		}

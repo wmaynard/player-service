@@ -8,8 +8,8 @@ using Rumble.Platform.Common.Web;
 
 namespace PlayerService.Services.ComponentServices
 {
-	public class ComponentAccountService : PlatformMongoService<Component>
+	public class AccountService : PlatformMongoService<Component>
 	{
-		public ComponentAccountService() : base("c_account") { }
+		public AccountService() : base("c_account") { }
 	}
 }

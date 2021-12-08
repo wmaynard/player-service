@@ -3,8 +3,8 @@ using Rumble.Platform.Common.Web;
 
 namespace PlayerService.Services.ComponentServices
 {
-	public class ComponentHeroService : PlatformMongoService<Component>
+	public class AbTestService : PlatformMongoService<Component>
 	{
-		public ComponentHeroService() : base("c_hero") { }
+		public AbTestService() : base("c_abTest") { }
 	}
 }
