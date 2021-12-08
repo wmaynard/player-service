@@ -3,7 +3,7 @@ using Rumble.Platform.Common.Web;
 
 namespace PlayerService.Services.ComponentServices
 {
-	public class EquipmentService : PlatformMongoService<Component>
+	public class EquipmentService : ComponentService
 	{
 		public EquipmentService() : base("c_equipment") { }
 	}

@@ -90,7 +90,7 @@ namespace PlayerService.Controllers
 			Installation install = _installService.FindOne(installation => installation.InstallId == installId);
 			string accountId = install.Id;
 			// 2141
-			int discriminator = _discriminatorService.Lookup(accountId, screenname);
+			int discriminator = _discriminatorService.Lookup(accountId, out screenname);
 			
 			response.AccessToken = GenerateToken(accountId, "player-service-v2-test", discriminator);
 			// TODO:

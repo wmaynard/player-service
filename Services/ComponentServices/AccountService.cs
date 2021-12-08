@@ -8,8 +8,9 @@ using Rumble.Platform.Common.Web;
 
 namespace PlayerService.Services.ComponentServices
 {
-	public class AccountService : PlatformMongoService<Component>
+	public class AccountService : ComponentService
 	{
-		public AccountService() : base("c_account") { }
+		public const string DB_KEY_SCREENNAME = "accountName";
+		public AccountService() : base("c_test") { }
 	}
 }

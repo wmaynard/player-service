@@ -8,7 +8,9 @@ using Microsoft.AspNetCore.Components.Web.Virtualization;
 using MongoDB.Bson.Serialization.Attributes;
 using MongoDB.Bson.Serialization.Serializers;
 using PlayerService.Exceptions;
+using PlayerService.Models;
 using PlayerService.Services.ComponentServices;
+using Rumble.Platform.Common.Utilities;
 using Rumble.Platform.Common.Web;
 
 namespace PlayerService.Services
@@ -26,9 +28,24 @@ namespace PlayerService.Services
 			_accountService = accountService;
 		}
 
-		public int Lookup(string accountId, string screenName)
+		public int Lookup(string accountId, out string screenName)
 		{
 			DiscriminatorGroup existing = FindOne(group => group.Members.Any(member => member.AccountId == accountId));
+			Component account = _accountService.Lookup(accountId);
+
+			if (account == null)
+				_accountService.Create(account = new Component(accountId, new GenericData()
+				{
+					{ AccountService.DB_KEY_SCREENNAME, screenName = "Confused Antelope" }
+				}));
+			else
+				screenName = account.Data.Optional<string>(AccountService.DB_KEY_SCREENNAME);
+
+			if (screenName == null)
+			{
+				account.Data[AccountService.DB_KEY_SCREENNAME] = screenName = "Confused Antelope";
+				_accountService.Update(account);
+			}
 
 			if (existing != null)
 				return existing.Number;
@@ -54,7 +71,7 @@ namespace PlayerService.Services
 				return false;
 			
 			next ??= new DiscriminatorGroup(target);  // We haven't assigned this discriminator to anyone yet.  Create a new DiscriminatorGroup for it.
-			next.Members.Add(new DiscriminatorMember(accountId, screenname));
+			next.Members.Add(new DiscriminatorMember(accountId, screenname)); // TODO: need to Create on a new group
 			
 			// Ideally, players are only ever in one group, but just in case, we'll loop through all of them.
 			foreach (DiscriminatorGroup group in previous)

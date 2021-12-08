@@ -3,7 +3,7 @@ using Rumble.Platform.Common.Web;
 
 namespace PlayerService.Services.ComponentServices
 {
-	public class WalletService : PlatformMongoService<Component>
+	public class WalletService : ComponentService
 	{
 		public WalletService() : base("c_wallet") { }
 	}
