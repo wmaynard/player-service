@@ -22,6 +22,7 @@ namespace PlayerService.Controllers
 		private readonly InstallationService _installService;
 		private readonly DiscriminatorService _discriminatorService;
 		private readonly DynamicConfigService _dynamicConfigService;
+		private readonly ProfileService _profileService;
 		
 		private DynamicConfigClient _config;
 
@@ -31,11 +32,12 @@ namespace PlayerService.Controllers
 			gameId: PlatformEnvironment.Variable("GAME_GUKEY")
 		);
 
-		public TopController(InstallationService installService, DynamicConfigService configService, DiscriminatorService discriminatorService, IConfiguration config) : base(config)
+		public TopController(InstallationService installService, DynamicConfigService configService, DiscriminatorService discriminatorService, ProfileService profileService, IConfiguration config) : base(config)
 		{
 			_installService = installService;
 			_discriminatorService = discriminatorService;
 			_dynamicConfigService = configService;
+			_profileService = profileService;
 			
 				
 				
@@ -67,6 +69,7 @@ namespace PlayerService.Controllers
 			string screenname = Optional<string>("screenName");
 			string mergeAccountId = Optional<string>("mergeAccountId");
 			string mergeToken = Optional<string>("mergeToken");
+			GenericData sso = Optional<GenericData>("sso");
 
 			LaunchResponse response = new LaunchResponse();
 			response.RequestId = requestId;
@@ -91,6 +94,30 @@ namespace PlayerService.Controllers
 			string accountId = install.Id;
 			// 2141
 			int discriminator = _discriminatorService.Lookup(accountId, out screenname);
+
+			Profile[] profiles = _profileService.ValidateProfile(sso);
+			Profile[] conflictProfiles = profiles
+				.Where(profile => profile.AccountId != accountId)
+				.ToArray();
+
+			if (conflictProfiles.Any())
+			{
+				response.ErrorCode = "accountConflict";
+				Log.Info(Owner.Default, "Account Conflict", data: new
+				{
+					AccountId = accountId,
+					Profiles = profiles,
+					ConflictProfiles = conflictProfiles,
+					RequestData = Body
+				});
+				response.ConflictingAccountId = conflictProfiles.First().AccountId;
+				// TODO: accountService.generateMergeToken, save to response.MergeToken
+				// TODO: Log(Merge token generated)
+			}
+			// TODO: #356 accountService.HasInstallConflict
+			
+			// TODO: no conflict; saveInstallIdProfile, save valid profiles, accountService.updateAccountData,
+			
 			
 			response.AccessToken = GenerateToken(accountId, "player-service-v2-test", discriminator);
 			// TODO:

@@ -16,6 +16,7 @@ namespace PlayerService.Models.Responses
 		public string AccountId { get; set; }
 		public string ErrorCode { get; set; }
 		public string AccessToken { get; set; }
+		public string ConflictingAccountId { get; set; }
 
 		public LaunchResponse()
 		{
