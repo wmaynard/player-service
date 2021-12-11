@@ -10,6 +10,17 @@
 	</ItemGroup>
 
 	<ItemGroup>
+	  <None Remove="adjectives.txt" />
+	  <Content Include="adjectives.txt">
+	    <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+	  </Content>
+	  <None Remove="nouns.txt" />
+	  <Content Include="nouns.txt">
+	    <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+	  </Content>
+	</ItemGroup>
+
+	<ItemGroup>
 	  <Folder Include="Utilities" />
 	</ItemGroup>
 

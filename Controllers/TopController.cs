@@ -13,6 +13,7 @@ using Rumble.Platform.Common.Web;
 using PlayerService.Services;
 using Rumble.Platform.Common.Utilities;
 using Rumble.Platform.CSharp.Common.Interop;
+using Rumble.Platform.CSharp.Common.Services;
 
 namespace PlayerService.Controllers
 {
@@ -23,6 +24,7 @@ namespace PlayerService.Controllers
 		private readonly DiscriminatorService _discriminatorService;
 		private readonly DynamicConfigService _dynamicConfigService;
 		private readonly ProfileService _profileService;
+		private readonly NameGeneratorService _nameGeneratorService;
 		
 		private DynamicConfigClient _config;
 
@@ -32,7 +34,8 @@ namespace PlayerService.Controllers
 			gameId: PlatformEnvironment.Variable("GAME_GUKEY")
 		);
 
-		public TopController(InstallationService installService, DynamicConfigService configService, DiscriminatorService discriminatorService, ProfileService profileService, IConfiguration config) : base(config)
+		public TopController(InstallationService installService, DynamicConfigService configService, DiscriminatorService discriminatorService, 
+			ProfileService profileService, NameGeneratorService nameGeneratorService, IConfiguration config) : base(config)
 		{
 			_installService = installService;
 			_discriminatorService = discriminatorService;
