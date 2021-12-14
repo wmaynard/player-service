@@ -130,13 +130,25 @@ namespace PlayerService.Models
 		public string ScreenName_Deprecated { get; private set; }
 		#endregion PROBABLY_UNUSED_FIELDS
 
-		public Profile(Installation install)
+		private Profile()
 		{
-			// CreatedTimestamp = install.CreatedTimestamp;
-			// ModifiedTimestamp = install.ModifiedTimestamp;
-			// ClientVersion = install.ClientVersion;
+			CreatedTimestamp = UnixTime;
+		}
+
+		public Profile(Installation install) : this()
+		{
+			CreatedTimestamp = install.CreatedTimestamp;
+			ModifiedTimestamp = install.ModifiedTimestamp;
+			ClientVersion = install.ClientVersion;
 			ProfileId = install.Id;
+			AccountId = ObjectId.GenerateNewId().ToString();
 			Type = "installId"; // TODO: const or enum
+		}
+
+		public Profile(string ssoId, string ssoType) : this()
+		{
+			ProfileId = ssoId;
+			Type = ssoType;
 		}
 	}
 }

@@ -95,25 +95,31 @@ namespace PlayerService.Controllers
 
 			if (install == null)
 			{
-				// oogabooga2
 				install = new Installation()
 				{
-					// ClientVersion = clientVersion,
-					// DeviceType = deviceType,
+					ClientVersion = clientVersion,
+					DeviceType = deviceType,
 					InstallId = installId
 				};
-				Profile profile = new Profile(install);
 				_installService.Create(install);
+				Profile profile = new Profile(install);
 				_profileService.Create(profile);
+				Log.Info(Owner.Default, "New account created.", data: new
+				{
+					InstallId = install.Id,
+					ProfileId = profile.Id,
+					AccountId = profile.AccountId
+				});
 			}
 			
 			// TODO: Handle install id not found (new client)
 
 			Profile[] profiles = _profileService.Find(install.Id, sso);
-			string accountId = profiles.First().AccountId;
+			string accountId = profiles.FirstOrDefault()?.AccountId;
 			Profile[] conflictProfiles = profiles
 				.Where(profile => profile.AccountId != accountId)
 				.ToArray();
+			// TODO: If SSO provided and no profile match, create profile for SSO on this account
 
 			int discriminator = _discriminatorService.Lookup(accountId, out screenname);
 
@@ -233,6 +239,23 @@ namespace PlayerService.Controllers
 			Task<GenericData> task = old.SendAsync();
 			task.Wait();
 			return task.Result;
+		}
+
+		private void Test()
+		{
+			Installation install = new Installation();
+			Installation install2 = new Installation();
+			
+			_installService.Create(install);
+			_installService.Create(install2);
+
+			Profile profile = new Profile(install);
+			Profile profile2 = new Profile(install2);
+			Profile sso2 = new Profile("agoobagoo", "gameCenter");
+			
+			_profileService.Create(profile);
+			_profileService.Create(profile2);
+			
 		}
 	}
 }
