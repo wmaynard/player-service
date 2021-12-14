@@ -38,57 +38,57 @@ namespace PlayerService.Models
 		
 		[BsonElement(DB_KEY_ACCOUNT_MERGED_TO), BsonIgnoreIfNull]
 		[JsonInclude, JsonPropertyName(FRIENDLY_KEY_ACCOUNT_MERGED_TO), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-		public string AccountMergedTo { get; private set; }
+		public string AccountMergedTo { get; set; }
 		
-		[BsonElement(DB_KEY_CLIENT_VERSION)]
+		[BsonElement(DB_KEY_CLIENT_VERSION), BsonIgnoreIfNull]
 		[JsonInclude, JsonPropertyName(FRIENDLY_KEY_CLIENT_VERSION), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
 		public string ClientVersion { get; set; }
 		
-		[BsonElement(DB_KEY_CREATED)]
+		[BsonElement(DB_KEY_CREATED), BsonIgnoreIfDefault]
 		[JsonInclude, JsonPropertyName(FRIENDLY_KEY_CREATED), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
-		public long CreatedTimestamp { get; private set; }
+		public long CreatedTimestamp { get; set; }
 		
-		[BsonElement(DB_KEY_DATA_VERSION), BsonSaveAsString]
+		[BsonElement(DB_KEY_DATA_VERSION), BsonSaveAsString, BsonIgnoreIfNull]
 		[JsonInclude, JsonPropertyName(FRIENDLY_KEY_DATA_VERSION), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-		public string DataVersion { get; private set; }
+		public string DataVersion { get; set; }
 		
-		[BsonElement(DB_KEY_DEVICE_TYPE)]
+		[BsonElement(DB_KEY_DEVICE_TYPE), BsonIgnoreIfNull]
 		[JsonInclude, JsonPropertyName(FRIENDLY_KEY_DEVICE_TYPE), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
 		public string DeviceType { get; set; }
 		
-		[BsonElement(DB_KEY_INSTALL_ID)]
+		[BsonElement(DB_KEY_INSTALL_ID), BsonIgnoreIfNull]
 		[JsonInclude, JsonPropertyName(FRIENDLY_KEY_INSTALL_ID), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
 		public string InstallId { get; set; }
-		
+		//
 		[BsonElement(DB_KEY_MERGE_TRANSACTION_ID), BsonIgnoreIfNull]
 		[JsonInclude, JsonPropertyName(FRIENDLY_KEY_MERGE_TRANSACTION_ID), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-		public string RecoveryToken { get; private set; } // Merge transaction?
+		public string RecoveryToken { get; set; } // Merge transaction?
 		
 		[BsonElement(DB_KEY_MERGED_VERSION), BsonSaveAsString, BsonIgnoreIfNull]
 		[JsonInclude, JsonPropertyName(FRIENDLY_KEY_MERGED_VERSION), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-		public string MergeVersion { get; private set; } // Merge Version?
+		public string MergeVersion { get; set; } // Merge Version?
 		
-		[BsonElement(DB_KEY_MODIFIED)]
+		[BsonElement(DB_KEY_MODIFIED), BsonIgnoreIfDefault]
 		[JsonInclude, JsonPropertyName(FRIENDLY_KEY_MODIFIED), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
-		public long ModifiedTimestamp { get; private set; }
+		public long ModifiedTimestamp { get; set; }
 		
-		[BsonElement(DB_KEY_PREVIOUS_DATA_VERSION), BsonSaveAsString]
+		[BsonElement(DB_KEY_PREVIOUS_DATA_VERSION), BsonSaveAsString, BsonIgnoreIfNull]
 		[JsonInclude, JsonPropertyName(FRIENDLY_KEY_PREVIOUS_DATA_VERSION), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-		public string PreviousDataVersion { get; private set; }
+		public string PreviousDataVersion { get; set; }
 		
-		[BsonElement(DB_KEY_SCREENNAME)]
+		[BsonElement(DB_KEY_SCREENNAME), BsonIgnoreIfNull]
 		[JsonInclude, JsonPropertyName(FRIENDLY_KEY_SCREENNAME), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-		public string Screenname { get; private set; }
+		public string Screenname { get; set; }
 		
-		[BsonElement(DB_KEY_UPDATED)]
+		[BsonElement(DB_KEY_UPDATED), BsonIgnoreIfNull]
 		[JsonInclude, JsonPropertyName(FRIENDLY_KEY_UPDATED), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-		public long UpdatedTimestamp { get; private set; }
+		public long UpdatedTimestamp { get; set; }
 
 		public Installation()
 		{
-			CreatedTimestamp = UnixTime;
-			ModifiedTimestamp = CreatedTimestamp;
-			UpdatedTimestamp = CreatedTimestamp;
+			// CreatedTimestamp = UnixTime;
+			// ModifiedTimestamp = CreatedTimestamp;
+			// UpdatedTimestamp = CreatedTimestamp;
 		}
 
 		public void GenerateRecoveryToken()

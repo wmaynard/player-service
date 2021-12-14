@@ -98,8 +98,8 @@ namespace PlayerService.Controllers
 				// oogabooga2
 				install = new Installation()
 				{
-					ClientVersion = clientVersion,
-					DeviceType = deviceType,
+					// ClientVersion = clientVersion,
+					// DeviceType = deviceType,
 					InstallId = installId
 				};
 				Profile profile = new Profile(install);
@@ -163,7 +163,7 @@ namespace PlayerService.Controllers
 			string keepId = Require<string>("keepAccountId");
 
 			Installation install = new Installation();
-			_installService.Update(install);
+			_installService.Create(install);
 			
 			
 			return Ok();
