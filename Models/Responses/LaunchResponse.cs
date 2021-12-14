@@ -17,6 +17,8 @@ namespace PlayerService.Models.Responses
 		public string ErrorCode { get; set; }
 		public string AccessToken { get; set; }
 		public string ConflictingAccountId { get; set; }
+		public long CreatedDate { get; set; }
+		public string RecoveryToken { get; set; }
 
 		public LaunchResponse()
 		{

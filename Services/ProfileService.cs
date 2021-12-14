@@ -5,6 +5,7 @@ using System.Runtime.CompilerServices;
 using System.Text.Json.Serialization;
 using MongoDB.Bson;
 using MongoDB.Bson.Serialization.Attributes;
+using PlayerService.Models;
 using Rumble.Platform.Common.Utilities;
 using Rumble.Platform.Common.Web;
 
@@ -13,8 +14,29 @@ namespace PlayerService.Services
 	public class ProfileService : PlatformMongoService<Profile>
 	{
 		public ProfileService() : base("profiles") { }
+
+		public Profile[] Find(string installId, GenericData ssoData = null)
+		{
+			ssoData ??= new GenericData();
+
+			List<Profile> output = new List<Profile>();
+			output.AddRange(base.Find(profile => profile.Type == "installId" && profile.ProfileId == installId));
+			foreach (string provider in ssoData.Keys)
+			{
+				GenericData data = ssoData.Require<GenericData>(provider);
+				output.Add(provider switch
+				{
+					"gameCenter" => FromGameCenter(data),
+					"googlePlay" => FromGooglePlay(data),
+					"facebook" => FromFacebook(data),
+					_ => throw new ArgumentOutOfRangeException($"Unexpected SSO provider '{provider}'.")
+				});
+			}
+
+			return output.ToArray();
+		}
 		
-		public Profile[] ValidateProfile(GenericData ssoData)
+		public Profile[] FromSSO(GenericData ssoData)
 		{
 			List<Profile> output = new List<Profile>();
 			foreach (string provider in ssoData.Keys)
@@ -86,7 +108,7 @@ namespace PlayerService.Services
 		public const string FRIENDLY_KEY_DISCRIMINATOR = "Discriminator";
 		public const string FRIENDLY_KEY_LANGUAGE = "SystemLanguage";
 		public const string FRIENDLY_KEY_MERGE_ACCOUNT_ID = "MergeAccountId";
-		public const string FRIENDLY_KEY_MERGE_TOKEN = "MergeToken";
+		public const string FRIENDLY_KEY_MERGE_TOKEN = "RecoveryToken";
 		public const string FRIENDLY_KEY_MODIFIED_TIMESTAMP = "ModifiedTimestamp";
 		public const string FRIENDLY_KEY_OPERATING_SYSTEM = "OperatingSystem";
 		public const string FRIENDLY_KEY_PROFILE_ID = "ProfileId";
@@ -184,6 +206,13 @@ namespace PlayerService.Services
 		public string ScreenName_Deprecated { get; private set; }
 		#endregion PROBABLY_UNUSED_FIELDS
 
-		
+		public Profile(Installation install)
+		{
+			CreatedTimestamp = install.CreatedTimestamp;
+			ModifiedTimestamp = install.ModifiedTimestamp;
+			ClientVersion = install.ClientVersion;
+			ProfileId = install.Id;
+			Type = "installId"; // TODO: const or enum
+		}
 	}
 }

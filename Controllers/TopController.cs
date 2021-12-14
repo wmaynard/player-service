@@ -41,9 +41,7 @@ namespace PlayerService.Controllers
 			_discriminatorService = discriminatorService;
 			_dynamicConfigService = configService;
 			_profileService = profileService;
-			
-				
-				
+
 			// DynamicConfig dc = new DynamicConfig();
 			_config = new DynamicConfigClient(
 				configServiceUrl: PlatformEnvironment.Variable("RUMBLE_CONFIG_SERVICE_URL"),
@@ -66,6 +64,7 @@ namespace PlayerService.Controllers
 			string requestId = Optional<string>("requestId") ?? Guid.NewGuid().ToString();
 			string clientVersion = Optional<string>("clientVersion");
 			string clientType = Optional<string>("clientType");
+			string dataVersion = Optional<string>("dataVersion");
 			string deviceType = Optional<string>("deviceType");
 			string osVersion = Optional<string>("osVersion");
 			string systemLanguage = Optional<string>("systemLanguage");
@@ -79,7 +78,7 @@ namespace PlayerService.Controllers
 			response.AccountId = installId;
 			response.RemoteAddr = "foo"; // TODO
 			response.GeoIPAddr = "foo"; // TODO
-			response.Country = "getCountry"; // TODO
+			response.Country = "foo"; // TODO
 			
 			GenericData config = _dynamicConfigService.GameConfig;
 			
@@ -92,16 +91,33 @@ namespace PlayerService.Controllers
 			if (clientVars != null)
 				response.ClientVars = clientVars;
 
-			bool conflict = false;
 			Installation install = _installService.FindOne(installation => installation.InstallId == installId);
-			string accountId = install.Id;
-			// 2141
-			int discriminator = _discriminatorService.Lookup(accountId, out screenname);
 
-			Profile[] profiles = _profileService.ValidateProfile(sso);
+			if (install == null)
+			{
+				// oogabooga2
+				install = new Installation()
+				{
+					ClientVersion = clientVersion,
+					DeviceType = deviceType,
+					InstallId = installId
+				};
+				Profile profile = new Profile(install);
+				_installService.Create(install);
+				_profileService.Create(profile);
+			}
+			
+			// TODO: Handle install id not found (new client)
+
+			Profile[] profiles = _profileService.Find(install.Id, sso);
+			string accountId = profiles.First().AccountId;
 			Profile[] conflictProfiles = profiles
 				.Where(profile => profile.AccountId != accountId)
 				.ToArray();
+
+			int discriminator = _discriminatorService.Lookup(accountId, out screenname);
+
+			response.AccountId = profiles.First().AccountId;
 
 			if (conflictProfiles.Any())
 			{
@@ -114,21 +130,43 @@ namespace PlayerService.Controllers
 					RequestData = Body
 				});
 				response.ConflictingAccountId = conflictProfiles.First().AccountId;
-				// TODO: accountService.generateMergeToken, save to response.MergeToken
-				// TODO: Log(Merge token generated)
+				
+				install.GenerateRecoveryToken();
+				_installService.Update(install);
+				response.RecoveryToken = install.RecoveryToken;
+				Log.Info(Owner.Default, "Merge token generated.", data: new
+				{
+					Installation = install
+				});
 			}
-			// TODO: #356 accountService.HasInstallConflict
-			
-			// TODO: no conflict; saveInstallIdProfile, save valid profiles, accountService.updateAccountData,
-			
-			
-			response.AccessToken = GenerateToken(accountId, "player-service-v2-test", discriminator);
-			// TODO:
-			// 1. Look up account information
-			// 2. Generate a response token
-			// 2. 
+			else if (install.InstallId != installId) // TODO: Not sure what this actually accomplishes.
+			{
+				response.ErrorCode = "installConflict";
+				response.ConflictingAccountId = accountId;
+			}
+			else // No conflict
+			{
+				// TODO: #370 saveInstallIdProfile
+				foreach (Profile p in profiles)
+					_profileService.Update(p); // Are we even modifying anything?
+				// TODO: #378 updateAccountData
+			}
+			response.AccessToken = GenerateToken(accountId, screenname, discriminator);
+			return Ok(response.ResponseObject);
+		}
 
-			return Ok(response);
+		[HttpPatch, Route("recover")]
+		public ActionResult Recover()
+		{
+			string recoverToken = Require<string>("recoveryToken");
+			string discardId = Require<string>("discardAccountId");
+			string keepId = Require<string>("keepAccountId");
+
+			Installation install = new Installation();
+			_installService.Update(install);
+			
+			
+			return Ok();
 		}
 
 		private static string GenerateToken(string aid, string sn, int discriminator)

@@ -2,6 +2,8 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using PlayerService.Exceptions;
+using Rumble.Platform.Common.Utilities;
 using Rumble.Platform.Common.Web;
 
 namespace PlayerService.Services
@@ -12,42 +14,58 @@ namespace PlayerService.Services
 		private const string NOUNS_PATH = "nouns.txt";
 		private const int MIN_LENGTH = 3;
 		private const int MAX_LENGTH = 7;
+		private const int MAX_RETRIES = 10;
 		public List<string> Adjectives { get; private set; }
 		public List<string> Nouns { get; private set; }
 
+		private bool Initialized { get; init; }
 		public NameGeneratorService()
 		{
-			ReloadAdjectives();
-			ReloadNouns();
-		}
-
-		public string Next => Generate();
-		private string Generate()
-		{
-			if (!Adjectives.Any())
-				ReloadAdjectives();
-			string adjective = Adjectives.First();
-
-			string noun = Nouns.FirstOrDefault(n => n.StartsWith(adjective[0]));
-			if (noun == null)
-			{
-				ReloadNouns();
-				noun = Nouns.FirstOrDefault(n => n.StartsWith(adjective[0]));
-			}
-			
-			Adjectives.RemoveAt(0);
-			Nouns.Remove(noun);
-
 			try
 			{
+				ReloadAdjectives();
+				ReloadNouns();
+				Initialized = true;
+			}
+			catch (Exception e)
+			{
+				Log.Error(Owner.Default, "Unable to initialize NameGeneratorService.", exception: e);
+				Initialized = false;
+			}
+		}
+
+		public string Next => Initialized 
+			? Generate() 
+			: null;
+		
+		private string Generate(int retries = MAX_RETRIES)
+		{
+			string adjective = null;
+			string noun = null;
+			try
+			{
+				if (!Adjectives.Any())
+					ReloadAdjectives();
+				adjective = Adjectives.First();
+
+				noun = Nouns.FirstOrDefault(n => n.StartsWith(adjective[0]));
+				if (noun == null)
+				{
+					ReloadNouns();
+					noun = Nouns.FirstOrDefault(n => n.StartsWith(adjective[0]));
+				}
+			
+				Adjectives.RemoveAt(0);
+				Nouns.Remove(noun);
+
 				return $"{Capitalize(adjective)} {Capitalize(noun)}";
 			}
 			catch (Exception e)
 			{
-				throw;
+				if (retries > 0)
+					return Generate(retries - 1);
+				throw new NameGenerationException(adjective, noun, e);
 			}
-
-			
 		}
 
 		private static string Capitalize(string input) => string.Concat(input[0].ToString().ToUpper(), input.AsSpan(1));

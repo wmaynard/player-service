@@ -42,7 +42,7 @@ namespace PlayerService.Models
 		
 		[BsonElement(DB_KEY_CLIENT_VERSION)]
 		[JsonInclude, JsonPropertyName(FRIENDLY_KEY_CLIENT_VERSION), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-		public string ClientVersion { get; private set; }
+		public string ClientVersion { get; set; }
 		
 		[BsonElement(DB_KEY_CREATED)]
 		[JsonInclude, JsonPropertyName(FRIENDLY_KEY_CREATED), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
@@ -54,15 +54,15 @@ namespace PlayerService.Models
 		
 		[BsonElement(DB_KEY_DEVICE_TYPE)]
 		[JsonInclude, JsonPropertyName(FRIENDLY_KEY_DEVICE_TYPE), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-		public string DeviceType { get; private set; }
+		public string DeviceType { get; set; }
 		
 		[BsonElement(DB_KEY_INSTALL_ID)]
 		[JsonInclude, JsonPropertyName(FRIENDLY_KEY_INSTALL_ID), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-		public string InstallId { get; private set; }
+		public string InstallId { get; set; }
 		
 		[BsonElement(DB_KEY_MERGE_TRANSACTION_ID), BsonIgnoreIfNull]
 		[JsonInclude, JsonPropertyName(FRIENDLY_KEY_MERGE_TRANSACTION_ID), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-		public string MergeTransactionID { get; private set; } // Merge transaction?
+		public string RecoveryToken { get; private set; } // Merge transaction?
 		
 		[BsonElement(DB_KEY_MERGED_VERSION), BsonSaveAsString, BsonIgnoreIfNull]
 		[JsonInclude, JsonPropertyName(FRIENDLY_KEY_MERGED_VERSION), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
@@ -83,5 +83,24 @@ namespace PlayerService.Models
 		[BsonElement(DB_KEY_UPDATED)]
 		[JsonInclude, JsonPropertyName(FRIENDLY_KEY_UPDATED), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
 		public long UpdatedTimestamp { get; private set; }
+
+		public Installation()
+		{
+			CreatedTimestamp = UnixTime;
+			ModifiedTimestamp = CreatedTimestamp;
+			UpdatedTimestamp = CreatedTimestamp;
+		}
+
+		public void GenerateRecoveryToken()
+		{
+			RecoveryToken = Guid.NewGuid().ToString();
+		}
+
+		public void Merge(string mergeAccountId)
+		{
+			Id = mergeAccountId;
+		}
+
+
 	}
 }

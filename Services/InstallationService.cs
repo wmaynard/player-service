@@ -9,6 +9,6 @@ namespace PlayerService.Services
 {
 	public class InstallationService : PlatformMongoService<Installation>
 	{
-		public InstallationService() : base("player") { }
+		public InstallationService() : base("player_temp") { }
 	}
 }
