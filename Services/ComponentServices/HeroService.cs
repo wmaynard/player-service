@@ -5,6 +5,6 @@ namespace PlayerService.Services.ComponentServices
 {
 	public class HeroService : ComponentService
 	{
-		public HeroService() : base("c_hero") { }
+		public HeroService() : base(Component.HERO) { }
 	}
 }

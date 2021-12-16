@@ -1,8 +1,10 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
+using System.Text.Json;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Configuration;
@@ -11,6 +13,8 @@ using PlayerService.Models;
 using PlayerService.Models.Responses;
 using Rumble.Platform.Common.Web;
 using PlayerService.Services;
+using PlayerService.Services.ComponentServices;
+using PlayerService.Utilities;
 using Rumble.Platform.Common.Utilities;
 using Rumble.Platform.CSharp.Common.Interop;
 using Rumble.Platform.CSharp.Common.Services;
@@ -26,6 +30,8 @@ namespace PlayerService.Controllers
 		private readonly ProfileService _profileService;
 		private readonly NameGeneratorService _nameGeneratorService;
 		
+		private Dictionary<string, ComponentService> ComponentServices { get; init; }
+		
 		private DynamicConfigClient _config;
 
 		private DynamicConfigClient dynamicConfig = new DynamicConfigClient(
@@ -34,13 +40,69 @@ namespace PlayerService.Controllers
 			gameId: PlatformEnvironment.Variable("GAME_GUKEY")
 		);
 
-		public TopController(InstallationService installService, DynamicConfigService configService, DiscriminatorService discriminatorService, 
-			ProfileService profileService, NameGeneratorService nameGeneratorService, IConfiguration config) : base(config)
+		/// <summary>
+		/// Will on 2021.12.16
+		/// Normally, so many newlines for a constructor is discouraged.  However, for something that requires so many
+		/// different services, I'm willing to make an exception for readability.
+		///
+		/// I don't think breaking all of a player's data into so many components was good design philosophy; while it
+		/// was clearly done to prevent Mongo documents from hitting huge sizes, this does mean that player-service
+		/// needs to hit the database very frequently, and updating components requires 2n db hits:
+		///		1 hit to retrieve the record
+		///		1 hit to store the updated record
+		/// Most of the components have a very small amount of information, so I'm not sure why they were separated.
+		/// If I had to wager a guess, the architect was used to RDBMS-style design where each of these things would be
+		/// its own table, but the real strength of Mongo is being able to store full objects in one spot, avoiding the
+		/// need to write joins / multiple queries to pull information.
+		///
+		/// The maximum document size in Mongo is 16 MB, and we're nowhere close to that limit.
+		///
+		/// This also means that we have many more possible points of failure; whenever we go to update the player record,
+		/// we have so many more write operations that can fail, which should trigger a transaction rollback.  KISS.
+		/// 
+		/// TODO: Compare performance with loadtests: all these collections vs. a monolithic player record
+		/// When there's some downtime, it's worth exploring and quantifying just what kind of impact this design has.
+		/// Maybe it's more performant than I think.  It's also entirely possible that it requires too much time to change
+		/// for TH, but we should re-evaluate it for the next game if that's the case.
+		/// </summary>
+		[SuppressMessage("ReSharper", "SuggestBaseTypeForParameter")]
+		public TopController(IConfiguration config,
+				DynamicConfigService configService,
+				DiscriminatorService discriminatorService,
+				InstallationService installService,
+				// TODO: ItemService
+				NameGeneratorService nameGeneratorService,
+				ProfileService profileService,
+				AbTestService abTestService,				// Component Services
+				AccountService accountService,
+				EquipmentService equipmentService,
+				HeroService heroService,
+				MultiplayerService multiplayerService,
+				QuestService questService,
+				StoreService storeService,
+				SummaryService summaryService,
+				TutorialService tutorialService,
+				WalletService walletService,
+				WorldService worldService
+			) : base(config)
 		{
 			_installService = installService;
 			_discriminatorService = discriminatorService;
 			_dynamicConfigService = configService;
 			_profileService = profileService;
+
+			ComponentServices = new Dictionary<string, ComponentService>();
+			ComponentServices[Component.AB_TEST] = abTestService;
+			ComponentServices[Component.ACCOUNT] = accountService;
+			ComponentServices[Component.EQUIPMENT] = equipmentService;
+			ComponentServices[Component.HERO] = heroService;
+			ComponentServices[Component.MULTIPLAYER] = multiplayerService;
+			ComponentServices[Component.QUEST] = questService;
+			ComponentServices[Component.STORE] = storeService;
+			ComponentServices[Component.SUMMARY] = summaryService;
+			ComponentServices[Component.TUTORIAL] = tutorialService;
+			ComponentServices[Component.WALLET] = walletService;
+			ComponentServices[Component.WORLD] = worldService;
 
 			// DynamicConfig dc = new DynamicConfig();
 			_config = new DynamicConfigClient(
@@ -73,44 +135,9 @@ namespace PlayerService.Controllers
 			string mergeToken = Optional<string>("mergeToken");
 			GenericData sso = Optional<GenericData>("sso");
 
-			LaunchResponse response = new LaunchResponse();
-			response.RequestId = requestId;
-			response.AccountId = installId;
-			response.RemoteAddr = "foo"; // TODO
-			response.GeoIPAddr = "foo"; // TODO
-			response.Country = "foo"; // TODO
-			
-			GenericData config = _dynamicConfigService.GameConfig;
-			
-			GenericData clientVars = ExtractClientVars(
-				clientVersion, 
-				prefixes: config.Require<string>("clientVarPrefixesCSharp").Split(','), 
-				configs: config
-			);
-
-			if (clientVars != null)
-				response.ClientVars = clientVars;
-
 			Installation install = _installService.FindOne(installation => installation.InstallId == installId);
 
-			if (install == null)
-			{
-				install = new Installation()
-				{
-					ClientVersion = clientVersion,
-					DeviceType = deviceType,
-					InstallId = installId
-				};
-				_installService.Create(install);
-				Profile profile = new Profile(install);
-				_profileService.Create(profile);
-				Log.Info(Owner.Default, "New account created.", data: new
-				{
-					InstallId = install.Id,
-					ProfileId = profile.Id,
-					AccountId = profile.AccountId
-				});
-			}
+			install ??= CreateNewAccount(installId, deviceType, clientVersion); // TODO: are these vars used anywhere else?
 			
 			// TODO: Handle install id not found (new client)
 
@@ -123,33 +150,25 @@ namespace PlayerService.Controllers
 
 			int discriminator = _discriminatorService.Lookup(accountId, out screenname);
 
-			response.AccountId = profiles.First().AccountId;
-
 			if (conflictProfiles.Any())
 			{
-				response.ErrorCode = "accountConflict";
-				Log.Info(Owner.Default, "Account Conflict", data: new
-				{
-					AccountId = accountId,
-					Profiles = profiles,
-					ConflictProfiles = conflictProfiles,
-					RequestData = Body
-				});
-				response.ConflictingAccountId = conflictProfiles.First().AccountId;
-				
 				install.GenerateRecoveryToken();
 				_installService.Update(install);
-				response.RecoveryToken = install.RecoveryToken;
-				Log.Info(Owner.Default, "Merge token generated.", data: new
+
+				object response = new
 				{
-					Installation = install
-				});
+					ErrorCode = "accountConflict",
+					AccountId = accountId,
+					ConflictingAccountId = conflictProfiles.First().AccountId,
+					ConflictingProfiles = conflictProfiles,
+					TransferToken = install.TransferToken
+				};
+				
+				Log.Info(Owner.Default, "Account Conflict", data: response);
+				return Ok(response);
 			}
 			else if (install.InstallId != installId) // TODO: Not sure what this actually accomplishes.
-			{
-				response.ErrorCode = "installConflict";
-				response.ConflictingAccountId = accountId;
-			}
+				return Ok(new { ErrorCode = "installConflict", ConflictingAccountId = accountId });
 			else // No conflict
 			{
 				// TODO: #370 saveInstallIdProfile
@@ -157,22 +176,95 @@ namespace PlayerService.Controllers
 					_profileService.Update(p); // Are we even modifying anything?
 				// TODO: #378 updateAccountData
 			}
-			response.AccessToken = GenerateToken(accountId, screenname, discriminator);
-			return Ok(response.ResponseObject);
+
+			return Ok(new
+			{
+				RemoteAddr = "",
+				GeoipAddr = "",
+				Country = "",
+				ServerTime = Timestamp.UnixTime,
+				RequestId = Guid.NewGuid().ToString(),
+				AccessToken = GenerateToken(accountId, screenname, discriminator) // TODO: we need tokens for conflicts too; generate when we have the accountId.
+			});
 		}
 
+		private Installation CreateNewAccount(string installId, string deviceType, string clientVersion)
+		{
+			Installation install = new Installation()
+			{
+				ClientVersion = clientVersion,
+				DeviceType = deviceType,
+				InstallId = installId
+			};
+			_installService.Create(install);
+			Profile profile = new Profile(install);
+			_profileService.Create(profile);
+			Log.Info(Owner.Default, "New account created.", data: new
+			{
+				InstallId = install.AccountId,
+				ProfileId = profile.Id,
+				AccountId = profile.AccountId
+			});
+			return install;
+		}
+
+		// TODO: Explore MongoTransaction attribute
 		[HttpPatch, Route("recover")]
 		public ActionResult Recover()
 		{
-			string recoverToken = Require<string>("recoveryToken");
+			string transferToken = Require<string>("transferToken");
 			string discardId = Require<string>("discardAccountId");
 			string keepId = Require<string>("keepAccountId");
 
-			Installation install = new Installation();
-			_installService.Create(install);
+			Installation i = _installService.Find(Token.AccountId);
+			if (i.TransferToken != transferToken)
+				return Problem("Invalid transfer token");
+
+			Profile[] keep = _profileService.Find(profile => profile.AccountId == keepId);
+			string[] installIds = keep
+				.Where(profile => profile.Type == Profile.TYPE_INSTALL)
+				.Select(profile => profile.ProfileId).ToArray();
+
+			Profile[] transfer = _profileService.Find(profile => profile.AccountId == discardId);
+			Installation[] installs = _installService.Find(install => install.AccountId == discardId);
+			foreach (Installation install in installs)
+			{
+				install.AccountMergedTo = keepId;
+				_installService.Update(install);
+			}
+			foreach (Profile profile in transfer)
+			{
+				profile.AccountId = keepId;
+				_profileService.Update(profile);
+			}
 			
+			return Ok(new
+			{
+				TransferredProfiles = transfer,
+				AccountsUpdated = installs
+			});
+		}
+
+		[HttpGet, Route("config"), NoAuth]
+		public ActionResult GetConfig()
+		{
+			string clientVersion = Optional<string>("clientVersion");
+			GenericData config = _dynamicConfigService.GameConfig;
 			
-			return Ok();
+			GenericData clientVars = ExtractClientVars(
+				clientVersion, 
+				prefixes: config.Require<string>("clientVarPrefixesCSharp").Split(','), 
+				configs: config
+			);
+
+			LaunchResponse response = new LaunchResponse();
+			response.ClientVars = clientVars;
+
+			return Ok(new
+			{
+				ClientVersion = clientVersion,
+				ClientVars = clientVars
+			});
 		}
 
 		private static string GenerateToken(string aid, string sn, int discriminator)
@@ -241,21 +333,45 @@ namespace PlayerService.Controllers
 			return task.Result;
 		}
 
-		private void Test()
+		[HttpGet, Route("testConflict")]
+		private ActionResult Test()
 		{
 			Installation install = new Installation();
+			install.InstallId = Guid.NewGuid().ToString();
+
 			Installation install2 = new Installation();
-			
+			install2.InstallId = Guid.NewGuid().ToString();
+
 			_installService.Create(install);
 			_installService.Create(install2);
 
 			Profile profile = new Profile(install);
 			Profile profile2 = new Profile(install2);
-			Profile sso2 = new Profile("agoobagoo", "gameCenter");
+			Profile sso = new Profile("agoobagoo", Profile.TYPE_GOOGLE);
 			
 			_profileService.Create(profile);
 			_profileService.Create(profile2);
+			_profileService.Create(sso);
+
+			return Ok(new
+			{
+				install_1 = install.InstallId,
+				install_2 = install2.InstallId
+			});
+		}
+
+		[HttpPost, Route("iostest"), NoAuth]
+		public void AppleTest()
+		{
+			string token = Require<GenericData>("sso").Require<GenericData>("appleId").Require<string>("token");
+			AppleToken at = new AppleToken(token);
+			at.Decode();
 			
+			
+			GenericData payload = new GenericData();
+			GenericData response = PlatformRequest.Post("https://appleid.apple.com/auth/token", payload: payload).Send();
+			string foo = "foo";
+			foo = "bar";
 		}
 	}
 }

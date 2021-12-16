@@ -32,7 +32,7 @@ namespace PlayerService.Models
 		public const string FRIENDLY_KEY_DISCRIMINATOR = "Discriminator";
 		public const string FRIENDLY_KEY_LANGUAGE = "SystemLanguage";
 		public const string FRIENDLY_KEY_MERGE_ACCOUNT_ID = "MergeAccountId";
-		public const string FRIENDLY_KEY_MERGE_TOKEN = "RecoveryToken";
+		public const string FRIENDLY_KEY_MERGE_TOKEN = "TransferToken";
 		public const string FRIENDLY_KEY_MODIFIED_TIMESTAMP = "ModifiedTimestamp";
 		public const string FRIENDLY_KEY_OPERATING_SYSTEM = "OperatingSystem";
 		public const string FRIENDLY_KEY_PROFILE_ID = "ProfileId";
@@ -42,7 +42,7 @@ namespace PlayerService.Models
 
 		[BsonElement(DB_KEY_ACCOUNT_ID), BsonRepresentation(BsonType.ObjectId)]
 		[JsonInclude, JsonPropertyName(FRIENDLY_KEY_ACCOUNT_ID)]
-		public string AccountId { get; private set; }
+		public string AccountId { get; set; }
 		
 		[BsonElement(DB_KEY_CLIENT_TYPE), BsonIgnoreIfNull]
 		[JsonInclude, JsonPropertyName(FRIENDLY_KEY_CLIENT_TYPE), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
@@ -140,9 +140,9 @@ namespace PlayerService.Models
 			CreatedTimestamp = install.CreatedTimestamp;
 			ModifiedTimestamp = install.ModifiedTimestamp;
 			ClientVersion = install.ClientVersion;
-			ProfileId = install.Id;
-			AccountId = ObjectId.GenerateNewId().ToString();
-			Type = "installId"; // TODO: const or enum
+			ProfileId = install.InstallId;
+			AccountId = install.AccountId;
+			Type = TYPE_INSTALL; // TODO: const or enum
 		}
 
 		public Profile(string ssoId, string ssoType) : this()
@@ -150,5 +150,15 @@ namespace PlayerService.Models
 			ProfileId = ssoId;
 			Type = ssoType;
 		}
+		
+		
+		public const string TYPE_INSTALL = "installId";
+		public const string TYPE_GOOGLE = "googlePlay";
+		public const string TYPE_GAME_CENTER = "gameCenter";
+		public const string TYPE_APPLE_ID = "appleId";
 	}
 }
+// Summary
+// bool HasPurchases
+// string lastWorldProgress (world campaigns field)
+// Screenname / Discriminator

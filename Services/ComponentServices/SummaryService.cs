@@ -5,6 +5,6 @@ namespace PlayerService.Services.ComponentServices
 {
 	public class SummaryService : ComponentService
 	{
-		public SummaryService() : base("c_summary") { }
+		public SummaryService() : base(Component.SUMMARY) { }
 	}
 }

@@ -5,6 +5,6 @@ namespace PlayerService.Services.ComponentServices
 {
 	public class MultiplayerService : ComponentService
 	{
-		public MultiplayerService() : base("c_multiplayer") { }
+		public MultiplayerService() : base(Component.MULTIPLAYER) { }
 	}
 }

@@ -5,6 +5,6 @@ namespace PlayerService.Services.ComponentServices
 {
 	public class QuestService : ComponentService
 	{
-		public QuestService() : base("c_quest") { }
+		public QuestService() : base(Component.QUEST) { }
 	}
 }

@@ -21,7 +21,7 @@
 	</ItemGroup>
 
 	<ItemGroup>
-	  <Folder Include="Utilities" />
+	  <PackageReference Include="Microsoft.IdentityModel.Tokens" Version="6.15.0" />
 	</ItemGroup>
 
 </Project>

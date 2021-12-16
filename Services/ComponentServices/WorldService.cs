@@ -5,6 +5,6 @@ namespace PlayerService.Services.ComponentServices
 {
 	public class WorldService : ComponentService
 	{
-		public WorldService() : base("c_world") { }
+		public WorldService() : base(Component.WORLD) { }
 	}
 }

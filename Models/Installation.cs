@@ -3,6 +3,7 @@ using System.Text.Json.Serialization;
 using MongoDB.Bson;
 using MongoDB.Bson.Serialization;
 using MongoDB.Bson.Serialization.Attributes;
+using PlayerService.Services;
 using Rumble.Platform.Common.Utilities.Serializers;
 using Rumble.Platform.Common.Web;
 
@@ -62,7 +63,7 @@ namespace PlayerService.Models
 		//
 		[BsonElement(DB_KEY_MERGE_TRANSACTION_ID), BsonIgnoreIfNull]
 		[JsonInclude, JsonPropertyName(FRIENDLY_KEY_MERGE_TRANSACTION_ID), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-		public string RecoveryToken { get; set; } // Merge transaction?
+		public string TransferToken { get; set; } // Merge transaction?
 		
 		[BsonElement(DB_KEY_MERGED_VERSION), BsonSaveAsString, BsonIgnoreIfNull]
 		[JsonInclude, JsonPropertyName(FRIENDLY_KEY_MERGED_VERSION), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
@@ -93,14 +94,18 @@ namespace PlayerService.Models
 
 		public void GenerateRecoveryToken()
 		{
-			RecoveryToken = Guid.NewGuid().ToString();
+			TransferToken = Guid.NewGuid().ToString();
 		}
 
 		public void Merge(string mergeAccountId)
 		{
-			Id = mergeAccountId;
+			// Id = mergeAccountId;
 		}
 
-
+		// This is a sanity check because using "install.Id" is confusing and hard to understand.
+		// This is a temporary kluge because this model should be called `Account`... it's unfortunate we have a component called `Account` as well, but no way around it.
+		[BsonIgnore]
+		[JsonIgnore]
+		public string AccountId => Id; 
 	}
 }

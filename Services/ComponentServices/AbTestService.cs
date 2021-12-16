@@ -5,6 +5,6 @@ namespace PlayerService.Services.ComponentServices
 {
 	public class AbTestService : ComponentService
 	{
-		public AbTestService() : base("c_abTest") { }
+		public AbTestService() : base(Component.AB_TEST) { }
 	}
 }

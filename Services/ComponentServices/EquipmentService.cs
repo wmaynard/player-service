@@ -5,6 +5,6 @@ namespace PlayerService.Services.ComponentServices
 {
 	public class EquipmentService : ComponentService
 	{
-		public EquipmentService() : base("c_equipment") { }
+		public EquipmentService() : base(Component.EQUIPMENT) { }
 	}
 }

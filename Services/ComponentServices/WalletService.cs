@@ -5,6 +5,6 @@ namespace PlayerService.Services.ComponentServices
 {
 	public class WalletService : ComponentService
 	{
-		public WalletService() : base("c_wallet") { }
+		public WalletService() : base(Component.WALLET) { }
 	}
 }
