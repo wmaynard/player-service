@@ -8,6 +8,7 @@ using System.Text.Json;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Configuration;
+using MongoDB.Driver.Core.Operations;
 using PlayerService.Exceptions;
 using PlayerService.Models;
 using PlayerService.Models.Responses;
@@ -89,6 +90,7 @@ namespace PlayerService.Controllers
 			_installService = installService;
 			_discriminatorService = discriminatorService;
 			_dynamicConfigService = configService;
+			_nameGeneratorService = nameGeneratorService;
 			_profileService = profileService;
 
 			ComponentServices = new Dictionary<string, ComponentService>();
@@ -118,6 +120,24 @@ namespace PlayerService.Controllers
 		{
 			return Ok(_installService.HealthCheckResponseObject);
 		}
+		
+		
+
+		[HttpGet, Route("testConflict"), NoAuth]
+		public ActionResult Launch2()
+		{
+			Installation install = CreateNewAccount(Guid.NewGuid().ToString(), "postman", "postman 1.0.0");
+			Installation install2 = CreateNewAccount(Guid.NewGuid().ToString(), "postman", "postman 2.0.0");
+			
+			Profile sso = new Profile(install.Id, "agoobagoo", Profile.TYPE_GOOGLE);
+			_profileService.Create(sso);
+
+			return Ok(new
+			{
+				install_1 = install.InstallId,
+				install_2 = install2.InstallId
+			});
+		}
 
 		[HttpPost, Route("launch"), NoAuth]
 		public ActionResult Launch()
@@ -139,26 +159,34 @@ namespace PlayerService.Controllers
 
 			install ??= CreateNewAccount(installId, deviceType, clientVersion); // TODO: are these vars used anywhere else?
 			
+			
 			// TODO: Handle install id not found (new client)
 
 			Profile[] profiles = _profileService.Find(install.Id, sso);
-			string accountId = profiles.FirstOrDefault()?.AccountId;
 			Profile[] conflictProfiles = profiles
-				.Where(profile => profile.AccountId != accountId)
+				.Where(profile => profile.AccountId != install.AccountId)
 				.ToArray();
 			// TODO: If SSO provided and no profile match, create profile for SSO on this account
 
-			int discriminator = _discriminatorService.Lookup(accountId, out screenname);
+			int discriminator = _discriminatorService.Lookup(install.AccountId, out screenname);
+			string token = GenerateToken(install.AccountId, screenname, discriminator);
 
 			if (conflictProfiles.Any())
 			{
 				install.GenerateRecoveryToken();
 				_installService.Update(install);
 
+				foreach (Profile profile in conflictProfiles)
+				{
+					profile.TransferToken = install.TransferToken;
+					_profileService.Update(profile);
+				}
+
 				object response = new
 				{
 					ErrorCode = "accountConflict",
-					AccountId = accountId,
+					AccessToken = token,
+					AccountId = install.AccountId,
 					ConflictingAccountId = conflictProfiles.First().AccountId,
 					ConflictingProfiles = conflictProfiles,
 					TransferToken = install.TransferToken
@@ -168,7 +196,7 @@ namespace PlayerService.Controllers
 				return Ok(response);
 			}
 			else if (install.InstallId != installId) // TODO: Not sure what this actually accomplishes.
-				return Ok(new { ErrorCode = "installConflict", ConflictingAccountId = accountId });
+				return Ok(new { ErrorCode = "installConflict", ConflictingAccountId = install.AccountId });
 			else // No conflict
 			{
 				// TODO: #370 saveInstallIdProfile
@@ -184,13 +212,13 @@ namespace PlayerService.Controllers
 				Country = "",
 				ServerTime = Timestamp.UnixTime,
 				RequestId = Guid.NewGuid().ToString(),
-				AccessToken = GenerateToken(accountId, screenname, discriminator) // TODO: we need tokens for conflicts too; generate when we have the accountId.
+				AccessToken = token
 			});
 		}
 
 		private Installation CreateNewAccount(string installId, string deviceType, string clientVersion)
 		{
-			Installation install = new Installation()
+			Installation install = new Installation(_nameGeneratorService.Next)
 			{
 				ClientVersion = clientVersion,
 				DeviceType = deviceType,
@@ -209,39 +237,70 @@ namespace PlayerService.Controllers
 		}
 
 		// TODO: Explore MongoTransaction attribute
-		[HttpPatch, Route("recover")]
-		public ActionResult Recover()
+		[HttpPatch, Route("transfer")]
+		public ActionResult Transfer()
 		{
 			string transferToken = Require<string>("transferToken");
-			string discardId = Require<string>("discardAccountId");
-			string keepId = Require<string>("keepAccountId");
 
 			Installation i = _installService.Find(Token.AccountId);
+
 			if (i.TransferToken != transferToken)
-				return Problem("Invalid transfer token");
+				throw new Exception("Invalid transfer token.");
 
-			Profile[] keep = _profileService.Find(profile => profile.AccountId == keepId);
-			string[] installIds = keep
-				.Where(profile => profile.Type == Profile.TYPE_INSTALL)
-				.Select(profile => profile.ProfileId).ToArray();
+			List<Profile> transfers = _profileService.Find(profile => profile.TransferToken == transferToken).ToList();
+			
+			if (transfers.Select(p => p.AccountId).Distinct().Count() > 1)
+				Log.Warn(Owner.Default, "A profile transfer affected more than one account.  This should not be possible.", data: new
+				{
+					Profiles = transfers,
+					User = Token
+				});
 
-			Profile[] transfer = _profileService.Find(profile => profile.AccountId == discardId);
-			Installation[] installs = _installService.Find(install => install.AccountId == discardId);
-			foreach (Installation install in installs)
+			foreach (Profile p in transfers)
 			{
-				install.AccountMergedTo = keepId;
-				_installService.Update(install);
+				p.AccountId = Token.AccountId;	// TODO: Add a 'Previous Accounts' field; #297 for merge behavior
+				p.TransferToken = null;
+				_profileService.Update(p);
 			}
-			foreach (Profile profile in transfer)
+
+			i.TransferToken = null;
+			_installService.Update(i);
+			
+			Log.Info(Owner.Default, "Profiles transferred.", data: new
 			{
-				profile.AccountId = keepId;
-				_profileService.Update(profile);
-			}
+				AccountId = Token.AccountId,
+				Profiles = transfers,
+				User = Token
+			});
+			
+			
+			
+
+			// Installation i = _installService.Find(Token.AccountId);
+			// if (i.TransferToken != transferToken)
+			// 	return Problem("Invalid transfer token");
+			//
+			// Profile[] keep = _profileService.Find(profile => profile.AccountId == keepId);
+			// string[] installIds = keep
+			// 	.Where(profile => profile.Type == Profile.TYPE_INSTALL)
+			// 	.Select(profile => profile.ProfileId).ToArray();
+			//
+			// Profile[] transfer = _profileService.Find(profile => profile.AccountId == discardId);
+			// Installation[] installs = _installService.Find(install => install.AccountId == discardId);
+			// foreach (Installation install in installs)
+			// {
+			// 	install.AccountMergedTo = keepId;
+			// 	_installService.Update(install);
+			// }
+			// foreach (Profile profile in transfer)
+			// {
+			// 	profile.AccountId = keepId;
+			// 	_profileService.Update(profile);
+			// }
 			
 			return Ok(new
 			{
-				TransferredProfiles = transfer,
-				AccountsUpdated = installs
+				TransferredProfiles = transfers
 			});
 		}
 
@@ -331,33 +390,6 @@ namespace PlayerService.Controllers
 			Task<GenericData> task = old.SendAsync();
 			task.Wait();
 			return task.Result;
-		}
-
-		[HttpGet, Route("testConflict")]
-		private ActionResult Test()
-		{
-			Installation install = new Installation();
-			install.InstallId = Guid.NewGuid().ToString();
-
-			Installation install2 = new Installation();
-			install2.InstallId = Guid.NewGuid().ToString();
-
-			_installService.Create(install);
-			_installService.Create(install2);
-
-			Profile profile = new Profile(install);
-			Profile profile2 = new Profile(install2);
-			Profile sso = new Profile("agoobagoo", Profile.TYPE_GOOGLE);
-			
-			_profileService.Create(profile);
-			_profileService.Create(profile2);
-			_profileService.Create(sso);
-
-			return Ok(new
-			{
-				install_1 = install.InstallId,
-				install_2 = install2.InstallId
-			});
 		}
 
 		[HttpPost, Route("iostest"), NoAuth]

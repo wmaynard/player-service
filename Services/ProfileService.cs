@@ -20,11 +20,11 @@ namespace PlayerService.Services
 			ssoData ??= new GenericData();
 
 			List<Profile> output = new List<Profile>();
-			output.AddRange(base.Find(profile => profile.Type == "installId" && profile.ProfileId == installId));
+			output.AddRange(base.Find(profile => profile.Type == Profile.TYPE_INSTALL && profile.AccountId == installId));
 			foreach (string provider in ssoData.Keys)
 			{
 				GenericData data = ssoData.Require<GenericData>(provider);
-				output.Add(provider switch
+				output.AddRange(provider switch
 				{
 					"gameCenter" => FromGameCenter(data),
 					"googlePlay" => FromGooglePlay(data),
@@ -42,7 +42,7 @@ namespace PlayerService.Services
 			foreach (string provider in ssoData.Keys)
 			{
 				GenericData data = ssoData.Require<GenericData>(provider);
-				output.Add(provider switch
+				output.AddRange(provider switch
 				{
 					"gameCenter" => FromGameCenter(data),
 					"googlePlay" => FromGooglePlay(data),
@@ -53,29 +53,28 @@ namespace PlayerService.Services
 			return output.ToArray();
 		}
 
-		private static Profile FromGooglePlay(GenericData sso)
+		private Profile[] FromGooglePlay(GenericData sso)
 		{
 			string googleClientId = PlatformEnvironment.Variable("GOOGLE_CLIENT_ID");
 
+			// TODO: Validate google id
 			string token = sso.Require<string>("idToken");
-			
-			
-			
-			return null;
+
+			return Find(profile => profile.ProfileId == token).ToArray();
 		}
 
 		// TODO GameCenter is old and deprecated and should be removed.  This is only here for testing purposes
 		// and should not be deployed.
-		private Profile FromGameCenter(GenericData sso)
+		private Profile[] FromGameCenter(GenericData sso)
 		{
 			string profileId = sso.Optional<string>("playerId");
 
 			return profileId != null
-				? FindOne(profile => profile.ProfileId == profileId)
+				? Find(profile => profile.ProfileId == profileId).ToArray()
 				: null;
 		}
 
-		private static Profile FromFacebook(GenericData sso)
+		private static Profile[] FromFacebook(GenericData sso)
 		{
 			return null;
 		}

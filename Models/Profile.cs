@@ -100,6 +100,10 @@ namespace PlayerService.Models
 		[JsonInclude, JsonPropertyName(FRIENDLY_KEY_TYPE), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
 		public string Type { get; private set; }
 		
+		[BsonElement(Installation.DB_KEY_TRANSFER_TOKEN), BsonIgnoreIfNull]
+		[JsonInclude, JsonPropertyName(Installation.FRIENDLY_KEY_TRANSFER_TOKEN), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+		public string TransferToken { get; set; }
+		
 		#region PROBABLY_UNUSED_FIELDS
 		// These are all keys found on some data points, but not those that are created in recent usage of player-service.
 		// They're likely old and can be dropped, but we should hold on to them just in case.  As a backlog task, we can
@@ -145,8 +149,9 @@ namespace PlayerService.Models
 			Type = TYPE_INSTALL; // TODO: const or enum
 		}
 
-		public Profile(string ssoId, string ssoType) : this()
+		public Profile(string accountId, string ssoId, string ssoType) : this()
 		{
+			AccountId = accountId;
 			ProfileId = ssoId;
 			Type = ssoType;
 		}
