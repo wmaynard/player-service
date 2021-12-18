@@ -6,7 +6,7 @@
 // using Rumble.Platform.Common.Web;
 // using StackExchange.Redis;
 //
-// namespace PlayerService.Services
+// namespace PlayerAccountService.Services
 // {
 // 	// TODO: Subscribe to tower-portal's dynamic config service
 // 	public class DynamicConfigService : PlatformTimerService

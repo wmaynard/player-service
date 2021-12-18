@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System.Text.Json.Serialization;
 using MongoDB.Bson;
 using MongoDB.Bson.Serialization.Attributes;
@@ -100,9 +101,9 @@ namespace PlayerService.Models
 		[JsonInclude, JsonPropertyName(FRIENDLY_KEY_TYPE), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
 		public string Type { get; private set; }
 		
-		[BsonElement(Installation.DB_KEY_TRANSFER_TOKEN), BsonIgnoreIfNull]
-		[JsonInclude, JsonPropertyName(Installation.FRIENDLY_KEY_TRANSFER_TOKEN), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-		public string TransferToken { get; set; }
+		// [BsonElement(Player.DB_KEY_TRANSFER_TOKEN), BsonIgnoreIfNull]
+		// [JsonInclude, JsonPropertyName(Player.FRIENDLY_KEY_TRANSFER_TOKEN), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+		// public string TransferToken { get; set; }
 		
 		#region PROBABLY_UNUSED_FIELDS
 		// These are all keys found on some data points, but not those that are created in recent usage of player-service.
@@ -133,19 +134,22 @@ namespace PlayerService.Models
 		[JsonInclude, JsonPropertyName(FRIENDLY_KEY_SCREENNAME_OLD), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
 		public string ScreenName_Deprecated { get; private set; }
 		#endregion PROBABLY_UNUSED_FIELDS
+		
+		public HashSet<string> PreviousAccountIds { get; set; }
 
 		private Profile()
 		{
 			CreatedTimestamp = UnixTime;
 		}
 
-		public Profile(Installation install) : this()
+		public Profile(Player player) : this()
 		{
-			CreatedTimestamp = install.CreatedTimestamp;
-			ModifiedTimestamp = install.ModifiedTimestamp;
-			ClientVersion = install.ClientVersion;
-			ProfileId = install.InstallId;
-			AccountId = install.AccountId;
+			PreviousAccountIds = new HashSet<string>();
+			CreatedTimestamp = player.CreatedTimestamp;
+			ModifiedTimestamp = player.ModifiedTimestamp;
+			ClientVersion = player.ClientVersion;
+			ProfileId = player.InstallId;
+			AccountId = player.AccountId;
 			Type = TYPE_INSTALL; // TODO: const or enum
 		}
 

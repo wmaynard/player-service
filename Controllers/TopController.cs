@@ -25,7 +25,7 @@ namespace PlayerService.Controllers
 	[ApiController, Route("player"), RequireAuth]
 	public class TopController : PlatformController
 	{
-		private readonly InstallationService _installService;
+		private readonly Services.PlayerAccountService _playerService;
 		private readonly DiscriminatorService _discriminatorService;
 		private readonly DynamicConfigService _dynamicConfigService;
 		private readonly ProfileService _profileService;
@@ -70,9 +70,9 @@ namespace PlayerService.Controllers
 		public TopController(IConfiguration config,
 				DynamicConfigService configService,
 				DiscriminatorService discriminatorService,
-				InstallationService installService,
 				// TODO: ItemService
 				NameGeneratorService nameGeneratorService,
+				PlayerAccountService playerService,
 				ProfileService profileService,
 				AbTestService abTestService,				// Component Services
 				AccountService accountService,
@@ -87,7 +87,7 @@ namespace PlayerService.Controllers
 				WorldService worldService
 			) : base(config)
 		{
-			_installService = installService;
+			_playerService = playerService;
 			_discriminatorService = discriminatorService;
 			_dynamicConfigService = configService;
 			_nameGeneratorService = nameGeneratorService;
@@ -118,24 +118,24 @@ namespace PlayerService.Controllers
 		[HttpGet, Route("health"), NoAuth]
 		public override ActionResult HealthCheck()
 		{
-			return Ok(_installService.HealthCheckResponseObject);
+			return Ok(_playerService.HealthCheckResponseObject);
 		}
 		
 		
 
 		[HttpGet, Route("testConflict"), NoAuth]
-		public ActionResult Launch2()
+		public ActionResult TestConflict()
 		{
-			Installation install = CreateNewAccount(Guid.NewGuid().ToString(), "postman", "postman 1.0.0");
-			Installation install2 = CreateNewAccount(Guid.NewGuid().ToString(), "postman", "postman 2.0.0");
+			Player player = CreateNewAccount(Guid.NewGuid().ToString(), "postman", "postman 1.0.0");
+			Player player2 = CreateNewAccount(Guid.NewGuid().ToString(), "postman", "postman 2.0.0");
 			
-			Profile sso = new Profile(install.Id, "agoobagoo", Profile.TYPE_GOOGLE);
+			Profile sso = new Profile(player.AccountId, "agoobagoo", Profile.TYPE_GOOGLE);
 			_profileService.Create(sso);
 
 			return Ok(new
 			{
-				install_1 = install.InstallId,
-				install_2 = install2.InstallId
+				install_1 = player.InstallId,
+				install_2 = player2.InstallId
 			});
 		}
 
@@ -155,48 +155,46 @@ namespace PlayerService.Controllers
 			string mergeToken = Optional<string>("mergeToken");
 			GenericData sso = Optional<GenericData>("sso");
 
-			Installation install = _installService.FindOne(installation => installation.InstallId == installId);
+			Player player = _playerService.FindOne(player => player.InstallId == installId);
 
-			install ??= CreateNewAccount(installId, deviceType, clientVersion); // TODO: are these vars used anywhere else?
+			player ??= CreateNewAccount(installId, deviceType, clientVersion); // TODO: are these vars used anywhere else?
 			
 			
 			// TODO: Handle install id not found (new client)
 
-			Profile[] profiles = _profileService.Find(install.Id, sso);
+			Profile[] profiles = _profileService.Find(player.AccountId, sso);
 			Profile[] conflictProfiles = profiles
-				.Where(profile => profile.AccountId != install.AccountId)
+				.Where(profile => profile.AccountId != player.AccountId)
 				.ToArray();
 			// TODO: If SSO provided and no profile match, create profile for SSO on this account
 
-			int discriminator = _discriminatorService.Lookup(install.AccountId, out screenname);
-			string token = GenerateToken(install.AccountId, screenname, discriminator);
+			int discriminator = _discriminatorService.Lookup(player);
+			string token = GenerateToken(player.AccountId, player.Screenname, discriminator);
 
 			if (conflictProfiles.Any())
 			{
-				install.GenerateRecoveryToken();
-				_installService.Update(install);
+				// player.GenerateRecoveryToken();
+				// _playerService.Update(player);
 
-				foreach (Profile profile in conflictProfiles)
-				{
-					profile.TransferToken = install.TransferToken;
-					_profileService.Update(profile);
-				}
+				Player other = _playerService.Find(conflictProfiles.First().AccountId);
+				other.GenerateRecoveryToken();
+				_playerService.Update(other);
 
 				object response = new
 				{
 					ErrorCode = "accountConflict",
 					AccessToken = token,
-					AccountId = install.AccountId,
+					AccountId = player.AccountId,
 					ConflictingAccountId = conflictProfiles.First().AccountId,
 					ConflictingProfiles = conflictProfiles,
-					TransferToken = install.TransferToken
+					TransferToken = other.TransferToken
 				};
 				
 				Log.Info(Owner.Default, "Account Conflict", data: response);
 				return Ok(response);
 			}
-			else if (install.InstallId != installId) // TODO: Not sure what this actually accomplishes.
-				return Ok(new { ErrorCode = "installConflict", ConflictingAccountId = install.AccountId });
+			else if (player.InstallId != installId) // TODO: Not sure what this actually accomplishes.
+				return Ok(new { ErrorCode = "installConflict", ConflictingAccountId = player.AccountId });
 			else // No conflict
 			{
 				// TODO: #370 saveInstallIdProfile
@@ -212,28 +210,30 @@ namespace PlayerService.Controllers
 				Country = "",
 				ServerTime = Timestamp.UnixTime,
 				RequestId = Guid.NewGuid().ToString(),
-				AccessToken = token
+				AccessToken = token,
+				Player = player,
+				Discriminator = discriminator
 			});
 		}
 
-		private Installation CreateNewAccount(string installId, string deviceType, string clientVersion)
+		private Player CreateNewAccount(string installId, string deviceType, string clientVersion)
 		{
-			Installation install = new Installation(_nameGeneratorService.Next)
+			Player player = new Player(_nameGeneratorService.Next)
 			{
 				ClientVersion = clientVersion,
 				DeviceType = deviceType,
 				InstallId = installId
 			};
-			_installService.Create(install);
-			Profile profile = new Profile(install);
+			_playerService.Create(player);
+			Profile profile = new Profile(player);
 			_profileService.Create(profile);
 			Log.Info(Owner.Default, "New account created.", data: new
 			{
-				InstallId = install.AccountId,
+				InstallId = player.AccountId,
 				ProfileId = profile.Id,
 				AccountId = profile.AccountId
 			});
-			return install;
+			return player;
 		}
 
 		// TODO: Explore MongoTransaction attribute
@@ -241,67 +241,62 @@ namespace PlayerService.Controllers
 		public ActionResult Transfer()
 		{
 			string transferToken = Require<string>("transferToken");
+			string[] profileIds = Optional<string[]>("profileIds") ?? new string[]{};
 
-			Installation i = _installService.Find(Token.AccountId);
+			Player player = _playerService.Find(Token.AccountId);
+			Player other = _playerService.FindOne(p => p.TransferToken == transferToken);
 
-			if (i.TransferToken != transferToken)
-				throw new Exception("Invalid transfer token.");
+			if (other == null)
+				throw new Exception("No player account found for transfer token.");
 
-			List<Profile> transfers = _profileService.Find(profile => profile.TransferToken == transferToken).ToList();
-			
-			if (transfers.Select(p => p.AccountId).Distinct().Count() > 1)
-				Log.Warn(Owner.Default, "A profile transfer affected more than one account.  This should not be possible.", data: new
+			if (profileIds.Any()) // Move the specified profile IDs to the requesting player.  This reassigns SSO profiles to other accounts.
+			{
+				if (player.AccountIdOverride != null)
+					Log.Warn(Owner.Default, "AccountIDOverride is not null for a transfer; this should be impossible.", data: new
+					{
+						Player = Token,
+						OtherPlayer = other,
+						TransferToken = transferToken
+					});
+				player.AccountIdOverride = null;
+				
+				Profile[] sso = _profileService.Find(p => profileIds.Contains(p.ProfileId) && p.Type != Profile.TYPE_INSTALL);
+				foreach (Profile profile in sso)
 				{
-					Profiles = transfers,
-					User = Token
+					profile.PreviousAccountIds.Add(other.AccountId);
+					profile.AccountId = player.Id;
+					_profileService.Update(profile);
+				}
+				other.AccountMergedTo = player.Id;
+				
+				_playerService.Update(player);
+				_playerService.Update(other);
+				Log.Info(Owner.Default, "Profiles transferred.", data: new
+				{
+					Player = Token,
+					PreviousAccount = other,
+					Profiles = sso
 				});
-
-			foreach (Profile p in transfers)
-			{
-				p.AccountId = Token.AccountId;	// TODO: Add a 'Previous Accounts' field; #297 for merge behavior
-				p.TransferToken = null;
-				_profileService.Update(p);
+				
+				return Ok(new { TransferredProfiles = sso });
 			}
-
-			i.TransferToken = null;
-			_installService.Update(i);
-			
-			Log.Info(Owner.Default, "Profiles transferred.", data: new
+			else
 			{
-				AccountId = Token.AccountId,
-				Profiles = transfers,
-				User = Token
-			});
-			
-			
-			
+				player.AccountIdOverride = other.AccountId;
+				other.TransferToken = null;
+				
+				_playerService.Update(player);
+				_playerService.Update(other);
 
-			// Installation i = _installService.Find(Token.AccountId);
-			// if (i.TransferToken != transferToken)
-			// 	return Problem("Invalid transfer token");
-			//
-			// Profile[] keep = _profileService.Find(profile => profile.AccountId == keepId);
-			// string[] installIds = keep
-			// 	.Where(profile => profile.Type == Profile.TYPE_INSTALL)
-			// 	.Select(profile => profile.ProfileId).ToArray();
-			//
-			// Profile[] transfer = _profileService.Find(profile => profile.AccountId == discardId);
-			// Installation[] installs = _installService.Find(install => install.AccountId == discardId);
-			// foreach (Installation install in installs)
-			// {
-			// 	install.AccountMergedTo = keepId;
-			// 	_installService.Update(install);
-			// }
-			// foreach (Profile profile in transfer)
-			// {
-			// 	profile.AccountId = keepId;
-			// 	_profileService.Update(profile);
-			// }
-			
-			return Ok(new
-			{
-				TransferredProfiles = transfers
-			});
+				_profileService.Create(new Profile(player));
+				
+				Log.Info(Owner.Default, "AccountID overridden.", data: new
+				{
+					Player = Token,
+					Account = player
+				});
+				return Ok(new { Account = player });
+			}
 		}
 
 		[HttpGet, Route("config"), NoAuth]

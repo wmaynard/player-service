@@ -9,8 +9,9 @@ using Rumble.Platform.Common.Web;
 
 namespace PlayerService.Models
 {
-	public class Installation : PlatformCollectionDocument
+	public class Player : PlatformCollectionDocument
 	{
+		internal const string DB_KEY_ACCOUNT_ID_OVERRIDE = "oaid";
 		internal const string DB_KEY_ACCOUNT_MERGED_TO = "ma";
 		internal const string DB_KEY_CLIENT_VERSION = "cv";
 		internal const string DB_KEY_CREATED = "cd";
@@ -23,7 +24,8 @@ namespace PlayerService.Models
 		internal const string DB_KEY_PREVIOUS_DATA_VERSION = "ldv";
 		internal const string DB_KEY_SCREENNAME = "sn";
 		internal const string DB_KEY_UPDATED = "lu";
-		
+
+		internal const string FRIENDLY_KEY_ACCOUNT_ID_OVERRIDE = "accountIdOverride";
 		internal const string FRIENDLY_KEY_ACCOUNT_MERGED_TO = "accountMergedTo";
 		internal const string FRIENDLY_KEY_CLIENT_VERSION = "clientVersion";
 		internal const string FRIENDLY_KEY_CREATED = "dateCreated";
@@ -82,10 +84,10 @@ namespace PlayerService.Models
 		public string Screenname { get; set; }
 		
 		[BsonElement(DB_KEY_UPDATED), BsonIgnoreIfDefault]
-		[JsonInclude, JsonPropertyName(FRIENDLY_KEY_UPDATED), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+		[JsonInclude, JsonPropertyName(FRIENDLY_KEY_UPDATED), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
 		public long UpdatedTimestamp { get; set; }
 
-		public Installation(string screenname)
+		public Player(string screenname)
 		{
 			CreatedTimestamp = UnixTime;
 			Screenname = screenname;
@@ -99,6 +101,10 @@ namespace PlayerService.Models
 		// This is a temporary kluge because this model should be called `Account`... it's unfortunate we have a component called `Account` as well, but no way around it.
 		[BsonIgnore]
 		[JsonIgnore]
-		public string AccountId => Id; 
+		public string AccountId => AccountIdOverride ?? Id;
+		
+		[BsonElement(DB_KEY_ACCOUNT_ID_OVERRIDE), BsonIgnoreIfDefault]
+		[JsonInclude, JsonPropertyName(FRIENDLY_KEY_ACCOUNT_ID_OVERRIDE), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+		public string AccountIdOverride { get; set; }
 	}
 }

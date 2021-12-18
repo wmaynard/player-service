@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics.Eventing.Reader;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Text.Json.Serialization;
@@ -23,40 +24,24 @@ namespace PlayerService.Services
 
 		private readonly AccountService _accountService;
 
-		public DiscriminatorService(AccountService accountService) : base("discriminators")
+		public DiscriminatorService(AccountService accountService) : base("discriminators_temp")
 		{
 			_accountService = accountService;
 		}
 
-		public int Lookup(string accountId, out string screenName)
+		private DiscriminatorGroup Find(Player player) => FindOne(group => group.Members.Any(member => member.AccountId == player.AccountId));
+
+		public int Lookup(Player player) => Find(player)?.Number ?? TryAssign(player);
+
+		private int TryAssign(Player player)
 		{
-			DiscriminatorGroup existing = FindOne(group => group.Members.Any(member => member.AccountId == accountId));
-			Component account = _accountService.Lookup(accountId);
-
-			if (account == null)
-				_accountService.Create(account = new Component(accountId, new GenericData()
-				{
-					{ AccountService.DB_KEY_SCREENNAME, screenName = "Confused Antelope" }
-				}));
-			else
-				screenName = account.Data.Optional<string>(AccountService.DB_KEY_SCREENNAME);
-
-			if (screenName == null)
-			{
-				account.Data[AccountService.DB_KEY_SCREENNAME] = screenName = "Confused Antelope";
-				_accountService.Update(account);
-			}
-
-			if (existing != null)
-				return existing.Number;
-
-			List<int> attempts = new List<int>();
+			List<int> attempted = new List<int>();
 			for (int i = 0; i < MAX_ASSIGNMENT_ATTEMPTS; i++)
-				if (Assign(accountId, screenName, out int discriminator))
-					return discriminator;
+				if (Assign(player.AccountId, player.Screenname, out int output))
+					return output;
 				else
-					attempts.Add(discriminator);
-			throw new DiscriminatorUnavailableException(accountId, attempts);
+					attempted.Add(output);
+			throw new DiscriminatorUnavailableException(player.AccountId, attempted);
 		}
 
 		private bool Assign(string accountId, string screenname, out int discriminator)
@@ -70,8 +55,8 @@ namespace PlayerService.Services
 			if (next != null && next.Members.Any(member => member.ScreenName == screenname && member.AccountId != accountId))
 				return false;
 			
-			next ??= new DiscriminatorGroup(target);  // We haven't assigned this discriminator to anyone yet.  Create a new DiscriminatorGroup for it.
-			next.Members.Add(new DiscriminatorMember(accountId, screenname)); // TODO: need to Create on a new group
+			next ??= Create(new DiscriminatorGroup(target));  // We haven't assigned this discriminator to anyone yet.  Create a new DiscriminatorGroup for it.
+			next.AddMember(accountId, screenname); // TODO: need to Create on a new group
 			
 			// Ideally, players are only ever in one group, but just in case, we'll loop through all of them.
 			foreach (DiscriminatorGroup group in previous)
@@ -82,6 +67,28 @@ namespace PlayerService.Services
 			Update(next);
 
 			return true;
+		}
+
+		public int Update(Player player)
+		{
+			DiscriminatorGroup existing = Find(player);
+
+			if (!existing.HasScreenname(player.Screenname))
+			{
+				existing.UpdateMember(player);
+				existing.RemoveMember(player.AccountId);					// removes
+				existing.AddMember(player.AccountId, player.Screenname);
+				Update(existing);
+			}
+			else if (existing.Members.First(m => m.ScreenName == player.Screenname).AccountId == player.AccountId)
+				Log.Warn(Owner.Default, "Tried to update a screenname, but the screenname is unchanged.");
+			else
+			{
+				existing.RemoveMember(player.AccountId);
+				Update(existing);
+				return TryAssign(player);
+			}
+			return existing.Number;
 		}
 	}
 
@@ -116,6 +123,8 @@ namespace PlayerService.Services
 		public bool HasScreenname(string screenname) => Members.Any(member => member.ScreenName == screenname);
 		// public bool HasMember(string accountId) => Members.Any(member => member.AccountId == accountId);
 		public void RemoveMember(string accountId) => Members.RemoveAll(member => member.AccountId == accountId);
+		public void AddMember(string accountId, string screenname) => Members.Add(new DiscriminatorMember(accountId, screenname));
+		public void UpdateMember(Player player) => Members.First(m => m.AccountId == player.AccountId).Update(player.Screenname);
 	}
 
 	public class DiscriminatorMember : PlatformDataModel
@@ -124,7 +133,7 @@ namespace PlayerService.Services
 		public const string DB_KEY_SCREENNAME = "sn";
 
 		public const string FRIENDLY_KEY_ACCOUNT_ID = "accountId";
-		public const string FRIENDLY_KEY_SCREENNAME = "screenName";
+		public const string FRIENDLY_KEY_SCREENNAME = "screenname";
 		
 		[BsonElement(DB_KEY_ACCOUNT_ID)]
 		[JsonInclude, JsonPropertyName(FRIENDLY_KEY_ACCOUNT_ID)]
@@ -139,5 +148,7 @@ namespace PlayerService.Services
 			AccountId = accountId;
 			ScreenName = screenname;
 		}
+
+		public void Update(string screenname) => ScreenName = screenname;
 	}
 }
