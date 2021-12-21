@@ -120,6 +120,15 @@ namespace PlayerService.Controllers
 		{
 			return Ok(_playerService.HealthCheckResponseObject);
 		}
+
+		[HttpPatch, Route("update")]
+		public ActionResult Update()
+		{
+			GenericData[] components = Require<GenericData[]>("components");
+
+			return Ok();
+		}
+		
 		
 		
 
