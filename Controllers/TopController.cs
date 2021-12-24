@@ -22,7 +22,7 @@ using Rumble.Platform.CSharp.Common.Services;
 
 namespace PlayerService.Controllers
 {
-	[ApiController, Route("player"), RequireAuth]
+	[ApiController, Route("player/v2"), RequireAuth]
 	public class TopController : PlatformController
 	{
 		private readonly Services.PlayerAccountService _playerService;
@@ -127,6 +127,8 @@ namespace PlayerService.Controllers
 			GenericData[] components = Require<GenericData[]>("components");
 
 			return Ok();
+
+			// return Ok(new { Body = components });
 		}
 		
 		
@@ -246,11 +248,13 @@ namespace PlayerService.Controllers
 		}
 
 		// TODO: Explore MongoTransaction attribute
+		// TODO: "link" instead of "transfer"?
 		[HttpPatch, Route("transfer")]
 		public ActionResult Transfer()
 		{
 			string transferToken = Require<string>("transferToken");
 			string[] profileIds = Optional<string[]>("profileIds") ?? new string[]{};
+			// TODO: Optional<bool>("cancel")
 
 			Player player = _playerService.Find(Token.AccountId);
 			Player other = _playerService.FindOne(p => p.TransferToken == transferToken);
