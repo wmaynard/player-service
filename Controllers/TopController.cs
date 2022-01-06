@@ -28,6 +28,7 @@ namespace PlayerService.Controllers
 		private readonly Services.PlayerAccountService _playerService;
 		private readonly DiscriminatorService _discriminatorService;
 		private readonly DynamicConfigService _dynamicConfigService;
+		private readonly ItemService _itemService;
 		private readonly ProfileService _profileService;
 		private readonly NameGeneratorService _nameGeneratorService;
 		
@@ -70,7 +71,7 @@ namespace PlayerService.Controllers
 		public TopController(IConfiguration config,
 				DynamicConfigService configService,
 				DiscriminatorService discriminatorService,
-				// TODO: ItemService
+				ItemService itemService,
 				NameGeneratorService nameGeneratorService,
 				PlayerAccountService playerService,
 				ProfileService profileService,
@@ -90,6 +91,7 @@ namespace PlayerService.Controllers
 			_playerService = playerService;
 			_discriminatorService = discriminatorService;
 			_dynamicConfigService = configService;
+			_itemService = itemService;
 			_nameGeneratorService = nameGeneratorService;
 			_profileService = profileService;
 
@@ -125,10 +127,25 @@ namespace PlayerService.Controllers
 		public ActionResult Update()
 		{
 			GenericData[] components = Require<GenericData[]>("components");
+			foreach (GenericData json in components)
+			{
+				string name = json.Require<string>("name");
+				Component component = ComponentServices[name].FindOne(component => component.AccountId == Token.AccountId);
+				component ??= ComponentServices[name].Create(new Component(Token.AccountId));
+				component.Data = json.Require<GenericData>(Component.FRIENDLY_KEY_DATA);
+				ComponentServices[name].Update(component);
+			}
 
-			return Ok();
+			// Will on 2022.01.06: We're hitting Mongo for EVERY item?  Maybe with a transaction, this builds everything into one query,
+			// but if it doesn't then this is miserable for performance.
+			Item[] items = Optional<Item[]>("items");
+			foreach (Item item in items)
+				if (item.MarkedForDeletion)
+					_itemService.Delete(item);
+				else
+					_itemService.Update(item);
 
-			// return Ok(new { Body = components });
+			return Ok(new { Token = Token});
 		}
 		
 		
@@ -339,6 +356,7 @@ namespace PlayerService.Controllers
 			if (aid == null || sn == null || discriminator < 0)
 				throw new InvalidUserException(aid, sn, discriminator);
 
+			// TODO: Use dynamic config
 			PlatformRequest request = PlatformRequest.Post(
 				url: "https://dev.nonprod.tower.cdrentertainment.com/secured/token/generate",
 				headers: new Dictionary<string, string>() {{"Authorization", "Bearer eyJraWQiOiJqd3QiLCJhbGciOiJSUzI1NiJ9.eyJzdWIiOiI2MTllOWU0YjhlNGQyYWI2ZjkyY2M5MGUiLCJhdWQiOiI1NzkwMWM2ZGY4MmE0NTcwODAxOGJhNzNiOGQxNjAwNCIsImlzcyI6IlJ1bWJsZSBQbGF5ZXIgU2VydmljZSIsImRpc2MiOjIxNDEsInNuIjoiaW9zIExvZ2luIFBvc3RtYW4gVGVzdCIsImV4cCI6MTYzOTI2NDQwOSwiaWF0IjoxNjM4OTE4ODA5LCJrZXkiOiJqd3QifQ.D3RiUfqmz_j8hyag2t5dHqeLAJVhiLwVX15niu-Ad_hVmhAZoLuTD60yydUGqK-VdugoPVMC9c8jzB1w8tgElrrGuCDpTwEv1hO5VONGUs5WHe1LKuCA2s_m0Fs0WrwP5S26dkEKegckoCRFSDTrAVz7jjgjyeM4-jmsORbJCqcm7B-8IrJ3oH_YfvfCMAptfjKBHDSGQhMJW1CBMK8J7e-4EsPQM3cHypj21Wi2MCGiSaDnv3rb1JpXelpFkDphpuDTC3dfHhHuLTKFdgsdghw273iLHtrRz-2_5RbpxMTK3slaEI95n6eocMuycvwKl-z8d0cKwu0W0HZGYZIjSw"}}
@@ -386,18 +404,14 @@ namespace PlayerService.Controllers
 			return output;
 		}
 
-		private GenericData OldLaunch(string installId)
+		[HttpGet, Route("items")]
+		public ActionResult GetItems()
 		{
-			GenericData payload = new GenericData {{ "installId", installId }};
-			PlatformRequest old = PlatformRequest.Post(
-				url: "https://dev.nonprod.tower.cdrentertainment.com/player/launch",
-				payload: payload
-			);
-
-			GenericData result = old.Send(out HttpStatusCode code);
-			Task<GenericData> task = old.SendAsync();
-			task.Wait();
-			return task.Result;
+			string[] types = Optional<string>("types")?.Split(',');
+			Item[] items = _itemService.GetItemsFor(Token.AccountId);
+			if (types != null)
+				items = items.Where(item => types.Contains(item.Type)).ToArray();
+			return Ok(new { Items = items});
 		}
 
 		[HttpPost, Route("iostest"), NoAuth]

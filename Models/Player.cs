@@ -106,5 +106,51 @@ namespace PlayerService.Models
 		[BsonElement(DB_KEY_ACCOUNT_ID_OVERRIDE), BsonIgnoreIfDefault]
 		[JsonInclude, JsonPropertyName(FRIENDLY_KEY_ACCOUNT_ID_OVERRIDE), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
 		public string AccountIdOverride { get; set; }
+		
+		
+		[BsonIgnore]
+		[JsonInclude, JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
+		public float SearchWeight { get; private set; }
+
+		/// <summary>
+		/// Uses arbitrary values to decide how relevant a search term is to this player.  Screennames are heavily favored over all other fields; consider a situation where we have 
+		/// a user with the screenname "Deadpool", and someone is searching with the term "dead".  Being all hex characters, we probably don't want Mongo IDs ranking before
+		/// "Deadpool".  For future reference, any user-generated field that we search on should rank earlier than ID fields.  If a portal user wants to search by ID, they're
+		/// likely to use the full ID, which shouldn't match user-generated fields anyway.
+		/// </summary>
+		/// <param name="term">The term to search for.</param>
+		/// <returns>An arbitrary search score indicating how relevant the search term is to this Player.</returns>
+		internal float WeighSearchTerm(string term)
+		{
+			if (term == null)
+				return 0;
+
+			const float WEIGHT_SCREENNAME = 1_000;
+			const float WEIGHT_ID = 50;
+			const float WEIGHT_ID_OVERRIDE = 25;
+			const float WEIGHT_ID_INSTALL = 10;
+
+			term = term.ToLower();
+			
+			float output = 0;
+			int termWeight = (int)Math.Pow(term.Length, 2);	// longer terms carry more weight.  Useful if we want to search on multiple terms separately later.
+			
+			float scoreLength(string field, string t) => t.Length / (float)field.Length;  // Modify the base score based on the term's position in the field and the field length.
+			float scorePosition(string field, string t) => 1 - field.IndexOf(t, StringComparison.Ordinal) * (1 / (float)field.Length); // Reduce score based on its index in the field to favor earlier matches.
+			float weigh(string field, float baseWeight) => field != null
+				? baseWeight * termWeight * scoreLength(field, term) * scorePosition(field, term)
+				: 0;
+
+			if (Screenname != null && Screenname.ToLower().Contains(term))
+				output += weigh(Screenname.ToLower(), baseWeight: WEIGHT_SCREENNAME);
+			if (Id.Contains(term))
+				output += weigh(Id, baseWeight: WEIGHT_ID);
+			if (AccountIdOverride != null && AccountIdOverride.Contains(term))
+				output += weigh(AccountIdOverride, baseWeight: WEIGHT_ID_OVERRIDE);
+			if (InstallId.Contains(term))
+				output += weigh(InstallId, baseWeight: WEIGHT_ID_INSTALL);
+			
+			return SearchWeight = output;  // If we later evaluate search terms separately later, remove this assignment.
+		}
 	}
 }

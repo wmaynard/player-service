@@ -33,7 +33,7 @@ namespace PlayerService.Models
 		
 		[BsonElement(DB_KEY_DATA)]
 		[JsonInclude, JsonPropertyName(FRIENDLY_KEY_DATA)]
-		public GenericData Data { get; private set; }
+		public GenericData Data { get; set; }
 
 		public Component(string accountId, GenericData data = null)
 		{
