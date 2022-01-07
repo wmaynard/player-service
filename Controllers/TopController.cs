@@ -2,13 +2,8 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
-using System.Net;
-using System.Net.Http;
-using System.Text.Json;
-using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Configuration;
-using MongoDB.Driver.Core.Operations;
 using PlayerService.Exceptions;
 using PlayerService.Models;
 using PlayerService.Models.Responses;
@@ -22,19 +17,18 @@ using Rumble.Platform.CSharp.Common.Services;
 
 namespace PlayerService.Controllers
 {
-	[ApiController, Route("player/v2"), RequireAuth]
+	[ApiController, Route("player/v2"), RequireAuth, UseMongoTransaction]
 	public class TopController : PlatformController
 	{
-		private readonly Services.PlayerAccountService _playerService;
+		private readonly PlayerAccountService _playerService;
 		private readonly DiscriminatorService _discriminatorService;
 		private readonly DynamicConfigService _dynamicConfigService;
 		private readonly ItemService _itemService;
 		private readonly ProfileService _profileService;
 		private readonly NameGeneratorService _nameGeneratorService;
+		private readonly TokenGeneratorService _tokenGeneratorService;
 		
 		private Dictionary<string, ComponentService> ComponentServices { get; init; }
-		
-		private DynamicConfigClient _config;
 
 		private DynamicConfigClient dynamicConfig = new DynamicConfigClient(
 			secret: PlatformEnvironment.Variable("RUMBLE_KEY"),
@@ -75,6 +69,7 @@ namespace PlayerService.Controllers
 				NameGeneratorService nameGeneratorService,
 				PlayerAccountService playerService,
 				ProfileService profileService,
+				TokenGeneratorService tokenGeneratorService,
 				AbTestService abTestService,				// Component Services
 				AccountService accountService,
 				EquipmentService equipmentService,
@@ -94,6 +89,7 @@ namespace PlayerService.Controllers
 			_itemService = itemService;
 			_nameGeneratorService = nameGeneratorService;
 			_profileService = profileService;
+			_tokenGeneratorService = tokenGeneratorService;
 
 			ComponentServices = new Dictionary<string, ComponentService>();
 			ComponentServices[Component.AB_TEST] = abTestService;
@@ -107,21 +103,18 @@ namespace PlayerService.Controllers
 			ComponentServices[Component.TUTORIAL] = tutorialService;
 			ComponentServices[Component.WALLET] = walletService;
 			ComponentServices[Component.WORLD] = worldService;
-
-			// DynamicConfig dc = new DynamicConfig();
-			_config = new DynamicConfigClient(
-				configServiceUrl: PlatformEnvironment.Variable("RUMBLE_CONFIG_SERVICE_URL"),
-				secret: PlatformEnvironment.Variable("RUMBLE_KEY"),
-				gameId: PlatformEnvironment.Variable("GAME_GUKEY")
-			);
-			_config.Initialize();
 		}
 
 		[HttpGet, Route("health"), NoAuth]
-		public override ActionResult HealthCheck()
-		{
-			return Ok(_playerService.HealthCheckResponseObject);
-		}
+		public override ActionResult HealthCheck() => Ok(
+			_playerService.HealthCheckResponseObject,
+			_discriminatorService.HealthCheckResponseObject,
+			_dynamicConfigService.HealthCheckResponseObject,
+			_itemService.HealthCheckResponseObject,
+			_nameGeneratorService.HealthCheckResponseObject,
+			_profileService.HealthCheckResponseObject,
+			_tokenGeneratorService.HealthCheckResponseObject
+		);
 
 		[HttpPatch, Route("update")]
 		public ActionResult Update()
@@ -148,9 +141,6 @@ namespace PlayerService.Controllers
 			return Ok(new { Token = Token});
 		}
 		
-		
-		
-
 		[HttpGet, Route("testConflict"), NoAuth]
 		public ActionResult TestConflict()
 		{
@@ -197,13 +187,10 @@ namespace PlayerService.Controllers
 			// TODO: If SSO provided and no profile match, create profile for SSO on this account
 
 			int discriminator = _discriminatorService.Lookup(player);
-			string token = GenerateToken(player.AccountId, player.Screenname, discriminator);
+			string token = _tokenGeneratorService.Generate(player.AccountId, player.Screenname, discriminator);
 
 			if (conflictProfiles.Any())
 			{
-				// player.GenerateRecoveryToken();
-				// _playerService.Update(player);
-
 				Player other = _playerService.Find(conflictProfiles.First().AccountId);
 				other.GenerateRecoveryToken();
 				_playerService.Update(other);
@@ -350,29 +337,6 @@ namespace PlayerService.Controllers
 				ClientVars = clientVars
 			});
 		}
-
-		private static string GenerateToken(string aid, string sn, int discriminator)
-		{
-			if (aid == null || sn == null || discriminator < 0)
-				throw new InvalidUserException(aid, sn, discriminator);
-
-			// TODO: Use dynamic config
-			PlatformRequest request = PlatformRequest.Post(
-				url: "https://dev.nonprod.tower.cdrentertainment.com/secured/token/generate",
-				headers: new Dictionary<string, string>() {{"Authorization", "Bearer eyJraWQiOiJqd3QiLCJhbGciOiJSUzI1NiJ9.eyJzdWIiOiI2MTllOWU0YjhlNGQyYWI2ZjkyY2M5MGUiLCJhdWQiOiI1NzkwMWM2ZGY4MmE0NTcwODAxOGJhNzNiOGQxNjAwNCIsImlzcyI6IlJ1bWJsZSBQbGF5ZXIgU2VydmljZSIsImRpc2MiOjIxNDEsInNuIjoiaW9zIExvZ2luIFBvc3RtYW4gVGVzdCIsImV4cCI6MTYzOTI2NDQwOSwiaWF0IjoxNjM4OTE4ODA5LCJrZXkiOiJqd3QifQ.D3RiUfqmz_j8hyag2t5dHqeLAJVhiLwVX15niu-Ad_hVmhAZoLuTD60yydUGqK-VdugoPVMC9c8jzB1w8tgElrrGuCDpTwEv1hO5VONGUs5WHe1LKuCA2s_m0Fs0WrwP5S26dkEKegckoCRFSDTrAVz7jjgjyeM4-jmsORbJCqcm7B-8IrJ3oH_YfvfCMAptfjKBHDSGQhMJW1CBMK8J7e-4EsPQM3cHypj21Wi2MCGiSaDnv3rb1JpXelpFkDphpuDTC3dfHhHuLTKFdgsdghw273iLHtrRz-2_5RbpxMTK3slaEI95n6eocMuycvwKl-z8d0cKwu0W0HZGYZIjSw"}}
-			);
-
-			GenericData payload = new GenericData();
-			payload["aid"] = aid;
-			payload["screenname"] = sn;
-			payload["origin"] = "player-service-v2";
-			payload["email"] = "test@test.com";
-			payload["discriminator"] = discriminator;
-
-			GenericData response = request.Send(payload);
-			return response.Require<GenericData>("authorization").Require<string>("token");
-		}
-
 		private GenericData ExtractClientVars(string clientVersion, string[] prefixes, params GenericData[] configs)
 		{
 			List<string> clientVersions = new List<string>();
@@ -424,8 +388,6 @@ namespace PlayerService.Controllers
 			
 			GenericData payload = new GenericData();
 			GenericData response = PlatformRequest.Post("https://appleid.apple.com/auth/token", payload: payload).Send();
-			string foo = "foo";
-			foo = "bar";
 		}
 	}
 }
