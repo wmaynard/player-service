@@ -131,7 +131,7 @@ namespace PlayerService.Controllers
 
 			// Will on 2022.01.06: We're hitting Mongo for EVERY item?  Maybe with a transaction, this builds everything into one query,
 			// but if it doesn't then this is miserable for performance.
-			Item[] items = Optional<Item[]>("items");
+			Item[] items = Optional<Item[]>("items") ?? Array.Empty<Item>();
 			foreach (Item item in items)
 				if (item.MarkedForDeletion)
 					_itemService.Delete(item);
@@ -233,11 +233,26 @@ namespace PlayerService.Controllers
 
 		private Player CreateNewAccount(string installId, string deviceType, string clientVersion)
 		{
+			// string installId = Require<string>("installId");
+			string requestId = Optional<string>("requestId") ?? Guid.NewGuid().ToString();
+			// string clientVersion = Optional<string>("clientVersion");
+			string clientType = Optional<string>("clientType");
+			string dataVersion = Optional<string>("dataVersion");
+			// string deviceType = Optional<string>("deviceType");
+			string osVersion = Optional<string>("osVersion");
+			string systemLanguage = Optional<string>("systemLanguage");
+			string screenname = Optional<string>("screenName");
+			string mergeAccountId = Optional<string>("mergeAccountId");
+			string mergeToken = Optional<string>("mergeToken");
+			
 			Player player = new Player(_nameGeneratorService.Next)
 			{
 				ClientVersion = clientVersion,
 				DeviceType = deviceType,
-				InstallId = installId
+				InstallId = installId,
+				DataVersion = dataVersion,
+				PreviousDataVersion = null,
+				UpdatedTimestamp = 0
 			};
 			_playerService.Create(player);
 			Profile profile = new Profile(player);
