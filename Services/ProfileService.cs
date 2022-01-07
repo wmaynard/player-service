@@ -13,7 +13,7 @@ namespace PlayerService.Services
 {
 	public class ProfileService : PlatformMongoService<Profile>
 	{
-		public ProfileService() : base("profiles_temp") { }
+		public ProfileService() : base("profiles") { }
 
 		public Profile[] Find(string installId, GenericData ssoData = null)
 		{

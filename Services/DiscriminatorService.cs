@@ -24,7 +24,7 @@ namespace PlayerService.Services
 
 		private readonly AccountService _accountService;
 
-		public DiscriminatorService(AccountService accountService) : base("discriminators_temp")
+		public DiscriminatorService(AccountService accountService) : base("discriminators")
 		{
 			_accountService = accountService;
 		}
