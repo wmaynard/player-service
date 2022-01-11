@@ -1,0 +1,24 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+	<PropertyGroup>
+		<TargetFramework>net5.0</TargetFramework>
+		<RootNamespace>PlayerService</RootNamespace>
+	</PropertyGroup>
+
+	<ItemGroup>
+	  <None Remove="adjectives.txt" />
+	  <Content Include="adjectives.txt">
+	    <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+	  </Content>
+	  <None Remove="nouns.txt" />
+	  <Content Include="nouns.txt">
+	    <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+	  </Content>
+	</ItemGroup>
+
+	<ItemGroup>
+	  <PackageReference Include="Microsoft.IdentityModel.Tokens" Version="6.15.0" />
+	  <PackageReference Include="platform-csharp-common" Version="1.0.66" />
+	</ItemGroup>
+
+</Project>

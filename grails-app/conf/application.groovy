@@ -1,1 +1,0 @@
-grails.converters.json.default.deep=true
