@@ -6,7 +6,7 @@ strategyType: RollingUpdate
 # `serviceAccountName` is deprecated in favor of `serviceAccount.name`
 serviceAccountName:
 image:
-  repository: gitlab.cdrentertainment.com:5050/platform-services/player-service
+  repository: gitlab.cdrentertainment.com:5050/platform-services/player-service-v2
   tag: stable
   pullPolicy: IfNotPresent
   # secrets:
@@ -32,7 +32,7 @@ hpa:
   minReplicas: 2
   maxReplicas: 5
   CPUUtilizationPercentage: 60
-  MemUtilizationPercentage: 83
+  MemUtilizationPercentage: 60
   keda:
     enabled: true
     requestsPerSecond: "500"
@@ -46,20 +46,17 @@ gitlab:
 service:
   enabled: true
   annotations: {}
-  name: ps-dev # 15 character limit..
+  name: ps2-dev # 15 character limit..
   type: NodePort
   url: https://dev.nonprod.tower.cdrentertainment.com/
   additionalHosts:
   commonName: dev.nonprod.tower.cdrentertainment.com
-  externalPort: 80
-  internalPort: 8080
+  externalPort: 5001
+  internalPort: 80
 ingress:
   enabled: true
   paths: 
-    - "/player"
-    - "/admin/player"
-    - "/item"
-    - "/admin/item"
+    - "/player/v2/"
   tls:
     enabled: true
     acme: true
@@ -80,19 +77,19 @@ ingress:
 prometheus:
   metrics: false
 livenessProbe:
-  path: "/health"
+  path: "/player/v2/health"
   initialDelaySeconds: 15
   timeoutSeconds: 15
   scheme: "HTTP"
   probeType: "httpGet"
 readinessProbe:
-  path: "/health"
+  path: "/player/v2/health"
   initialDelaySeconds: 5
   timeoutSeconds: 3
   scheme: "HTTP"
   probeType: "httpGet"
 startupProbe:
-  path: "/health"
+  path: "/player/v2/health"
   failureThreshold: 30
   timeoutSeconds: 10
   scheme: "HTTP"
@@ -105,11 +102,11 @@ postgresql:
 
 resources:
   limits:
-    cpu: 512m
-    memory: 600Mi
+    cpu: 128m
+    memory: 128Mi
   requests:
-    cpu: 512m
-    memory: 600Mi
+    cpu: 128m
+    memory: 128Mi
 
 ## Configure PodDisruptionBudget
 ## ref: https://kubernetes.io/docs/concepts/workloads/pods/disruptions/
