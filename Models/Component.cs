@@ -28,7 +28,7 @@ namespace PlayerService.Models
 		public const string FRIENDLY_KEY_DATA = "data";
 		
 		[BsonElement(DB_KEY_ACCOUNT_ID), BsonRepresentation(BsonType.ObjectId)]
-		[JsonInclude, JsonPropertyName(FRIENDLY_KEY_DATA)]
+		[JsonInclude, JsonPropertyName(FRIENDLY_KEY_ACCOUNT_ID)]
 		public string AccountId { get; private set; }
 		
 		[BsonElement(DB_KEY_DATA)]

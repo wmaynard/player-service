@@ -157,6 +157,22 @@ namespace PlayerService.Controllers
 			});
 		}
 
+		[HttpGet, Route("read")]
+		public ActionResult Read()
+		{
+			string[] names = Optional<string[]>("names");
+
+			GenericData components = new GenericData();
+			foreach (var pair in ComponentServices.Where(pair => names == null || names.Contains(pair.Key)))
+				components[pair.Key] = pair.Value.Lookup(Token.AccountId);
+
+			return Ok(value: new GenericData()
+			{
+				{ "accountId", Token.AccountId },
+				{ "components", components }
+			});
+		}
+
 		[HttpPost, Route("launch"), NoAuth]
 		public ActionResult Launch()
 		{
