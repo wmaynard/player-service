@@ -86,8 +86,11 @@ Previous platform API was built on using POST for everything.  v2 uses more appr
 
 ### 8. Use `GET /player/v2/items` to retrieve a player's items.
 
+### 9. `POST /player/read` is now `GET /player/v2/read`.
 
-### 9. Some type coercion may occur in the JSON.
+Pass `names` in through a query string instead of in the body.
+
+### 10. Some type coercion may occur in the JSON.
 
 Between `platform-csharp-common` making C#'s JSON handling less painful and changes to the admin portal, there may be times when a datatype changes.  For example:
 
