@@ -84,7 +84,10 @@ The data structure remains the same as Groovy's, but a request body should look 
 
 Previous platform API was built on using POST for everything.  v2 uses more appropriate HTTP methods, but the request body for `/update` remains the same.
 
-### 8. Some type coercion may occur in the JSON.
+### 8. Use `GET /player/v2/items` to retrieve a player's items.
+
+
+### 9. Some type coercion may occur in the JSON.
 
 Between `platform-csharp-common` making C#'s JSON handling less painful and changes to the admin portal, there may be times when a datatype changes.  For example:
 
