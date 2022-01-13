@@ -237,33 +237,16 @@ namespace PlayerService.Controllers
 				// TODO: #378 updateAccountData
 			}
 
-
-			GenericData vars = new GenericData()
-			{
-				{ "headers", HttpContext.Request.Headers },
-				{ "Proxy-Client-IP", HttpContext.Request.Headers["Proxy-Client-IP"] },
-				{ "WL-Proxy-Client-IP", HttpContext.Request.Headers["WL-Proxy-Client-IP"]},
-				{ "HTTP_X_FORWARDED_FOR", HttpContext.Request.Headers["HTTP_X_FORWARDED_FOR"]},
-				{ "HTTP_X_FORWARDED", HttpContext.Request.Headers["HTTP_X_FORWARDED"]},
-				{ "HTTP_X_CLUSTER_CLIENT_IP", HttpContext.Request.Headers["HTTP_X_CLUSTER_CLIENT_IP"]},
-				{ "HTTP_CLIENT_IP", HttpContext.Request.Headers["HTTP_CLIENT_IP"]},
-				{ "HTTP_FORWARDED_FOR", HttpContext.Request.Headers["HTTP_FORWARDED_FOR"]},
-				{ "HTTP_FORWARDED", HttpContext.Request.Headers["HTTP_FORWARDED"]},
-				{ "HTTP_VIA", HttpContext.Request.Headers["HTTP_VIA"]},
-				{ "REMOTE_ADDR", HttpContext.Request.Headers["REMOTE_ADDR"]}
-			};
-
 			return Ok(new
 			{
 				RemoteAddr = GeoIPData.IPAddress ?? IpAddress, // fallbacks for local dev, since ::1 fails the lookups.
 				GeoipAddr = GeoIPData.IPAddress ?? IpAddress,
 				Country = GeoIPData.Country,
 				ServerTime = Timestamp.UnixTime,
-				RequestId = Guid.NewGuid().ToString(),
+				RequestId = HttpContext.Request.Headers["X-Request-ID"].ToString() ?? Guid.NewGuid().ToString(),
 				AccessToken = token,
 				Player = player,
-				Discriminator = discriminator,
-				Debug = vars
+				Discriminator = discriminator
 			});
 		}
 

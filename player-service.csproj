@@ -23,7 +23,7 @@
 
 	<ItemGroup>
 	  <PackageReference Include="Microsoft.IdentityModel.Tokens" Version="6.15.0" />
-	  <PackageReference Include="platform-csharp-common" Version="1.0.72" />
+	  <PackageReference Include="platform-csharp-common" Version="1.0.74" />
 	</ItemGroup>
 
 </Project>
