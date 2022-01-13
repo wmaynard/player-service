@@ -240,7 +240,8 @@ namespace PlayerService.Controllers
 
 			GenericData vars = new GenericData()
 			{
-				{ "", HttpContext.GetServerVariable("Proxy-Client-IP") },
+				{ "headers", HttpContext.Request.Headers },
+				{ "Proxy-Client-IP", HttpContext.Request.Headers["Proxy-Client-IP"] },
 				{ "WL-Proxy-Client-IP", HttpContext.Request.Headers["WL-Proxy-Client-IP"]},
 				{ "HTTP_X_FORWARDED_FOR", HttpContext.Request.Headers["HTTP_X_FORWARDED_FOR"]},
 				{ "HTTP_X_FORWARDED", HttpContext.Request.Headers["HTTP_X_FORWARDED"]},
