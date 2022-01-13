@@ -16,14 +16,14 @@
 	  </Content>
 	  <None Remove="GeoIP2-Country.mmdb" />
 	  <Content Include="GeoIP2-Country.mmdb">
-	    <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+	    <CopyToOutputDirectory>Always</CopyToOutputDirectory>
 	  </Content>
 	  <None Remove="geo-ip.mmdb" />
 	</ItemGroup>
 
 	<ItemGroup>
 	  <PackageReference Include="Microsoft.IdentityModel.Tokens" Version="6.15.0" />
-	  <PackageReference Include="platform-csharp-common" Version="1.0.74" />
+	  <PackageReference Include="platform-csharp-common" Version="1.0.76" />
 	</ItemGroup>
 
 </Project>

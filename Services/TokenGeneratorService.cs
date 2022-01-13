@@ -33,8 +33,8 @@ namespace PlayerService.Services
 				{"origin", "player-service-v2"},
 				{"email", email},
 				{"discriminator", discriminator},
-				{"ip", geoData?.IPAddress},
-				{"country", geoData?.Country}
+				{"ipAddress", geoData?.IPAddress},
+				{"countryCode", geoData?.CountryCode}
 			});
 			return response.Require<GenericData>("authorization").Require<string>("token");
 		}

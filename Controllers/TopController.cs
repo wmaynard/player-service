@@ -2,11 +2,8 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
-using System.Net;
-using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Configuration;
-using PlayerService.Exceptions;
 using PlayerService.Models;
 using PlayerService.Models.Responses;
 using Rumble.Platform.Common.Web;
@@ -162,10 +159,11 @@ namespace PlayerService.Controllers
 		[HttpGet, Route("read")]
 		public ActionResult Read()
 		{
-			string[] names = Optional<string[]>("names");
+			string[] names = Optional<string>("names")?.Split(',');
 
 			GenericData components = new GenericData();
-			foreach (var pair in ComponentServices.Where(pair => names == null || names.Contains(pair.Key)))
+			
+			foreach (KeyValuePair<string, ComponentService> pair in ComponentServices.Where(pair => names?.Contains(pair.Key) ?? true))
 				components[pair.Key] = pair.Value.Lookup(Token.AccountId);
 
 			return Ok(value: new GenericData()
@@ -205,7 +203,7 @@ namespace PlayerService.Controllers
 			// TODO: If SSO provided and no profile match, create profile for SSO on this account
 
 			int discriminator = _discriminatorService.Lookup(player);
-			
+
 			string token = _tokenGeneratorService.Generate(player.AccountId, player.Screenname, discriminator, geoData: GeoIPData);
 
 			if (conflictProfiles.Any())
