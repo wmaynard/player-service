@@ -2,6 +2,8 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
+using System.Net;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Configuration;
 using PlayerService.Exceptions;
@@ -235,6 +237,21 @@ namespace PlayerService.Controllers
 				// TODO: #378 updateAccountData
 			}
 
+
+			GenericData vars = new GenericData()
+			{
+				{ "", HttpContext.GetServerVariable("Proxy-Client-IP") },
+				{ "WL-Proxy-Client-IP", HttpContext.Request.Headers["WL-Proxy-Client-IP"]},
+				{ "HTTP_X_FORWARDED_FOR", HttpContext.Request.Headers["HTTP_X_FORWARDED_FOR"]},
+				{ "HTTP_X_FORWARDED", HttpContext.Request.Headers["HTTP_X_FORWARDED"]},
+				{ "HTTP_X_CLUSTER_CLIENT_IP", HttpContext.Request.Headers["HTTP_X_CLUSTER_CLIENT_IP"]},
+				{ "HTTP_CLIENT_IP", HttpContext.Request.Headers["HTTP_CLIENT_IP"]},
+				{ "HTTP_FORWARDED_FOR", HttpContext.Request.Headers["HTTP_FORWARDED_FOR"]},
+				{ "HTTP_FORWARDED", HttpContext.Request.Headers["HTTP_FORWARDED"]},
+				{ "HTTP_VIA", HttpContext.Request.Headers["HTTP_VIA"]},
+				{ "REMOTE_ADDR", HttpContext.Request.Headers["REMOTE_ADDR"]}
+			};
+
 			return Ok(new
 			{
 				RemoteAddr = GeoIPData.IPAddress ?? IpAddress, // fallbacks for local dev, since ::1 fails the lookups.
@@ -244,7 +261,8 @@ namespace PlayerService.Controllers
 				RequestId = Guid.NewGuid().ToString(),
 				AccessToken = token,
 				Player = player,
-				Discriminator = discriminator
+				Discriminator = discriminator,
+				Debug = vars
 			});
 		}
 
