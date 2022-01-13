@@ -3,6 +3,7 @@ using Microsoft.Extensions.Configuration;
 using PlayerService.Exceptions;
 using Rumble.Platform.Common.Utilities;
 using Rumble.Platform.Common.Web;
+using Rumble.Platform.CSharp.Common.Models;
 using Rumble.Platform.CSharp.Common.Services;
 
 namespace PlayerService.Services
@@ -13,7 +14,7 @@ namespace PlayerService.Services
 		
 		public TokenGeneratorService(DynamicConfigService dynamicConfigService) => _dynamicConfigService = dynamicConfigService;
 		
-		public string Generate(string accountId, string screenname, int discriminator, string email = null)
+		public string Generate(string accountId, string screenname, int discriminator, GeoIPData geoData = null, string email = null)
 		{
 			if (accountId == null || screenname == null || discriminator < 0)
 				throw new InvalidUserException(accountId, screenname, discriminator);
@@ -31,7 +32,9 @@ namespace PlayerService.Services
 				{"screenname", screenname},
 				{"origin", "player-service-v2"},
 				{"email", email},
-				{"discriminator", discriminator}
+				{"discriminator", discriminator},
+				{"ip", geoData?.IPAddress},
+				{"country", geoData?.Country}
 			});
 			return response.Require<GenericData>("authorization").Require<string>("token");
 		}

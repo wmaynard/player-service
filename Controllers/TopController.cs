@@ -203,7 +203,8 @@ namespace PlayerService.Controllers
 			// TODO: If SSO provided and no profile match, create profile for SSO on this account
 
 			int discriminator = _discriminatorService.Lookup(player);
-			string token = _tokenGeneratorService.Generate(player.AccountId, player.Screenname, discriminator);
+			
+			string token = _tokenGeneratorService.Generate(player.AccountId, player.Screenname, discriminator, geoData: GeoIPData);
 
 			if (conflictProfiles.Any())
 			{
@@ -236,9 +237,9 @@ namespace PlayerService.Controllers
 
 			return Ok(new
 			{
-				RemoteAddr = "",
-				GeoipAddr = "",
-				Country = "",
+				RemoteAddr = GeoIPData.IPAddress ?? IpAddress, // fallbacks for local dev, since ::1 fails the lookups.
+				GeoipAddr = GeoIPData.IPAddress ?? IpAddress,
+				Country = GeoIPData.Country,
 				ServerTime = Timestamp.UnixTime,
 				RequestId = Guid.NewGuid().ToString(),
 				AccessToken = token,
