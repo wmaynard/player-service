@@ -26,6 +26,7 @@ namespace PlayerService.Models
 
 		public const string FRIENDLY_KEY_ACCOUNT_ID = "aid";
 		public const string FRIENDLY_KEY_DATA = "data";
+		public const string FRIENDLY_KEY_NAME = "name";
 		
 		[BsonElement(DB_KEY_ACCOUNT_ID), BsonRepresentation(BsonType.ObjectId)]
 		[JsonInclude, JsonPropertyName(FRIENDLY_KEY_ACCOUNT_ID)]
@@ -34,10 +35,15 @@ namespace PlayerService.Models
 		[BsonElement(DB_KEY_DATA)]
 		[JsonInclude, JsonPropertyName(FRIENDLY_KEY_DATA)]
 		public GenericData Data { get; set; }
+		
+		[BsonIgnore]
+		[JsonInclude, JsonPropertyName(FRIENDLY_KEY_NAME), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+		public string Name { get; set; }
 
-		public Component(string accountId, GenericData data = null)
+		public Component(string accountId, string name = null, GenericData data = null)
 		{
 			AccountId = accountId;
+			Name = name;
 			Data = data ?? new GenericData();
 		}
 	}

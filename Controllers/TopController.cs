@@ -160,11 +160,11 @@ namespace PlayerService.Controllers
 		public ActionResult Read()
 		{
 			string[] names = Optional<string>("names")?.Split(',');
-
-			GenericData components = new GenericData();
 			
-			foreach (KeyValuePair<string, ComponentService> pair in ComponentServices.Where(pair => names?.Contains(pair.Key) ?? true))
-				components[pair.Key] = pair.Value.Lookup(Token.AccountId);
+			List<Component> components = ComponentServices
+				.Where(pair => names?.Contains(pair.Key) ?? true)
+				.Select(pair => pair.Value.Lookup(Token.AccountId))
+				.ToList();
 
 			return Ok(value: new GenericData()
 			{

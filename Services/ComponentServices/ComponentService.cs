@@ -5,8 +5,14 @@ namespace PlayerService.Services.ComponentServices
 {
 	public abstract class ComponentService : PlatformMongoService<Component>
 	{
-		protected ComponentService(string name) : base("c_" + name) { }
+		private string Name { get; set; }
+		protected ComponentService(string name) : base("c_" + name) => Name = name;
 
-		public Component Lookup(string accountId) => FindOne(component => component.AccountId == accountId) ?? Create(new Component(accountId));
+		public Component Lookup(string accountId)
+		{
+			Component output = FindOne(component => component.AccountId == accountId) ?? Create(new Component(accountId));
+			output.Name = Name;
+			return output;
+		}
 	}
 }
