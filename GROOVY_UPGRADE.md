@@ -86,6 +86,9 @@ Previous platform API was built on using POST for everything.  v2 uses more appr
 
 ### 8. Use `GET /player/v2/items` to retrieve a player's items.
 
+Optional field: `types`: a CSV-separated field to narrow the scope of the results.
+Optional field: `ids`: a CSV-separated field to further narrow the scope of the results.
+
 ### 9. `POST /player/read` is now `GET /player/v2/read`.
 
 Pass `names` in through a query string instead of in the body.

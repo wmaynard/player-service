@@ -403,10 +403,15 @@ namespace PlayerService.Controllers
 		[HttpGet, Route("items")]
 		public ActionResult GetItems()
 		{
+			string[] ids = Optional<string>("ids")?.Split(',');
 			string[] types = Optional<string>("types")?.Split(',');
+			
+			// TODO: improve performance by only retrieving requested items.
 			Item[] items = _itemService.GetItemsFor(Token.AccountId);
 			if (types != null)
 				items = items.Where(item => types.Contains(item.Type)).ToArray();
+			if (ids != null)
+				items = items.Where(item => ids.Contains(item.ItemId)).ToArray();
 			return Ok(new { Items = items});
 		}
 
