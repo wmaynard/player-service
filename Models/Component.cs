@@ -8,7 +8,6 @@ namespace PlayerService.Models
 {
 	public class Component : PlatformCollectionDocument
 	{
-		// TODO: Check keys
 		public const string AB_TEST = "abTest";
 		public const string ACCOUNT = "account";
 		public const string EQUIPMENT = "equipment";
