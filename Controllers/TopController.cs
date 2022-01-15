@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
+using System.Text.Json;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Configuration;
 using PlayerService.Models;
@@ -131,13 +132,19 @@ namespace PlayerService.Controllers
 			// Will on 2022.01.06: We're hitting Mongo for EVERY item?  Maybe with a transaction, this builds everything into one query,
 			// but if it doesn't then this is miserable for performance.
 			Item[] items = Optional<Item[]>("items") ?? Array.Empty<Item>();
+			long ms = Timestamp.UnixTimeMS;
 			foreach (Item item in items)
+			{
+				item.AccountId = Token.AccountId;
 				if (item.MarkedForDeletion)
 					_itemService.Delete(item);
 				else
-					_itemService.Update(item);
+					_itemService.UpdateItem(item);
+			}
 
-			return Ok(new { Token = Token});
+			ms = Timestamp.UnixTimeMS - ms;
+
+			return Ok(new { Token = Token, itemMS = ms});
 		}
 		
 		[HttpGet, Route("testConflict"), NoAuth]
