@@ -152,14 +152,23 @@ namespace PlayerService.Controllers
 		{
 			Player player = CreateNewAccount(Guid.NewGuid().ToString(), "postman", "postman 1.0.0");
 			Player player2 = CreateNewAccount(Guid.NewGuid().ToString(), "postman", "postman 2.0.0");
-			
-			Profile sso = new Profile(player.AccountId, "agoobagoo", Profile.TYPE_GOOGLE);
+
+			string ssoKey = Guid.NewGuid().ToString();
+			Profile sso = new Profile(player.AccountId, ssoKey, Profile.TYPE_GOOGLE);
 			_profileService.Create(sso);
 
 			return Ok(new
 			{
 				install_1 = player.InstallId,
-				install_2 = player2.InstallId
+				install_2 = player2.InstallId,
+				message = "Call /player/launch with installId = install_2 and the sso object.",
+				sso = new
+				{
+					googlePlay = new
+					{
+						idToken = ssoKey
+					}
+				}
 			});
 		}
 
