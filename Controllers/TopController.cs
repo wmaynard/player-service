@@ -3,8 +3,14 @@ using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Text.Json;
+using System.Threading.Tasks;
+using Google.Apis.Auth;
+using Google.Apis.Auth.AspNetCore3;
+using Google.Apis.Auth.OAuth2;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Configuration;
+using PlayerService.Exceptions;
 using PlayerService.Models;
 using PlayerService.Models.Responses;
 using Rumble.Platform.Common.Web;
@@ -212,7 +218,7 @@ namespace PlayerService.Controllers
 			
 			// TODO: Handle install id not found (new client)
 
-			Profile[] profiles = _profileService.Find(player.AccountId, sso);
+			Profile[] profiles = _profileService.Find(player.AccountId, sso, out SsoData[] ssoData);
 			Profile[] conflictProfiles = profiles
 				.Where(profile => profile.AccountId != player.AccountId)
 				.ToArray();
@@ -220,7 +226,7 @@ namespace PlayerService.Controllers
 
 			int discriminator = _discriminatorService.Lookup(player);
 
-			string token = _tokenGeneratorService.Generate(player.AccountId, player.Screenname, discriminator, geoData: GeoIPData);
+			string token = _tokenGeneratorService.Generate(player.AccountId, player.Screenname, discriminator, geoData: GeoIPData, email: ssoData.FirstOrDefault(sso => sso.Email != null)?.Email);
 
 			if (conflictProfiles.Any())
 			{
@@ -235,7 +241,8 @@ namespace PlayerService.Controllers
 					AccountId = player.AccountId,
 					ConflictingAccountId = conflictProfiles.First().AccountId,
 					ConflictingProfiles = conflictProfiles,
-					TransferToken = other.TransferToken
+					TransferToken = other.TransferToken,
+					SsoData = ssoData
 				};
 				
 				Log.Info(Owner.Default, "Account Conflict", data: response);
@@ -260,7 +267,8 @@ namespace PlayerService.Controllers
 				RequestId = HttpContext.Request.Headers["X-Request-ID"].ToString() ?? Guid.NewGuid().ToString(),
 				AccessToken = token,
 				Player = player,
-				Discriminator = discriminator
+				Discriminator = discriminator,
+				SsoData = ssoData
 			});
 		}
 
@@ -442,5 +450,15 @@ namespace PlayerService.Controllers
 			GenericData payload = new GenericData();
 			GenericData response = PlatformRequest.Post("https://appleid.apple.com/auth/token", payload: payload).Send();
 		}
+
+		// [HttpGet, Route("googtest"), NoAuth]
+		// public ActionResult GoogleTest([FromServices] IGoogleAuthProvider auth)
+		// {
+		// 	string token = Require<string>("idToken");
+		// 	
+		// 	SsoData data = SsoAuthenticator.Google(token);
+		// 	
+		// 	return Ok(data);
+		// }
 	}
 }
