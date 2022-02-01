@@ -26,20 +26,20 @@ namespace PlayerService.Models
 		private const string DB_KEY_TYPE = "type";
 		
 		public const string FRIENDLY_KEY_ACCOUNT_ID = "aid";
-		public const string FRIENDLY_KEY_CREATED_TIMESTAMP = "CreatedTimestamp";
-		public const string FRIENDLY_KEY_CLIENT_TYPE = "ClientType";
-		public const string FRIENDLY_KEY_CLIENT_VERSION = "ClientVersion";
-		public const string FRIENDLY_KEY_DEVICE_TYPE = "DeviceType";
-		public const string FRIENDLY_KEY_DISCRIMINATOR = "Discriminator";
-		public const string FRIENDLY_KEY_LANGUAGE = "SystemLanguage";
-		public const string FRIENDLY_KEY_MERGE_ACCOUNT_ID = "MergeAccountId";
-		public const string FRIENDLY_KEY_MERGE_TOKEN = "TransferToken";
-		public const string FRIENDLY_KEY_MODIFIED_TIMESTAMP = "ModifiedTimestamp";
-		public const string FRIENDLY_KEY_OPERATING_SYSTEM = "OperatingSystem";
-		public const string FRIENDLY_KEY_PROFILE_ID = "ProfileId";
-		public const string FRIENDLY_KEY_REQUEST_ID = "RequestId";
-		public const string FRIENDLY_KEY_SCREENNAME = "Screenname";
-		public const string FRIENDLY_KEY_TYPE = "Type";
+		public const string FRIENDLY_KEY_CREATED_TIMESTAMP = "createdTimestamp";
+		public const string FRIENDLY_KEY_CLIENT_TYPE = "clientType";
+		public const string FRIENDLY_KEY_CLIENT_VERSION = "clientVersion";
+		public const string FRIENDLY_KEY_DEVICE_TYPE = "deviceType";
+		public const string FRIENDLY_KEY_DISCRIMINATOR = "discriminator";
+		public const string FRIENDLY_KEY_LANGUAGE = "systemLanguage";
+		public const string FRIENDLY_KEY_MERGE_ACCOUNT_ID = "mergeAccountId";
+		public const string FRIENDLY_KEY_MERGE_TOKEN = "transferToken";
+		public const string FRIENDLY_KEY_MODIFIED_TIMESTAMP = "modifiedTimestamp";
+		public const string FRIENDLY_KEY_OPERATING_SYSTEM = "operatingSystem";
+		public const string FRIENDLY_KEY_PROFILE_ID = "profileId";
+		public const string FRIENDLY_KEY_REQUEST_ID = "pequestId";
+		public const string FRIENDLY_KEY_SCREENNAME = "screenname";
+		public const string FRIENDLY_KEY_TYPE = "type";
 
 		[BsonElement(DB_KEY_ACCOUNT_ID), BsonRepresentation(BsonType.ObjectId)]
 		[JsonInclude, JsonPropertyName(FRIENDLY_KEY_ACCOUNT_ID)]
