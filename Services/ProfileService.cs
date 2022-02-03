@@ -61,7 +61,8 @@ namespace PlayerService.Services
 		private Profile[] FromGooglePlay(GenericData sso, ref List<SsoData> list)
 		{
 			string token = sso.Require<string>("idToken");
-			
+			if (string.IsNullOrWhiteSpace(token))
+				return Array.Empty<Profile>();
 			try
 			{
 				Task<GoogleJsonWebSignature.Payload> task = GoogleJsonWebSignature.ValidateAsync(token);
