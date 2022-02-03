@@ -9,6 +9,7 @@ using Google.Apis.Auth.AspNetCore3;
 using Google.Apis.Auth.OAuth2;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.Configuration;
 using PlayerService.Exceptions;
 using PlayerService.Models;
@@ -17,9 +18,10 @@ using Rumble.Platform.Common.Web;
 using PlayerService.Services;
 using PlayerService.Services.ComponentServices;
 using PlayerService.Utilities;
+using Rumble.Platform.Common.Attributes;
 using Rumble.Platform.Common.Utilities;
-using Rumble.Platform.CSharp.Common.Interop;
-using Rumble.Platform.CSharp.Common.Services;
+using Rumble.Platform.Common.Interop;
+using Rumble.Platform.Common.Services;
 
 namespace PlayerService.Controllers
 {
@@ -111,6 +113,21 @@ namespace PlayerService.Controllers
 			ComponentServices[Component.WORLD] = worldService;
 		}
 
+		[HttpGet, Route("health2"), NoAuth]
+		public async Task<ActionResult> HealthCheckAsync()
+		{
+			return Ok(
+				_playerService.HealthCheckResponseObject,
+				_discriminatorService.HealthCheckResponseObject,
+				_dynamicConfigService.HealthCheckResponseObject,
+				_itemService.HealthCheckResponseObject,
+				_nameGeneratorService.HealthCheckResponseObject,
+				_profileService.HealthCheckResponseObject,
+				_tokenGeneratorService.HealthCheckResponseObject
+			);
+		}
+
+
 		[HttpGet, Route("health"), NoAuth]
 		public override ActionResult HealthCheck() => Ok(
 			_playerService.HealthCheckResponseObject,
@@ -138,6 +155,8 @@ namespace PlayerService.Controllers
 			// Will on 2022.01.06: We're hitting Mongo for EVERY item?  Maybe with a transaction, this builds everything into one query,
 			// but if it doesn't then this is miserable for performance.
 			Item[] items = Optional<Item[]>("items") ?? Array.Empty<Item>();
+			long tsStart = Timestamp.UnixTimeMS;
+			long tsItemsV2 = Timestamp.UnixTimeMS - tsStart;
 			long ms = Timestamp.UnixTimeMS;
 			foreach (Item item in items)
 			{
@@ -150,7 +169,7 @@ namespace PlayerService.Controllers
 
 			ms = Timestamp.UnixTimeMS - ms;
 
-			return Ok(new { Token = Token, itemMS = ms});
+			return Ok(new { Token = Token, itemMS = ms, itemV2MS = tsItemsV2 });
 		}
 		
 		[HttpGet, Route("testConflict"), NoAuth]
@@ -298,12 +317,13 @@ namespace PlayerService.Controllers
 			_playerService.Create(player);
 			Profile profile = new Profile(player);
 			_profileService.Create(profile);
-			Log.Info(Owner.Default, "New account created.", data: new
-			{
-				InstallId = player.AccountId,
-				ProfileId = profile.Id,
-				AccountId = profile.AccountId
-			});
+			if (!PlatformEnvironment.SwarmMode)
+				Log.Info(Owner.Default, "New account created.", data: new
+				{
+					InstallId = player.AccountId,
+					ProfileId = profile.Id,
+					AccountId = profile.AccountId
+				});
 			return player;
 		}
 
@@ -460,5 +480,31 @@ namespace PlayerService.Controllers
 		// 	
 		// 	return Ok(data);
 		// }
+
+		[HttpDelete, Route("pesticide"), NoAuth]
+		public ActionResult KillAllLocusts()
+		{
+			// string name = null;
+			// for (int i = 0; i < 100_000; i++)
+			// 	name = _nameGeneratorService.Next;
+			// return Ok();
+
+			Player[] locusts = _playerService.Find(filter: player => player.InstallId.StartsWith("locust-"));
+
+			foreach (Player locust in locusts)
+			{
+				foreach (ComponentService componentService in ComponentServices.Values)
+					componentService.Delete(locust);
+				foreach (Profile profile in _profileService.Find(profile => profile.AccountId == locust.AccountId))
+					_profileService.Delete(profile.Id);
+				_itemService.Delete(locust);
+				_playerService.Delete(locust.Id);
+			}
+
+			return Ok(new
+			{
+				LocustsKilled = locusts.Length
+			});
+		}
 	}
 }

@@ -20,8 +20,8 @@ namespace PlayerService.Models
 		public const string WALLET = "wallet";
 		public const string WORLD = "world";
 		
-		private const string DB_KEY_ACCOUNT_ID = "aid";
-		private const string DB_KEY_DATA = "data";
+		internal const string DB_KEY_ACCOUNT_ID = "aid";
+		internal const string DB_KEY_DATA = "data";
 
 		public const string FRIENDLY_KEY_ACCOUNT_ID = "aid";
 		public const string FRIENDLY_KEY_DATA = "data";

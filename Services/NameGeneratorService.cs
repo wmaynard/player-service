@@ -47,6 +47,7 @@ namespace PlayerService.Services
 				if (!Adjectives.Any())
 					ReloadAdjectives();
 				adjective = Adjectives.First();
+				Adjectives.RemoveAt(0);
 
 				noun = Nouns.FirstOrDefault(n => n.StartsWith(adjective[0]));
 				if (noun == null)
@@ -55,8 +56,9 @@ namespace PlayerService.Services
 					noun = Nouns.FirstOrDefault(n => n.StartsWith(adjective[0]));
 				}
 			
-				Adjectives.RemoveAt(0);
 				Nouns.Remove(noun);
+				
+				// Log.Local(Owner.Will, $"Nouns: {Nouns.Count.ToString(),4} | Adjectives: {Adjectives.Count.ToString(),4}");
 
 				return $"{Capitalize(adjective)} {Capitalize(noun)}";
 			}
@@ -64,7 +66,13 @@ namespace PlayerService.Services
 			{
 				if (retries > 0)
 					return Generate(retries - 1);
-				throw new NameGenerationException(adjective, noun, e);
+				Log.Error(Owner.Default, $"Name generation failed. {adjective} {noun}", exception: new NameGenerationException(adjective, noun, e));
+				Log.Local(Owner.Will, $"Null nouns: {Nouns.Count(n => n == null)} | Null adjectives: {Adjectives.Count(n => n == null)}");
+				ReloadAdjectives();
+				ReloadNouns();
+				// throw new NameGenerationException(adjective, noun, e);
+				// Fallback to old default; bad name generation can't be allowed to break the login
+				return string.Concat(Enumerable.Range(0, 8).Select(_ => new Random().Next(16).ToString("X"))).ToLower();
 			}
 		}
 
@@ -78,6 +86,7 @@ namespace PlayerService.Services
 			Random rando = new Random();
 			List<string> output = File.ReadAllLines(path)
 				.Distinct()
+				// .Where(str => str != null) // Somehow we're getting null values in our lists
 				.Where(str => str.Length >= MIN_LENGTH && str.Length <= MAX_LENGTH)
 				.Where(str => !str.StartsWith("//")) // Allow commented lines in case we want to revisit words
 				.Select(str => str.ToLower().Trim()) // Account for proper nouns and bad whitespace input

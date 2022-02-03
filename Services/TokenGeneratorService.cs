@@ -3,8 +3,8 @@ using Microsoft.Extensions.Configuration;
 using PlayerService.Exceptions;
 using Rumble.Platform.Common.Utilities;
 using Rumble.Platform.Common.Web;
-using Rumble.Platform.CSharp.Common.Models;
-using Rumble.Platform.CSharp.Common.Services;
+using Rumble.Platform.Common.Models;
+using Rumble.Platform.Common.Services;
 
 namespace PlayerService.Services
 {

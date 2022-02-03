@@ -1,4 +1,5 @@
 using System.Linq;
+using MongoDB.Bson;
 using MongoDB.Driver;
 using PlayerService.Models;
 using Rumble.Platform.Common.Web;
@@ -9,7 +10,11 @@ namespace PlayerService.Services
 	{
 		public ItemService() : base("items") { }
 
-		public Item[] GetItemsFor(string accountId) => Find(item => item.AccountId == accountId).ToArray();
+		// public Item[] GetItemsFor(string accountId) => Find(item => item.AccountId == accountId).ToArray();
+		public Item[] GetItemsFor(string accountId)
+		{
+			return _collection.Find(new FilterDefinitionBuilder<Item>().Eq(Item.DB_KEY_ACCOUNT_ID, ObjectId.Parse(accountId))).ToList().ToArray();
+		}
 
 		public void UpdateItem(Item item)
 		{
@@ -24,19 +29,25 @@ namespace PlayerService.Services
 				.Set(i => i.Data, item.Data)
 				.Set(i => i.Type, item.Type)
 				.Set(i => i.AccountId, item.AccountId);
-			
+
+			Item updated = null;
 			if (session != null)
-				_collection.FindOneAndUpdate<Item>(session,
+				updated = _collection.FindOneAndUpdate<Item>(session,
 					filter: dbItem => dbItem.AccountId == item.AccountId && dbItem.ItemId == item.ItemId,
 					update: update, 
 					options: new FindOneAndUpdateOptions<Item>() { ReturnDocument = ReturnDocument.After, IsUpsert = true}
 				);
 			else
-				_collection.FindOneAndUpdate<Item>(
+				updated = _collection.FindOneAndUpdate<Item>(
 					filter: dbItem => dbItem.AccountId == item.AccountId && dbItem.ItemId == item.ItemId,
 					update: update, 
 					options: new FindOneAndUpdateOptions<Item>() { ReturnDocument = ReturnDocument.After, IsUpsert = true}
 				);
+		}
+
+		public void Delete(Player player)
+		{
+			_collection.DeleteMany(new FilterDefinitionBuilder<Item>().Eq(Item.DB_KEY_ACCOUNT_ID, player.AccountId));
 		}
 	}
 }

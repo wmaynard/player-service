@@ -22,7 +22,7 @@ namespace PlayerService
 #if DEBUG
 			base.ConfigureServices(services, Owner.Will, warnMS: 5_000, errorMS: 30_000, criticalMS: 180_000);
 #else
-			base.ConfigureServices(services, Owner.Will, warnMS: 500, errorMS: 1_000, criticalMS: 30_000);
+			base.ConfigureServices(services, Owner.Will, warnMS: 5_000, errorMS: 30_000, criticalMS: 90_000);
 #endif
 			
 			// TODO: This might be unnecessary for Google OAuth with the new solution; will need to test it.

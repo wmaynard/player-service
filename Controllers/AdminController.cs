@@ -7,9 +7,10 @@ using Microsoft.Extensions.Configuration;
 using PlayerService.Models;
 using PlayerService.Services;
 using PlayerService.Services.ComponentServices;
+using Rumble.Platform.Common.Attributes;
 using Rumble.Platform.Common.Utilities;
 using Rumble.Platform.Common.Web;
-using Rumble.Platform.CSharp.Common.Services;
+using Rumble.Platform.Common.Services;
 
 namespace PlayerService.Controllers
 {
@@ -134,11 +135,11 @@ namespace PlayerService.Controllers
 			
 			return Ok(new { Results = results });
 		}
-
-
 		public override ActionResult HealthCheck()
 		{
 			throw new System.NotImplementedException();
 		}
+		
+		
 	}
 }

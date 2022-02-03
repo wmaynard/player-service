@@ -1,6 +1,7 @@
 using System.Text.Json.Serialization;
 using MongoDB.Bson;
 using MongoDB.Bson.Serialization.Attributes;
+using Rumble.Platform.Common.Attributes;
 using Rumble.Platform.Common.Utilities;
 using Rumble.Platform.Common.Web;
 
@@ -8,10 +9,10 @@ namespace PlayerService.Models
 {
 	public class Item : PlatformCollectionDocument
 	{
-		private const string DB_KEY_ACCOUNT_ID = "aid";
-		private const string DB_KEY_ITEM_ID = "iid";
-		private const string DB_KEY_DATA = "data";
-		private const string DB_KEY_TYPE = "type";
+		internal const string DB_KEY_ACCOUNT_ID = "aid";
+		internal const string DB_KEY_ITEM_ID = "iid";
+		internal const string DB_KEY_DATA = "data";
+		internal const string DB_KEY_TYPE = "type";
 
 		public const string FRIENDLY_KEY_ACCOUNT_ID = "aid";
 		public const string FRIENDLY_KEY_ITEM_ID = "iid";
@@ -19,6 +20,7 @@ namespace PlayerService.Models
 		public const string FRIENDLY_KEY_TYPE = "type";
 		public const string FRIENDLY_KEY_DELETE = "delete";
 
+		[SimpleIndex(DB_KEY_ACCOUNT_ID, "accountId")]
 		[BsonElement(DB_KEY_ACCOUNT_ID), BsonRepresentation(BsonType.ObjectId)]
 		[JsonInclude, JsonPropertyName(FRIENDLY_KEY_ACCOUNT_ID)]
 		public string AccountId { get; set; }
