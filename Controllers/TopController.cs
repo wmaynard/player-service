@@ -156,7 +156,6 @@ namespace PlayerService.Controllers
 			// but if it doesn't then this is miserable for performance.
 			Item[] items = Optional<Item[]>("items") ?? Array.Empty<Item>();
 			long tsStart = Timestamp.UnixTimeMS;
-			long tsItemsV2 = Timestamp.UnixTimeMS - tsStart;
 			long ms = Timestamp.UnixTimeMS;
 			foreach (Item item in items)
 			{
@@ -169,7 +168,7 @@ namespace PlayerService.Controllers
 
 			ms = Timestamp.UnixTimeMS - ms;
 
-			return Ok(new { Token = Token, itemMS = ms, itemV2MS = tsItemsV2 });
+			return Ok(new { Token = Token, itemMS = ms });
 		}
 		
 		[HttpGet, Route("testConflict"), NoAuth]
