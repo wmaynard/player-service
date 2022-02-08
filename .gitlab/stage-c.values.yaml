@@ -35,7 +35,7 @@ hpa:
   MemUtilizationPercentage: 83
   keda:
     enabled: true
-    requestsPerSecond: "500"
+    requestsPerSecond: "100"
     serverAddress: http://prometheus-prometheus-server.gitlab-managed-apps.svc:80
 gitlab:
   app:
@@ -61,14 +61,14 @@ ingress:
     - "/item"
     - "/admin/item"
   tls:
-    enabled: true
-    acme: true
+    enabled: false
+    acme: false
     secretName: "player-service-stage-c"
     useDefaultSecret: false
   annotations:
-    cert-manager.io/cluster-issuer: "letsencrypt-prod"
     kubernetes.io/ingress.class: "nginx"
     nginx.ingress.kubernetes.io/client-body-buffer-size: 2m
+    nginx.ingress.kubernetes.io/proxy-body-size: 2m
   modSecurity:
     enabled: false
     secRuleEngine: "On"
