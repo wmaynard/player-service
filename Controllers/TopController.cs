@@ -458,6 +458,34 @@ namespace PlayerService.Controllers
 			return Ok(new { Items = items});
 		}
 
+		[HttpPatch, Route("screenname")]
+		public ActionResult ChangeName()
+		{
+			string sn = Require<string>("screenname");
+			
+			Player player = _playerService.Find(Token.AccountId);
+			player.Screenname = sn;
+			_playerService.Update(player);
+
+			int discriminator = _discriminatorService.Update(player);
+			
+			
+			string token = _tokenGeneratorService.Generate(
+				accountId: player.AccountId, 
+				screenname: player.Screenname, 
+				discriminator: discriminator,
+				geoData: GeoIPData, 
+				email: Token.Email
+			);
+
+			return Ok(new
+			{
+				Player = player,
+				AccessToken = token,
+				Discriminator = discriminator
+			});
+		}
+
 		[HttpPost, Route("iostest"), NoAuth]
 		public void AppleTest()
 		{
