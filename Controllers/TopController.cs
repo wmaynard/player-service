@@ -280,7 +280,7 @@ namespace PlayerService.Controllers
 			{
 				RemoteAddr = GeoIPData.IPAddress ?? IpAddress, // fallbacks for local dev, since ::1 fails the lookups.
 				GeoipAddr = GeoIPData.IPAddress ?? IpAddress,
-				Country = GeoIPData.Country,
+				Country = GeoIPData.CountryCode,
 				ServerTime = Timestamp.UnixTime,
 				RequestId = HttpContext.Request.Headers["X-Request-ID"].ToString() ?? Guid.NewGuid().ToString(),
 				AccessToken = token,
