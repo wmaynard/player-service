@@ -36,7 +36,7 @@ hpa:
   keda:
     enabled: true
     requestsPerSecond: "100"
-    serverAddress: http://prometheus-prometheus-server.gitlab-managed-apps.svc:80
+    serverAddress: http://prometheus-server.gitlab-managed-apps.svc:80
 gitlab:
   app:
   env:
@@ -46,11 +46,11 @@ gitlab:
 service:
   enabled: true
   annotations: {}
-  name: ps2-stage-a # 15 character limit..
+  name: ps2-prod # 15 character limit..
   type: NodePort
-  url: https://stage-a.nonprod.tower.cdrentertainment.com/
+  url: https://platform.prod.tower.rumblegames.com/
   additionalHosts:
-  commonName: stage-a.nonprod.tower.cdrentertainment.com
+  commonName: platform.prod.tower.rumblegames.com
   externalPort: 5001
   internalPort: 80
 ingress:
@@ -60,7 +60,7 @@ ingress:
   tls:
     enabled: false
     acme: false
-    secretName: "player-service-stage-a"
+    secretName: "player-service-prod"
     useDefaultSecret: false
   annotations:
     kubernetes.io/ingress.class: "nginx"
