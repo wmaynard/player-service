@@ -28,6 +28,7 @@ namespace PlayerService.Controllers
 	[ApiController, Route("player/v2"), RequireAuth, UseMongoTransaction]
 	public class TopController : PlatformController
 	{
+#pragma warning disable CS0649
 		private readonly PlayerAccountService _playerService;
 		private readonly DiscriminatorService _discriminatorService;
 		private readonly DynamicConfigService _dynamicConfigService;
@@ -36,13 +37,21 @@ namespace PlayerService.Controllers
 		private readonly NameGeneratorService _nameGeneratorService;
 		private readonly TokenGeneratorService _tokenGeneratorService;
 		
+		// Component Services
+		private readonly AbTestService _abTestService;
+		private readonly AccountService _accountService;
+		private readonly EquipmentService _equipmentService;
+		private readonly HeroService _heroService;
+		private readonly MultiplayerService _multiplayerService;
+		private readonly QuestService _questService;
+		private readonly StoreService _storeService;
+		private readonly SummaryService _summaryService;
+		private readonly TutorialService _tutorialService;
+		private readonly WalletService _walletService;
+		private readonly WorldService _worldService;
+#pragma warning restore CS0649
 		private Dictionary<string, ComponentService> ComponentServices { get; init; }
 
-		private DynamicConfigClient dynamicConfig = new DynamicConfigClient(
-			secret: PlatformEnvironment.Variable("RUMBLE_KEY"),
-			configServiceUrl: PlatformEnvironment.Variable("RUMBLE_CONFIG_SERVICE_URL"),
-			gameId: PlatformEnvironment.Variable("GAME_GUKEY")
-		);
 
 		/// <summary>
 		/// Will on 2021.12.16
@@ -70,48 +79,21 @@ namespace PlayerService.Controllers
 		/// for TH, but we should re-evaluate it for the next game if that's the case.
 		/// </summary>
 		[SuppressMessage("ReSharper", "SuggestBaseTypeForParameter")]
-		public TopController(IConfiguration config,
-				DynamicConfigService configService,
-				DiscriminatorService discriminatorService,
-				ItemService itemService,
-				NameGeneratorService nameGeneratorService,
-				PlayerAccountService playerService,
-				ProfileService profileService,
-				TokenGeneratorService tokenGeneratorService,
-				AbTestService abTestService,				// Component Services
-				AccountService accountService,
-				EquipmentService equipmentService,
-				HeroService heroService,
-				MultiplayerService multiplayerService,
-				QuestService questService,
-				StoreService storeService,
-				SummaryService summaryService,
-				TutorialService tutorialService,
-				WalletService walletService,
-				WorldService worldService
-			) : base(config)
-		{
-			_playerService = playerService;
-			_discriminatorService = discriminatorService;
-			_dynamicConfigService = configService;
-			_itemService = itemService;
-			_nameGeneratorService = nameGeneratorService;
-			_profileService = profileService;
-			_tokenGeneratorService = tokenGeneratorService;
-
-			ComponentServices = new Dictionary<string, ComponentService>();
-			ComponentServices[Component.AB_TEST] = abTestService;
-			ComponentServices[Component.ACCOUNT] = accountService;
-			ComponentServices[Component.EQUIPMENT] = equipmentService;
-			ComponentServices[Component.HERO] = heroService;
-			ComponentServices[Component.MULTIPLAYER] = multiplayerService;
-			ComponentServices[Component.QUEST] = questService;
-			ComponentServices[Component.STORE] = storeService;
-			ComponentServices[Component.SUMMARY] = summaryService;
-			ComponentServices[Component.TUTORIAL] = tutorialService;
-			ComponentServices[Component.WALLET] = walletService;
-			ComponentServices[Component.WORLD] = worldService;
-		}
+		public TopController(IConfiguration config)  : base(config) =>
+			ComponentServices = new Dictionary<string, ComponentService>()
+			{
+				{ Component.AB_TEST, _abTestService },
+				{ Component.ACCOUNT, _accountService },
+				{ Component.EQUIPMENT, _equipmentService },
+				{ Component.HERO, _heroService },
+				{ Component.MULTIPLAYER, _multiplayerService },
+				{ Component.QUEST, _questService },
+				{ Component.STORE, _storeService },
+				{ Component.SUMMARY, _summaryService },
+				{ Component.TUTORIAL, _tutorialService },
+				{ Component.WALLET, _walletService },
+				{ Component.WORLD, _worldService }
+			};
 
 		[HttpGet, Route("health2"), NoAuth]
 		public async Task<ActionResult> HealthCheckAsync()

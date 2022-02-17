@@ -86,6 +86,20 @@ namespace PlayerService.Models
 		[BsonElement(DB_KEY_UPDATED), BsonIgnoreIfDefault]
 		[JsonInclude, JsonPropertyName(FRIENDLY_KEY_UPDATED), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
 		public long UpdatedTimestamp { get; set; }
+		
+		/// <summary>
+		/// This is used exclusively by the admin portal at the moment - it's a frontend-only field that is never stored in MongoDB.
+		/// This is needed to join the discriminator to /admin/search Player results.
+		/// </summary>
+		[BsonIgnore]
+		[JsonInclude, JsonPropertyName("discriminator"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+		public int? Discriminator { get; internal set; }
+		/// <summary>
+		/// Another feature for frontend readability.  Creates the fully-qualified screenname (e.g. JoeMcFugal#1234).
+		/// </summary>
+		[BsonIgnore]
+		[JsonInclude, JsonPropertyName("username")]
+		public string Username => (Screenname ?? "") + (Discriminator != null ? $"#{Discriminator}" : "");
 
 		public Player(string screenname)
 		{

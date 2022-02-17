@@ -3,11 +3,13 @@ using System.Collections.Generic;
 using System.Diagnostics.Eventing.Reader;
 using System.Linq;
 using System.Linq.Expressions;
+using System.Security.Cryptography.Xml;
 using System.Text.Json.Serialization;
 using System.Text.RegularExpressions;
 using Microsoft.AspNetCore.Components.Web.Virtualization;
 using MongoDB.Bson.Serialization.Attributes;
 using MongoDB.Bson.Serialization.Serializers;
+using MongoDB.Driver;
 using PlayerService.Exceptions;
 using PlayerService.Models;
 using PlayerService.Services.ComponentServices;
@@ -95,6 +97,22 @@ namespace PlayerService.Services
 				return Assign(player);
 			}
 			return existing.Number;
+		}
+
+		public GenericData Search(params string[] accountIds)
+		{
+			GenericData output = new GenericData();
+
+			DiscriminatorGroup[] groups = _collection
+				.Find(Builders<DiscriminatorGroup>.Filter.In("members.aid", accountIds))
+				.ToList()
+				.ToArray();
+			
+			foreach (DiscriminatorGroup group in groups)
+				foreach (DiscriminatorMember member in group.Members)
+					output[member.AccountId] = group.Number;
+
+			return output;
 		}
 	}
 }
