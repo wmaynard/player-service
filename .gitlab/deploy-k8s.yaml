@@ -9,7 +9,6 @@ dev:
     - auto-deploy check_kube_domain
     - auto-deploy download_chart
     - auto-deploy ensure_namespace
-    - auto-deploy initialize_tiller
     - auto-deploy create_secret
     - auto-deploy deploy
   environment:
@@ -20,7 +19,8 @@ dev:
       when: never
     - if: '$CI_COMMIT_BRANCH != $CI_DEFAULT_BRANCH'
       when: never
-    - if: '$DEV_ENABLED'
+    - if: $DEPLOY_TYPE == "kubernetes" || $DEPLOY_TYPE == "both"
+      when: manual
 
 stage-a:
   extends: .auto-deploy
@@ -29,7 +29,6 @@ stage-a:
     - auto-deploy check_kube_domain
     - auto-deploy download_chart
     - auto-deploy ensure_namespace
-    - auto-deploy initialize_tiller
     - auto-deploy create_secret
     - auto-deploy deploy
   environment:
@@ -40,7 +39,7 @@ stage-a:
       when: never
     - if: '$CI_COMMIT_BRANCH != $CI_DEFAULT_BRANCH'
       when: never
-    - if: '$STAGING_ENABLED'
+    - if: $DEPLOY_TYPE == "kubernetes" || $DEPLOY_TYPE == "both"
       when: manual
 
 stage-b:
@@ -50,7 +49,6 @@ stage-b:
     - auto-deploy check_kube_domain
     - auto-deploy download_chart
     - auto-deploy ensure_namespace
-    - auto-deploy initialize_tiller
     - auto-deploy create_secret
     - auto-deploy deploy
   environment:
@@ -61,7 +59,7 @@ stage-b:
       when: never
     - if: '$CI_COMMIT_BRANCH != $CI_DEFAULT_BRANCH'
       when: never
-    - if: '$STAGING_ENABLED'
+    - if: $DEPLOY_TYPE == "kubernetes" || $DEPLOY_TYPE == "both"
       when: manual
 
 stage-c:
@@ -71,7 +69,6 @@ stage-c:
     - auto-deploy check_kube_domain
     - auto-deploy download_chart
     - auto-deploy ensure_namespace
-    - auto-deploy initialize_tiller
     - auto-deploy create_secret
     - auto-deploy deploy
   environment:
@@ -82,5 +79,27 @@ stage-c:
       when: never
     - if: '$CI_COMMIT_BRANCH != $CI_DEFAULT_BRANCH'
       when: never
-    - if: '$STAGING_ENABLED'
+    - if: $DEPLOY_TYPE == "kubernetes" || $DEPLOY_TYPE == "both"
+      when: manual
+
+production:
+  extends: .auto-deploy
+  stage: production
+  tags:
+    - production
+  script:
+    - auto-deploy check_kube_domain
+    - auto-deploy download_chart
+    - auto-deploy ensure_namespace
+    - auto-deploy create_secret
+    - auto-deploy deploy
+  environment:
+    name: production/platform
+    url: https://platform-a.prod.tower.rumblegames.com/
+  rules:
+    - if: '$CI_KUBERNETES_ACTIVE == null || $CI_KUBERNETES_ACTIVE == ""'
+      when: never
+    - if: '$CI_COMMIT_BRANCH != $CI_DEFAULT_BRANCH'
+      when: never
+    - if: $DEPLOY_TYPE == "kubernetes" || $DEPLOY_TYPE == "both"
       when: manual
