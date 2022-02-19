@@ -124,7 +124,7 @@ namespace PlayerService.Controllers
 			{
 				{ "player", player },
 				{ "score", player.SearchWeight },
-				{ "relevance", 100 * player.SearchWeight / (sum ??= players.Sum(p => p.SearchWeight)) } // Percentage of the score this record has.
+				{ "confidence", 100 * player.SearchWeight / (sum ??= players.Sum(p => p.SearchWeight)) } // Percentage of the score this record has.
 			}).ToArray();
 			
 			return Ok(new { Results = results });
