@@ -11,6 +11,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.Configuration;
+using MongoDB.Driver;
 using PlayerService.Exceptions;
 using PlayerService.Models;
 using PlayerService.Models.Responses;
