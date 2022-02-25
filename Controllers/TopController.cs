@@ -124,33 +124,55 @@ namespace PlayerService.Controllers
 		[HttpPatch, Route("update")]
 		public ActionResult Update()
 		{
+			IClientSessionHandle session = _itemService.StartTransaction();
 			GenericData[] components = Require<GenericData[]>("components");
-			foreach (GenericData json in components)
-			{
-				string name = json.Require<string>("name");
-				Component component = ComponentServices[name].FindOne(component => component.AccountId == Token.AccountId);
-				component ??= ComponentServices[name].Create(new Component(Token.AccountId));
-				component.Data = json.Require<GenericData>(Component.FRIENDLY_KEY_DATA);
-				ComponentServices[name].Update(component);
-			}
-
-			// Will on 2022.01.06: We're hitting Mongo for EVERY item?  Maybe with a transaction, this builds everything into one query,
-			// but if it doesn't then this is miserable for performance.
 			Item[] items = Optional<Item[]>("items") ?? Array.Empty<Item>();
-			long tsStart = Timestamp.UnixTimeMS;
-			long ms = Timestamp.UnixTimeMS;
-			foreach (Item item in items)
+
+			long totalMS = Timestamp.UnixTimeMS;
+			long componentMS = Timestamp.UnixTimeMS;
+
+			List<Task<bool>> tasks = components.Select(data => ComponentServices[data.Require<string>(Component.FRIENDLY_KEY_NAME)]
+				.UpdateAsync(
+					accountId: Token.AccountId,
+					data: data.Require<string>(Component.FRIENDLY_KEY_DATA),
+					session: session
+				)
+			).ToList();
+
+
+			componentMS = Timestamp.UnixTimeMS - componentMS;
+
+			long itemMS = Timestamp.UnixTimeMS;
+
+			Item[] toSave = items?.Where(item => !item.MarkedForDeletion).ToArray();
+			Item[] toDelete = items?.Where(item => item.MarkedForDeletion).ToArray();
+
+			// _itemService.BulkUpdateAsync(toSave, session).Wait();
+			// _itemService.BulkDeleteAsync(toDelete, session).Wait();
+			tasks.Add(_itemService.BulkUpdateAsync(toSave, session));
+			tasks.Add(_itemService.BulkDeleteAsync(toDelete, session));
+			itemMS = Timestamp.UnixTimeMS - itemMS;
+			
+			Task.WaitAll(tasks.ToArray());
+
+			if (tasks.Select(task => task.Result).Any(success => !success))
 			{
-				item.AccountId = Token.AccountId;
-				if (item.MarkedForDeletion)
-					_itemService.Delete(item);
-				else
-					_itemService.UpdateItem(item);
+				session.AbortTransaction();
+				Log.Warn(Owner.Default, "The update was aborted.  One or more updates was unsuccessful.");
+				return Problem(detail: "Transaction aborted.");
 			}
+			
+			session.CommitTransaction();
 
-			ms = Timestamp.UnixTimeMS - ms;
+			totalMS = Timestamp.UnixTimeMS - totalMS;
 
-			return Ok(new { Token = Token, itemMS = ms });
+			return Ok(new
+			{
+				Token = Token, 
+				componentTaskCreationMS = componentMS, 
+				itemTaskCreationMS = itemMS, 
+				totalMS = totalMS
+			});
 		}
 		
 		[HttpGet, Route("testConflict"), NoAuth]
@@ -219,7 +241,7 @@ namespace PlayerService.Controllers
 			Profile[] conflictProfiles = profiles
 				.Where(profile => profile.AccountId != player.AccountId)
 				.ToArray();
-			// TODO: If SSO provided and no profile match, create profile for SSO on this account
+			
 			// SSO data was provided, but there's no profile match.  We should create a profile for this SSO on this account.
 			foreach (SsoData data in ssoData)
 			{
