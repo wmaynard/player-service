@@ -160,35 +160,12 @@ namespace PlayerService.Controllers
 				totalMS = totalMS
 			});
 		}
-		
-		[HttpGet, Route("testConflict"), NoAuth]
-		public ActionResult TestConflict()
-		{
-			Player player = CreateNewAccount(Guid.NewGuid().ToString(), "postman", "postman 1.0.0");
-			Player player2 = CreateNewAccount(Guid.NewGuid().ToString(), "postman", "postman 2.0.0");
-
-			string ssoKey = Guid.NewGuid().ToString();
-			Profile sso = new Profile(player.AccountId, ssoKey, Profile.TYPE_GOOGLE);
-			_profileService.Create(sso);
-
-			return Ok(new
-			{
-				install_1 = player.InstallId,
-				install_2 = player2.InstallId,
-				message = "Call /player/launch with installId = install_2 and the sso object.",
-				sso = new
-				{
-					googlePlay = new
-					{
-						idToken = ssoKey
-					}
-				}
-			});
-		}
 
 		[HttpGet, Route("read")]
 		public ActionResult Read()
 		{
+			
+			// ~900 ms
 			string[] names = Optional<string>("names")?.Split(',');
 			
 			List<Component> components = ComponentServices
@@ -526,19 +503,10 @@ namespace PlayerService.Controllers
 			});
 		}
 
-		// [HttpGet, Route("googtest"), NoAuth]
-		// public ActionResult GoogleTest([FromServices] IGoogleAuthProvider auth)
-		// {
-		// 	string token = Require<string>("idToken");
-		// 	
-		// 	SsoData data = SsoAuthenticator.Google(token);
-		// 	
-		// 	return Ok(data);
-		// }
-
 		[HttpDelete, Route("pesticide"), NoAuth]
 		public ActionResult KillAllLocusts()
 		{
+			// TODO: This should require admin, and optimize queries
 			// string name = null;
 			// for (int i = 0; i < 100_000; i++)
 			// 	name = _nameGeneratorService.Next;
