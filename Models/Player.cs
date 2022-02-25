@@ -165,6 +165,7 @@ namespace PlayerService.Models
 				output += weigh(AccountIdOverride, baseWeight: WEIGHT_ID_OVERRIDE);
 			if (InstallId.Contains(term))
 				output += weigh(InstallId, baseWeight: WEIGHT_ID_INSTALL);
+			output += termWeight;
 			
 			return SearchWeight = output;  // If we later evaluate search terms separately later, remove this assignment.
 		}

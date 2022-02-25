@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using Google.Apis.Auth;
 using MongoDB.Bson;
 using MongoDB.Bson.Serialization.Attributes;
+using MongoDB.Driver;
 using PlayerService.Exceptions;
 using PlayerService.Models;
 using Rumble.Platform.Common.Utilities;
@@ -45,7 +46,12 @@ namespace PlayerService.Services
 			ssos = ssoList.ToArray();
 			return output.ToArray();
 		}
-		
+
+		public Profile[] FindByEmail(string term) => _collection
+			.Find(filter: profile => profile.Email.Contains(term))
+			.ToList()
+			.ToArray();
+
 		// public Profile[] FromSSO(GenericData ssoData)
 		// {
 		// 	List<Profile> output = new List<Profile>();

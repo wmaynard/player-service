@@ -94,6 +94,8 @@ namespace PlayerService.Controllers
 				? _profileService.Find(profile => profile.AccountId.Equals(term)).ToArray()
 				: Array.Empty<Profile>();
 
+			Profile[] ProfileEmailMatches = _profileService.FindByEmail(term);
+
 			// Now we can search for partial matches.  Frustratingly, on ObjectId fields only, Contains() returns false on
 			// exact matches, hence the above query.
 			List<Player> players = _playerService.Find(player =>
@@ -112,12 +114,13 @@ namespace PlayerService.Controllers
 				profile.AccountId.Contains(term)
 			).ToList();
 			profiles.AddRange(ProfileIdMatches);
+			profiles.AddRange(ProfileEmailMatches);
 			
 			// Grab any Players from found profiles that we don't already have.  Finding anything here should be
 			// extremely rare.
 			foreach (string accountId in profiles.Select(profile => profile.AccountId))
 				if (!players.Select(player => player.Id).Contains(accountId))
-					players.Add(_playerService.FindOne(player => player.AccountId == accountId));
+					players.Add(_playerService.FindOne(player => player.Id == accountId));
 
 			float? sum = null; // Assigning to a field in the middle of a LINQ query is a little janky, but this prevents sum re-evaluation / requiring another loop.
 			GenericData[] results = players.OrderByDescending(player => player.WeighSearchTerm(term)).Select(player => new GenericData()
