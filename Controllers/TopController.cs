@@ -96,21 +96,6 @@ namespace PlayerService.Controllers
 				{ Component.WORLD, _worldService }
 			};
 
-		[HttpGet, Route("health2"), NoAuth]
-		public async Task<ActionResult> HealthCheckAsync()
-		{
-			return Ok(
-				_playerService.HealthCheckResponseObject,
-				_discriminatorService.HealthCheckResponseObject,
-				_dynamicConfigService.HealthCheckResponseObject,
-				_itemService.HealthCheckResponseObject,
-				_nameGeneratorService.HealthCheckResponseObject,
-				_profileService.HealthCheckResponseObject,
-				_tokenGeneratorService.HealthCheckResponseObject
-			);
-		}
-
-
 		[HttpGet, Route("health"), NoAuth]
 		public override ActionResult HealthCheck() => Ok(
 			_playerService.HealthCheckResponseObject,
@@ -505,6 +490,40 @@ namespace PlayerService.Controllers
 			
 			GenericData payload = new GenericData();
 			GenericData response = PlatformRequest.Post("https://appleid.apple.com/auth/token", payload: payload).Send();
+		}
+
+		[HttpGet, Route("lookup")]
+		public ActionResult PlayerLookup()
+		{
+			// TODO: This is a little janky, and once the SummaryComponent is implemented, this should just return those entries.
+			string[] accountIds = Require<string>("accountIds")?.Split(",");
+			
+			DiscriminatorGroup[] discriminators = _discriminatorService.Find(accountIds);
+			Dictionary<string, string> avatars = ComponentServices[Component.ACCOUNT]
+				.Find(accountIds)
+				.ToDictionary(
+					keySelector: component => component.AccountId,
+					elementSelector: component => component.Data.Optional<string>("accountAvatar")
+				);
+
+			Dictionary<string, GenericData> output = new Dictionary<string, GenericData>();
+			
+			foreach (DiscriminatorGroup group in discriminators)
+				foreach (DiscriminatorMember member in group.Members)
+					output.Add(member.AccountId, new GenericData()
+					{
+						{ Player.FRIENDLY_KEY_SCREENNAME, member.ScreenName },
+						{ "discriminator", group.Number.ToString().PadLeft(4, '0') },
+						{ "accountAvatar", avatars.ContainsKey(member.AccountId) ? avatars[member.AccountId] : null }
+					});
+
+			return Ok(new
+			{
+				Results = output.Select(pair => new GenericData()
+				{
+					{ pair.Key, pair.Value }
+				})
+			});
 		}
 
 		// [HttpGet, Route("googtest"), NoAuth]

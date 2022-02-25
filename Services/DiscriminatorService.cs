@@ -114,5 +114,10 @@ namespace PlayerService.Services
 
 			return output;
 		}
+
+		public DiscriminatorGroup[] Find(IEnumerable<string> accountIds) => _collection
+			.Find(Builders<DiscriminatorGroup>.Filter.In("members.aid", accountIds))
+			.ToList()
+			.ToArray();
 	}
 }

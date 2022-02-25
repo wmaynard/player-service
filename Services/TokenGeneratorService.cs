@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using Microsoft.Extensions.Configuration;
 using PlayerService.Exceptions;
@@ -36,7 +37,14 @@ namespace PlayerService.Services
 				{"ipAddress", geoData?.IPAddress},
 				{"countryCode", geoData?.CountryCode}
 			});
-			return response.Require<GenericData>("authorization").Require<string>("token");
+			try
+			{
+				return response.Require<GenericData>("authorization").Require<string>("token");
+			}
+			catch (KeyNotFoundException)
+			{
+				throw new TokenGenerationException(response?.Optional<string>("message"));
+			}
 		}
 	}
 }

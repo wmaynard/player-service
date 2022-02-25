@@ -12,5 +12,10 @@ namespace PlayerService.Services
 		public PlayerAccountService() : base("player") { }
 
 		public Player Find(string accountId) => FindOne(player => player.Id == accountId);
+
+		public Player[] DirectoryLookup(params string[] accountIds) => _collection
+			.Find(Builders<Player>.Filter.In(player => player.Id, accountIds))
+			.ToList()
+			.ToArray();
 	}
 }
