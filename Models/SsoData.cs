@@ -33,6 +33,10 @@ namespace PlayerService.Models
 		[BsonElement(DB_KEY_PHOTO), BsonIgnoreIfNull]
 		[JsonInclude, JsonPropertyName(FRIENDLY_KEY_PHOTO), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
 		public string Photo { get; init; }
+		
+		[BsonIgnore]
+		[JsonIgnore]
+		public string Source { get; set; }
 
 		public static implicit operator SsoData(GoogleJsonWebSignature.Payload payload) => new SsoData()
 		{

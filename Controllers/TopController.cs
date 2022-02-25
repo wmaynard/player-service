@@ -214,15 +214,19 @@ namespace PlayerService.Controllers
 			Player player = _playerService.FindOne(player => player.InstallId == installId);
 
 			player ??= CreateNewAccount(installId, deviceType, clientVersion); // TODO: are these vars used anywhere else?
-			
-			
-			// TODO: Handle install id not found (new client)
 
 			Profile[] profiles = _profileService.Find(player.AccountId, sso, out SsoData[] ssoData);
 			Profile[] conflictProfiles = profiles
 				.Where(profile => profile.AccountId != player.AccountId)
 				.ToArray();
 			// TODO: If SSO provided and no profile match, create profile for SSO on this account
+			// SSO data was provided, but there's no profile match.  We should create a profile for this SSO on this account.
+			foreach (SsoData data in ssoData)
+			{
+				if (profiles.Any(profile => profile.Type == data.Source))
+					continue;
+				_profileService.Create(new Profile(player.Id, data));
+			}
 
 			int discriminator = _discriminatorService.Lookup(player);
 

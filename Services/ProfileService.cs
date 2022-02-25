@@ -16,6 +16,10 @@ namespace PlayerService.Services
 {
 	public class ProfileService : PlatformMongoService<Profile>
 	{
+		private const string GAME_CENTER = "gameCenter";
+		private const string GOOGLE_PLAY = "googlePlay";
+		private const string FACEBOOK = "facebook";
+			
 		public ProfileService() : base("profiles") { }
 
 		public Profile[] Find(string installId, GenericData ssoData, out SsoData[] ssos)
@@ -28,11 +32,12 @@ namespace PlayerService.Services
 			foreach (string provider in ssoData.Keys)
 			{
 				GenericData data = ssoData.Require<GenericData>(provider);
+
 				output.AddRange(provider switch
 				{
-					"gameCenter" => FromGameCenter(data),
-					"googlePlay" => FromGooglePlay(data, ref ssoList),
-					"facebook" => FromFacebook(data),
+					GAME_CENTER => FromGameCenter(data),
+					GOOGLE_PLAY => FromGooglePlay(data, ref ssoList),
+					FACEBOOK => FromFacebook(data),
 					_ => throw new ArgumentOutOfRangeException($"Unexpected SSO provider '{provider}'.")
 				});
 			}
@@ -68,6 +73,7 @@ namespace PlayerService.Services
 				Task<GoogleJsonWebSignature.Payload> task = GoogleJsonWebSignature.ValidateAsync(token);
 				task.Wait();
 				SsoData payload = task.Result;
+				payload.Source = GOOGLE_PLAY;
 				list.Add(payload);
 				return Find(profile => profile.ProfileId == payload.AccountId).ToArray();
 			}

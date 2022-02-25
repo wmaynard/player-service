@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Security.Policy;
 using System.Text.Json.Serialization;
 using MongoDB.Bson;
 using MongoDB.Bson.Serialization.Attributes;
@@ -15,6 +16,7 @@ namespace PlayerService.Models
 		private const string DB_KEY_CLIENT_VERSION = "clientVersion";
 		private const string DB_KEY_DEVICE_TYPE = "deviceType";
 		private const string DB_KEY_DISCRIMINATOR = "discriminator";
+		private const string DB_KEY_EMAIL = "email";
 		private const string DB_KEY_LANGUAGE = "systemLanguage";
 		private const string DB_KEY_MERGE_ACCOUNT_ID = "mergeAccountId";
 		private const string DB_KEY_MERGE_TOKEN = "mergeToken";
@@ -31,6 +33,7 @@ namespace PlayerService.Models
 		public const string FRIENDLY_KEY_CLIENT_VERSION = "clientVersion";
 		public const string FRIENDLY_KEY_DEVICE_TYPE = "deviceType";
 		public const string FRIENDLY_KEY_DISCRIMINATOR = "discriminator";
+		public const string FRIENDLY_KEY_EMAIL = "email";
 		public const string FRIENDLY_KEY_LANGUAGE = "systemLanguage";
 		public const string FRIENDLY_KEY_MERGE_ACCOUNT_ID = "mergeAccountId";
 		public const string FRIENDLY_KEY_MERGE_TOKEN = "transferToken";
@@ -101,6 +104,10 @@ namespace PlayerService.Models
 		[JsonInclude, JsonPropertyName(FRIENDLY_KEY_TYPE), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
 		public string Type { get; private set; }
 		
+		[BsonElement(DB_KEY_EMAIL), BsonIgnoreIfNull]
+		[JsonInclude, JsonPropertyName(FRIENDLY_KEY_EMAIL)]
+		public string Email { get; private set; }
+		
 		// [BsonElement(Player.DB_KEY_TRANSFER_TOKEN), BsonIgnoreIfNull]
 		// [JsonInclude, JsonPropertyName(Player.FRIENDLY_KEY_TRANSFER_TOKEN), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
 		// public string TransferToken { get; set; }
@@ -140,6 +147,7 @@ namespace PlayerService.Models
 		private Profile()
 		{
 			CreatedTimestamp = UnixTime;
+			PreviousAccountIds = new HashSet<string>();
 		}
 
 		public Profile(Player player) : this()
@@ -159,8 +167,16 @@ namespace PlayerService.Models
 			ProfileId = ssoId;
 			Type = ssoType;
 		}
-		
-		
+
+		public Profile(string accountId, SsoData ssoData) : this()
+		{
+			AccountId = accountId;
+			ProfileId = ssoData.AccountId;
+			Email = ssoData.Email;
+			Type = ssoData.Source;
+		}
+
+
 		public const string TYPE_INSTALL = "installId";
 		public const string TYPE_GOOGLE = "googlePlay";
 		public const string TYPE_GAME_CENTER = "gameCenter";
