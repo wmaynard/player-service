@@ -46,9 +46,9 @@ gitlab:
 service:
   enabled: true
   annotations: {}
-  name: ps2-prod # 15 character limit..
+  name: ps2-prod-b # 15 character limit..
   type: NodePort
-  url: 
+  url:
   additionalHosts:
   commonName: 
   externalPort: 5001
@@ -60,7 +60,7 @@ ingress:
   tls:
     enabled: false
     acme: false
-    secretName: "player-service-v2-prod"
+    secretName: "player-service-prod"
     useDefaultSecret: false
   annotations:
     kubernetes.io/ingress.class: "nginx"
