@@ -61,9 +61,8 @@ namespace PlayerService.Controllers
 		///
 		/// I don't think breaking all of a player's data into so many components was good design philosophy; while it
 		/// was clearly done to prevent Mongo documents from hitting huge sizes, this does mean that player-service
-		/// needs to hit the database very frequently, and updating components requires 2n db hits:
-		///		1 hit to retrieve the record
-		///		1 hit to store the updated record
+		/// needs to hit the database very frequently, and updating components requires a separate db hit per component.
+		/// 
 		/// Most of the components have a very small amount of information, so I'm not sure why they were separated.
 		/// If I had to wager a guess, the architect was used to RDBMS-style design where each of these things would be
 		/// its own table, but the real strength of Mongo is being able to store full objects in one spot, avoiding the
@@ -72,7 +71,12 @@ namespace PlayerService.Controllers
 		/// The maximum document size in Mongo is 16 MB, and we're nowhere close to that limit.
 		///
 		/// This also means that we have many more possible points of failure; whenever we go to update the player record,
-		/// we have so many more write operations that can fail, which should trigger a transaction rollback.  KISS.
+		/// we have so many more write operations that can fail, which should trigger a transaction rollback.
+		///
+		/// Maintaining a transaction with async writes has caused headaches and introduced kluges to get it working, too.
+		/// This would be less of a problem with fewer components, or just one gigantic player record.
+		///
+		/// To retrieve components from a monolithic record, mongo can Project specific fields, and just used the one query.
 		/// 
 		/// TODO: Compare performance with loadtests: all these collections vs. a monolithic player record
 		/// When there's some downtime, it's worth exploring and quantifying just what kind of impact this design has.
@@ -130,13 +134,13 @@ namespace PlayerService.Controllers
 
 			long itemMS = Timestamp.UnixTimeMS;
 
-			Item[] toSave = items?.Where(item => !item.MarkedForDeletion).ToArray();
-			Item[] toDelete = items?.Where(item => item.MarkedForDeletion).ToArray();
+			Item[] toSave = items.Where(item => !item.MarkedForDeletion).ToArray();
+			Item[] toDelete = items.Where(item => item.MarkedForDeletion).ToArray();
 
-			// _itemService.BulkUpdateAsync(toSave, session).Wait();
-			// _itemService.BulkDeleteAsync(toDelete, session).Wait();
-			tasks.Add(_itemService.BulkUpdateAsync(toSave, session));
-			tasks.Add(_itemService.BulkDeleteAsync(toDelete, session));
+			if (toSave.Any())
+				tasks.Add(_itemService.BulkUpdateAsync(toSave, session));
+			if (toDelete.Any())
+				tasks.Add(_itemService.BulkDeleteAsync(toDelete, session));
 			itemMS = Timestamp.UnixTimeMS - itemMS;
 			
 			Task.WaitAll(tasks.ToArray());
@@ -164,19 +168,25 @@ namespace PlayerService.Controllers
 		[HttpGet, Route("read")]
 		public ActionResult Read()
 		{
-			
-			// ~900 ms
+			// ~900 ms sequential reads
+			// ~250-350ms concurrent reads
 			string[] names = Optional<string>("names")?.Split(',');
-			
-			List<Component> components = ComponentServices
-				.Where(pair => names?.Contains(pair.Key) ?? true)
-				.Select(pair => pair.Value.Lookup(Token.AccountId))
-				.ToList();
+
+			List<Task<Component>> tasks = new List<Task<Component>>();
+
+			foreach (string name in names)
+			{
+				if (!ComponentServices.ContainsKey(name))
+					continue;
+				tasks.Add(ComponentServices[name].LookupAsync(Token.AccountId));
+			}
+
+			Task.WaitAll(tasks.ToArray());
 
 			return Ok(value: new GenericData()
 			{
 				{ "accountId", Token.AccountId },
-				{ "components", components }
+				{ "components", tasks.Select(task => task.Result) }
 			});
 		}
 
@@ -420,13 +430,7 @@ namespace PlayerService.Controllers
 			string[] ids = Optional<string>("ids")?.Split(',');
 			string[] types = Optional<string>("types")?.Split(',');
 			
-			// TODO: improve performance by only retrieving requested items.
-			Item[] items = _itemService.GetItemsFor(Token.AccountId);
-			if (types != null)
-				items = items.Where(item => types.Contains(item.Type)).ToArray();
-			if (ids != null)
-				items = items.Where(item => ids.Contains(item.ItemId)).ToArray();
-			return Ok(new { Items = items});
+			return Ok(new { Items = _itemService.GetItemsFor(Token.AccountId, ids, types)});
 		}
 
 		[HttpPatch, Route("screenname")]
@@ -439,8 +443,7 @@ namespace PlayerService.Controllers
 			_playerService.Update(player);
 
 			int discriminator = _discriminatorService.Update(player);
-			
-			
+
 			string token = _tokenGeneratorService.Generate(
 				accountId: player.AccountId, 
 				screenname: player.Screenname, 
@@ -507,10 +510,6 @@ namespace PlayerService.Controllers
 		public ActionResult KillAllLocusts()
 		{
 			// TODO: This should require admin, and optimize queries
-			// string name = null;
-			// for (int i = 0; i < 100_000; i++)
-			// 	name = _nameGeneratorService.Next;
-			// return Ok();
 
 			Player[] locusts = _playerService.Find(filter: player => player.InstallId.StartsWith("locust-"));
 
