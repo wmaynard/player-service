@@ -22,9 +22,14 @@ namespace PlayerService.Services.ComponentServices
 			return output;
 		}
 
-		public async Task<Component> LookupAsync(string accountId) => _collection
-			.FindAsync(component => component.AccountId == accountId).Result.FirstOrDefault()
-			?? Create(new Component(accountId));
+		public async Task<Component> LookupAsync(string accountId)
+		{
+			Component output = _collection
+				.FindAsync(component => component.AccountId == accountId).Result.FirstOrDefault()
+				?? Create(new Component(accountId));
+			output.Name = Name;
+			return output;
+		}
 
 		public void Delete(Player player) => _collection.DeleteMany(new FilterDefinitionBuilder<Component>().Eq(Component.DB_KEY_ACCOUNT_ID, player.AccountId));
 
