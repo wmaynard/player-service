@@ -117,6 +117,8 @@ namespace PlayerService.Controllers
 			IClientSessionHandle session = _itemService.StartTransaction();
 			GenericData[] components = Require<GenericData[]>("components");
 			Item[] items = Optional<Item[]>("items") ?? Array.Empty<Item>();
+			foreach (Item item in items)
+				item.AccountId = Token.AccountId;
 
 			long totalMS = Timestamp.UnixTimeMS;
 			long componentMS = Timestamp.UnixTimeMS;
