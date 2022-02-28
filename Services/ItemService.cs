@@ -95,7 +95,20 @@ namespace PlayerService.Services
 		public async Task<bool> BulkUpdateAsync(Item[] items, IClientSessionHandle session, int retries = 5)
 		{
 			List<WriteModel<Item>> bulk = new List<WriteModel<Item>>();
-			bulk.AddRange(items.Select(item => new ReplaceOneModel<Item>(Builders<Item>.Filter.Where(dbItem => dbItem.Id == item.Id), item)
+			
+			// var filter = Builders<Item>.Filter.And(
+			// 	Builders<Item>.Filter.Eq(item => item.AccountId, item.AccountId),
+			// 	Builders<Item>.Filter.Eq(item => item.ItemId, item.ItemId));
+			bulk.AddRange(items.Select(item => new UpdateOneModel<Item>(
+				Builders<Item>.Filter.And(
+					Builders<Item>.Filter.Eq(dbItem => dbItem.AccountId, item.AccountId),
+					Builders<Item>.Filter.Eq(dbItem => dbItem.ItemId, item.ItemId)), 
+				update: Builders<Item>.Update
+					.Set(dbItem => dbItem.AccountId, item.AccountId)
+					.Set(dbItem => dbItem.ItemId, item.ItemId)
+					.Set(dbItem => dbItem.Type, item.Type)
+					.Set(dbItem => dbItem.Data, item.Data)
+			)
 			{
 				IsUpsert = true
 			}));

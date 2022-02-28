@@ -6,6 +6,7 @@ using Rumble.Platform.Common.Web;
 
 namespace PlayerService.Models
 {
+	[BsonIgnoreExtraElements]
 	public class Component : PlatformCollectionDocument
 	{
 		public const string AB_TEST = "abTest";

@@ -11,6 +11,7 @@ namespace PlayerService.Models
 {
 	// TODO: IMPORTANT: When GPG profiles move to a different account, we need to update all oaids to match!
 	// TODO: Invalidate all other tokens, or change token-service to only keep 1 valid token.
+	[BsonIgnoreExtraElements]
 	public class Player : PlatformCollectionDocument
 	{
 		internal const string DB_KEY_ACCOUNT_ID_OVERRIDE = "oaid";

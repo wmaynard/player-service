@@ -27,6 +27,7 @@ namespace PlayerService.Models
 		
 		[BsonElement(DB_KEY_ITEM_ID)]
 		[JsonInclude, JsonPropertyName(FRIENDLY_KEY_ITEM_ID)]
+		[SimpleIndex(DB_KEY_ITEM_ID, FRIENDLY_KEY_ITEM_ID)]
 		public string ItemId { get; set; }
 		
 		[BsonElement(DB_KEY_DATA)]
