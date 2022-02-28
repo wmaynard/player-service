@@ -17,5 +17,17 @@ namespace PlayerService.Services
 			.Find(Builders<Player>.Filter.In(player => player.Id, accountIds))
 			.ToList()
 			.ToArray();
+
+		/// <summary>
+		/// When using SSO, this update gets called, which unifies all screennames.  New devices generate new screennames and need to be updated
+		/// to reflect the account they're linked to.
+		/// </summary>
+		/// <param name="screenname"></param>
+		/// <param name="accountId"></param>
+		/// <returns></returns>
+		public int SyncScreenname(string screenname, string accountId) => (int)_collection.UpdateMany(
+			filter: player => player.Id == accountId || player.AccountIdOverride == accountId,
+			update: Builders<Player>.Update.Set(player => player.Screenname, screenname)
+		).ModifiedCount;
 	}
 }

@@ -210,6 +210,19 @@ namespace PlayerService.Controllers
 
 			Player player = _playerService.FindOne(player => player.InstallId == installId);
 
+			// This block is an upgrade for the new behavior for screennames.
+			// if (player.Screenname == null)
+			// {
+			// 	player.Screenname = screenname ?? ComponentServices[Component.ACCOUNT].Lookup(player.Id)?.Data?.Optional<string>("accountName");
+			// 	
+			// 	Log.Info(Owner.Will, "Looking up screenname from Account Component.", data: new
+			// 	{
+			// 		RetrievedName = player.Screenname,
+			// 		Detail = "A player record was found, but without a screenname.  This should be a one-time upgrade per account."
+			// 	});	
+			// 	_playerService.Update(player);
+			// }
+
 			player ??= CreateNewAccount(installId, deviceType, clientVersion); // TODO: are these vars used anywhere else?
 
 			Profile[] profiles = _profileService.Find(player.AccountId, sso, out SsoData[] ssoData);
@@ -358,13 +371,16 @@ namespace PlayerService.Controllers
 			else
 			{
 				player.AccountIdOverride = other.AccountId;
+				player.Screenname = other.Screenname;
 				other.TransferToken = null;
 				
 				_playerService.Update(player);
 				_playerService.Update(other);
+				_playerService.SyncScreenname(other.Screenname, other.AccountId); // TODO: Can combine these updates into one query
 
 				_profileService.Create(new Profile(player));
-				
+
+				Token.ScreenName = other.Screenname;
 				Log.Info(Owner.Default, "AccountID overridden.", data: new
 				{
 					Player = Token,
