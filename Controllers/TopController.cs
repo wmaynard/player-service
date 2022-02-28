@@ -481,17 +481,23 @@ namespace PlayerService.Controllers
 			string[] accountIds = Require<string>("accountIds")?.Split(",");
 			
 			DiscriminatorGroup[] discriminators = _discriminatorService.Find(accountIds);
-			Dictionary<string, string> avatars = ComponentServices[Component.ACCOUNT]
-				.Find(accountIds)
-				.ToDictionary(
-					keySelector: component => component.AccountId,
-					elementSelector: component => component.Data.Optional<string>("accountAvatar")
-				);
+
+
+			Dictionary<string, string> avatars = new Dictionary<string, string>();
+			foreach (Component component in ComponentServices[Component.ACCOUNT].Find(accountIds))
+				if (!avatars.ContainsKey(component.AccountId) || avatars[component.AccountId] == null)
+					avatars[component.AccountId] = component.Data.Optional<string>("accountAvatar");
+			// Dictionary<string, string> avatars = ComponentServices[Component.ACCOUNT]
+			// 	.Find(accountIds)
+			// 	.ToDictionary(
+			// 		keySelector: component => component.AccountId,
+			// 		elementSelector: component => component.Data.Optional<string>("accountAvatar")
+			// 	);
 
 			Dictionary<string, GenericData> output = new Dictionary<string, GenericData>();
 			
 			foreach (DiscriminatorGroup group in discriminators)
-				foreach (DiscriminatorMember member in group.Members)
+				foreach (DiscriminatorMember member in group.Members.Where(member => accountIds.Contains(member.AccountId)))
 					output.Add(member.AccountId, new GenericData()
 					{
 						{ Player.FRIENDLY_KEY_SCREENNAME, member.ScreenName },
