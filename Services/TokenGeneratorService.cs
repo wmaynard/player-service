@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Logging.TraceSource;
 using PlayerService.Exceptions;
 using Rumble.Platform.Common.Utilities;
 using Rumble.Platform.Common.Web;
@@ -27,16 +28,18 @@ namespace PlayerService.Services
 				headers: new Dictionary<string, string>() {{"Authorization", $"Bearer {token}"}}
 			);
 
-			GenericData response = request.Send(new GenericData()
+			GenericData payload = new GenericData()
 			{
-				{"aid", accountId},
-				{"screenname", screenname},
-				{"origin", "player-service-v2"},
-				{"email", email},
-				{"discriminator", discriminator},
-				{"ipAddress", geoData?.IPAddress},
-				{"countryCode", geoData?.CountryCode}
-			});
+				{ "aid", accountId },
+				{ "screenname", screenname },
+				{ "origin", "player-service-v2" },
+				{ "email", email },
+				{ "discriminator", discriminator },
+				{ "ipAddress", geoData?.IPAddress },
+				{ "countryCode", geoData?.CountryCode }
+			};
+
+			GenericData response = request.Send(payload);
 			try
 			{
 				return response.Require<GenericData>("authorization").Require<string>("token");
@@ -44,6 +47,16 @@ namespace PlayerService.Services
 			catch (KeyNotFoundException)
 			{
 				throw new TokenGenerationException(response?.Optional<string>("message"));
+			}
+			catch (Exception e)
+			{
+				Log.Error(Owner.Will, "An unexpected error occurred when generating a token.", data: new
+				{
+					Url = url,
+					Response = response,
+					Payload = payload
+				}, exception: e);
+				throw;
 			}
 		}
 	}
