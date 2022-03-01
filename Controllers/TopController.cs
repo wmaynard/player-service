@@ -447,8 +447,12 @@ namespace PlayerService.Controllers
 		{
 			string[] ids = Optional<string>("ids")?.Split(',');
 			string[] types = Optional<string>("types")?.Split(',');
+
+			long itemMS = Timestamp.UnixTimeMS;
+			Item[] output = _itemService.GetItemsFor(Token.AccountId, ids, types);
+			itemMS = Timestamp.UnixTimeMS - itemMS;
 			
-			return Ok(new { Items = _itemService.GetItemsFor(Token.AccountId, ids, types)});
+			return Ok(new { Items = output, itemMS = itemMS });
 		}
 
 		[HttpPatch, Route("screenname")]
