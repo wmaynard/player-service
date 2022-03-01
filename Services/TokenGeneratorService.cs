@@ -13,9 +13,13 @@ namespace PlayerService.Services
 	public class TokenGeneratorService : PlatformService
 	{
 		private readonly DynamicConfigService _dynamicConfigService;
-		
-		public TokenGeneratorService(DynamicConfigService dynamicConfigService) => _dynamicConfigService = dynamicConfigService;
-		
+		private readonly APIService _apiService;
+		public TokenGeneratorService(DynamicConfigService dynamicConfigService, APIService apiService)
+		{
+			_dynamicConfigService = dynamicConfigService;
+			_apiService = apiService;
+		}
+
 		public string Generate(string accountId, string screenname, int discriminator, GeoIPData geoData = null, string email = null)
 		{
 			if (accountId == null || screenname == null || discriminator < 0)
@@ -40,6 +44,29 @@ namespace PlayerService.Services
 			};
 
 			GenericData response = request.Send(payload);
+
+			// GenericData result = _apiService
+			// 	.Request(url)
+			// 	.AddHeader("Authorization", $"Bearer {token}")
+			// 	.SetPayload(new GenericData()
+			// 	{
+			// 		{ "aid", accountId },
+			// 		{ "screenname", screenname },
+			// 		{ "origin", "player-service-v2" },
+			// 		{ "email", email },
+			// 		{ "discriminator", discriminator },
+			// 		{ "ipAddress", geoData?.IPAddress },
+			// 		{ "countryCode", geoData?.CountryCode }
+			// 	})
+			// 	.OnSuccess((sender, args) =>
+			// 	{
+			// 		Log.Local(Owner.Will, "Successful request!");
+			// 	})
+			// 	.OnFailure((sender, args) =>
+			// 	{
+			// 		Log.Local(Owner.Will, "Request failed!");
+			// 	}).Post();
+
 			try
 			{
 				return response.Require<GenericData>("authorization").Require<string>("token");
