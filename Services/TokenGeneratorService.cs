@@ -1,7 +1,5 @@
 using System;
 using System.Collections.Generic;
-using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.Logging.TraceSource;
 using PlayerService.Exceptions;
 using Rumble.Platform.Common.Utilities;
 using Rumble.Platform.Common.Web;
@@ -13,8 +11,8 @@ namespace PlayerService.Services
 	public class TokenGeneratorService : PlatformService
 	{
 		private readonly DynamicConfigService _dynamicConfigService;
-		private readonly APIService _apiService;
-		public TokenGeneratorService(DynamicConfigService dynamicConfigService, APIService apiService)
+		private readonly ApiService _apiService;
+		public TokenGeneratorService(DynamicConfigService dynamicConfigService, ApiService apiService)
 		{
 			_dynamicConfigService = dynamicConfigService;
 			_apiService = apiService;
@@ -27,10 +25,6 @@ namespace PlayerService.Services
 
 			string url = $"{_dynamicConfigService.PlatformUrl}secured/token/generate";
 			string token = _dynamicConfigService.GameConfig.Require<string>("playerServiceToken");
-			PlatformRequest request = PlatformRequest.Post(
-				url: url,
-				headers: new Dictionary<string, string>() {{"Authorization", $"Bearer {token}"}}
-			);
 
 			GenericData payload = new GenericData()
 			{
@@ -43,30 +37,15 @@ namespace PlayerService.Services
 				{ "countryCode", geoData?.CountryCode }
 			};
 
-			GenericData response = request.Send(payload);
-
-			// GenericData result = _apiService
-			// 	.Request(url)
-			// 	.AddHeader("Authorization", $"Bearer {token}")
-			// 	.SetPayload(new GenericData()
-			// 	{
-			// 		{ "aid", accountId },
-			// 		{ "screenname", screenname },
-			// 		{ "origin", "player-service-v2" },
-			// 		{ "email", email },
-			// 		{ "discriminator", discriminator },
-			// 		{ "ipAddress", geoData?.IPAddress },
-			// 		{ "countryCode", geoData?.CountryCode }
-			// 	})
-			// 	.OnSuccess((sender, args) =>
-			// 	{
-			// 		Log.Local(Owner.Will, "Successful request!");
-			// 	})
-			// 	.OnFailure((sender, args) =>
-			// 	{
-			// 		Log.Local(Owner.Will, "Request failed!");
-			// 	}).Post();
-
+			_apiService
+				.Request(url)
+				.AddAuthorization(token)
+				.SetPayload(payload)
+				.OnFailure((sender, response) =>
+				{
+					Log.Error(Owner.Will, "Unable to generate token.");
+				})
+				.Post(out GenericData response, out int code);
 			try
 			{
 				return response.Require<GenericData>("authorization").Require<string>("token");
@@ -74,6 +53,10 @@ namespace PlayerService.Services
 			catch (KeyNotFoundException)
 			{
 				throw new TokenGenerationException(response?.Optional<string>("message"));
+			}
+			catch (NullReferenceException)
+			{
+				throw new TokenGenerationException("Response was null.");
 			}
 			catch (Exception e)
 			{
