@@ -25,7 +25,7 @@
 	<ItemGroup>
 	  <PackageReference Include="Google.Apis.Auth.AspNetCore3" Version="1.55.0" />
 	  <PackageReference Include="Microsoft.IdentityModel.Tokens" Version="6.15.0" />
-	  <PackageReference Include="platform-csharp-common" Version="1.0.105" />
+	  <PackageReference Include="platform-csharp-common" Version="1.0.106" />
 	</ItemGroup>
 
 </Project>
