@@ -54,7 +54,7 @@ stages:
 
 build_app:
   stage: app_build
-  image: mcr.microsoft.com/dotnet/sdk:5.0
+  image: mcr.microsoft.com/dotnet/sdk:6.0
   allow_failure: false
   tags:
     - kubernetes
@@ -64,7 +64,7 @@ build_app:
     - dotnet build --no-restore --configuration Release
   artifacts:
     paths:
-      - bin/Release/net5.0/*
+      - bin/Release/net6.0/*
 
 
 
