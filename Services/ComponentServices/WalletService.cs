@@ -1,10 +1,8 @@
 using PlayerService.Models;
-using Rumble.Platform.Common.Web;
 
-namespace PlayerService.Services.ComponentServices
+namespace PlayerService.Services.ComponentServices;
+
+public class WalletService : ComponentService
 {
-	public class WalletService : ComponentService
-	{
-		public WalletService() : base(Component.WALLET) { }
-	}
+	public WalletService() : base(Component.WALLET) { }
 }
