@@ -34,8 +34,8 @@ namespace PlayerService
 			})
 			.AddGoogleOpenIdConnect(options =>
 			{
-				options.ClientId = PlatformEnvironment.Variable("GOOGLE_CLIENT_ID");
-				options.ClientSecret = PlatformEnvironment.Variable("GOOGLE_APP_SECRET");
+				options.ClientId = PlatformEnvironment.Require<string>("GOOGLE_CLIENT_ID");
+				options.ClientSecret = PlatformEnvironment.Require<string>("GOOGLE_APP_SECRET");
 			});
 		}
 

@@ -485,13 +485,13 @@ namespace PlayerService.Controllers
 		[HttpPost, Route("iostest"), NoAuth]
 		public void AppleTest()
 		{
-			string token = Require<GenericData>("sso").Require<GenericData>("appleId").Require<string>("token");
-			AppleToken at = new AppleToken(token);
-			at.Decode();
-			
-			
-			GenericData payload = new GenericData();
-			GenericData response = PlatformRequest.Post("https://appleid.apple.com/auth/token", payload: payload).Send();
+			// string token = Require<GenericData>("sso").Require<GenericData>("appleId").Require<string>("token");
+			// AppleToken at = new AppleToken(token);
+			// at.Decode();
+			//
+			//
+			// GenericData payload = new GenericData();
+			// GenericData response = PlatformRequest.Post("https://appleid.apple.com/auth/token", payload: payload).Send();
 		}
 
 		[HttpGet, Route("lookup")]

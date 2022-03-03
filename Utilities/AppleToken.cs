@@ -14,40 +14,40 @@ namespace PlayerService.Utilities
 {
 	public class AppleToken
 	{
-		private const string PUBLIC_KEY_URL = "https://appleid.apple.com/auth/keys";
-		private static readonly PlatformRequest GetPublicKey = PlatformRequest.Get(PUBLIC_KEY_URL);
-		public GenericData Keys { get; init; }
-		// private static readonly GenericData PublicKey = GetPublicKey.Send();
-		public string Token { get; set; }
-		
-		public AppleToken(string token)
-		{
-			Token = token;
-
-			PlatformRequest req = PlatformRequest.Get(PUBLIC_KEY_URL);
-			GenericData response = req.Send(out HttpStatusCode code);
-			GenericData[] data = response.Require<GenericData[]>("keys");
-			
-			if (code != HttpStatusCode.OK)
-				Log.Error(Owner.Will, "Could not retrieve auth keys from Apple.", data: new
-				{
-					URL = PUBLIC_KEY_URL,
-					Code = code
-				});
-		}
-
-		public void Decode()
-		{
-			List<JsonWebKey> ks = new List<JsonWebKey>();
-			foreach (GenericData key in Keys.Values)
-			{
-				ks.Add(new JsonWebKey(key.JSON));
-			}
-
-			ks = null;
-
-		}
-		
+		// private const string PUBLIC_KEY_URL = "https://appleid.apple.com/auth/keys";
+		// private static readonly PlatformRequest GetPublicKey = PlatformRequest.Get(PUBLIC_KEY_URL);
+		// public GenericData Keys { get; init; }
+		// // private static readonly GenericData PublicKey = GetPublicKey.Send();
+		// public string Token { get; set; }
+		//
+		// public AppleToken(string token)
+		// {
+		// 	Token = token;
+		//
+		// 	PlatformRequest req = PlatformRequest.Get(PUBLIC_KEY_URL);
+		// 	GenericData response = req.Send(out HttpStatusCode code);
+		// 	GenericData[] data = response.Require<GenericData[]>("keys");
+		// 	
+		// 	if (code != HttpStatusCode.OK)
+		// 		Log.Error(Owner.Will, "Could not retrieve auth keys from Apple.", data: new
+		// 		{
+		// 			URL = PUBLIC_KEY_URL,
+		// 			Code = code
+		// 		});
+		// }
+		//
+		// public void Decode()
+		// {
+		// 	List<JsonWebKey> ks = new List<JsonWebKey>();
+		// 	foreach (GenericData key in Keys.Values)
+		// 	{
+		// 		ks.Add(new JsonWebKey(key.JSON));
+		// 	}
+		//
+		// 	ks = null;
+		//
+		// }
+		//
 		
 	}
 }

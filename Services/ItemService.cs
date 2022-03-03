@@ -15,32 +15,59 @@ namespace PlayerService.Services
 	{
 		public ItemService() : base("items") { }
 
-public Item[] GetItemsFor(string accountId, string[] ids = null, string[] types = null)
-{
-	ids ??= Array.Empty<string>();
-	types ??= Array.Empty<string>();
-	
-	FilterDefinition<Item> aid = Builders<Item>.Filter.Eq(item => item.AccountId, accountId);
-	FilterDefinition<Item> byId = ids.Any()
-		? Builders<Item>.Filter.In(item => item.ItemId, ids)
-		: null;
-	FilterDefinition<Item> byType = types.Any()
-		? Builders<Item>.Filter.In(item => item.Type, types)
-		: null;
-	FilterDefinition<Item> or = byId != null && byType != null
-		? Builders<Item>.Filter.Or(byId, byType)
-		: null;
+		public Item[] GetItemsFor(string accountId, string[] ids = null, string[] types = null)
+		{
+			ids ??= Array.Empty<string>();
+			types ??= Array.Empty<string>();
+			
+			FilterDefinition<Item> aid = Builders<Item>.Filter.Eq(item => item.AccountId, accountId);
+			FilterDefinition<Item> byId = ids.Any()
+				? Builders<Item>.Filter.In(item => item.ItemId, ids)
+				: null;
+			FilterDefinition<Item> byType = types.Any()
+				? Builders<Item>.Filter.In(item => item.Type, types)
+				: null;
+			FilterDefinition<Item> or = byId != null && byType != null
+				? Builders<Item>.Filter.Or(byId, byType)
+				: null;
 
-	FilterDefinition<Item> and = null;
-	if (or != null)
-		and = Builders<Item>.Filter.And(aid, or);
-	else if (byId != null)
-		and = Builders<Item>.Filter.And(aid, byId);
-	else if (byType != null)
-		and = Builders<Item>.Filter.And(aid, byType);
+			FilterDefinition<Item> and = null;
+			if (or != null)
+				and = Builders<Item>.Filter.And(aid, or);
+			else if (byId != null)
+				and = Builders<Item>.Filter.And(aid, byId);
+			else if (byType != null)
+				and = Builders<Item>.Filter.And(aid, byType);
 
-	return _collection.Find(filter: and ?? aid).ToList().ToArray();
-}
+			BsonDocument filter = (and ?? aid).ToBsonDocument();
+			BsonDocument filter2 = new BsonDocument()
+			{
+				{ "aid", new ObjectId("621e842a7d13b7c545bbe7d4") }
+			};
+			try
+			{
+				// string json = FindRaw(filter: and ?? aid);
+				// var cmd = new BsonDocument()
+				// {
+				// 	{"find", "items"},
+				// 	{"filter", filter2 }
+				// 	// {"filter", new BsonDocument()
+				// 	// {
+				// 	// 	{"aid", new ObjectId("621e842a7d13b7c545bbe7d4")}
+				// 	// }}
+				// };
+				// BsonDocumentCommand<BsonDocument> cmd2 = new BsonDocumentCommand<BsonDocument>(cmd);
+				// string results = _database.RunCommand(cmd2).ToJson();
+				// GenericData g = results;
+				//
+				// return null;
+			}
+			catch (Exception ex)
+			{
+				var foo = ex;
+			}
+			return _collection.Find(filter: and ?? aid).ToList().ToArray();
+		}
 
 		public void UpdateItem(Item item)
 		{

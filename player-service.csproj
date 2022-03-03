@@ -4,6 +4,7 @@
 		<TargetFramework>net6.0</TargetFramework>
 		<RootNamespace>PlayerService</RootNamespace>
 		<LangVersion>10</LangVersion>
+		<AssemblyVersion>2.0.0</AssemblyVersion>
 	</PropertyGroup>
 
 	<ItemGroup>
@@ -25,7 +26,7 @@
 	<ItemGroup>
 	  <PackageReference Include="Google.Apis.Auth.AspNetCore3" Version="1.55.0" />
 	  <PackageReference Include="Microsoft.IdentityModel.Tokens" Version="6.15.0" />
-	  <PackageReference Include="platform-csharp-common" Version="1.0.106" />
+	  <PackageReference Include="platform-csharp-common" Version="1.0.107" />
 	</ItemGroup>
 
 </Project>
