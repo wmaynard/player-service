@@ -63,8 +63,7 @@ build_app:
     - dotnet restore
     - dotnet build --no-restore --configuration Release
     - DOTNETLOC=$(which dotnet)
-    - SUDOLOC=$(which sudo)
-    - CURRENTVERSION="$($SUDOLOC $DOTNETLOC $CI_BUILDS_DIR/bin/Release/net6.0/player-service.dll -version | cut -d':' -f2)"
+    - CURRENTVERSION="$(sudo $DOTNETLOC $CI_BUILDS_DIR/bin/Release/net6.0/player-service.dll -version | cut -d':' -f2)"
     - echo $CURRENTVERSION
     - git tag $CURRENTVERSION; git push origin HEAD:$CURRENTVERSION
   artifacts:
