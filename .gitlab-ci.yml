@@ -64,7 +64,8 @@ build_app:
     - dotnet build --no-restore --configuration Release
     - VERSIONSTR=sudo dotnet bin/Release/net6.0/player-service.dll -version
     - CURRENTVERSION="$(echo $VERSIONSTR | cut -d':' -f2)"
-    - git tag $CURRENTVERSION; git push origin $CURRENTVERSION
+    - echo $CURRENTVERSION
+    - git tag $CURRENTVERSION; git push origin HEAD:$CURRENTVERSION
   artifacts:
     paths:
       - bin/Release/net6.0/*
