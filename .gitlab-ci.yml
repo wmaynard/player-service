@@ -62,8 +62,7 @@ build_app:
     - dotnet nuget add source --username eric.sheris --password $NUGET_PAT --store-password-in-clear-text --name github "https://gitlab.cdrentertainment.com/api/v4/projects/14/packages/nuget/index.json"
     - dotnet restore
     - dotnet build --no-restore --configuration Release
-    - DOTNETLOC=$(which dotnet)
-    - CURRENTVERSION="$(sudo $DOTNETLOC $CI_BUILDS_DIR/bin/Release/net6.0/player-service.dll -version | cut -d':' -f2)"
+    - CURRENTVERSION="$(sudo -E env "PATH=$PATH" dotnet $CI_BUILDS_DIR/bin/Release/net6.0/player-service.dll -version | cut -d':' -f2)"
     - echo $CURRENTVERSION
     - git tag $CURRENTVERSION; git push origin HEAD:$CURRENTVERSION
   artifacts:
