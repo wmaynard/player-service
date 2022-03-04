@@ -64,10 +64,12 @@ build_app:
     - dotnet build --no-restore --configuration Release
     - CURRENTVERSION="$(dotnet ./bin/Release/net6.0/player-service.dll -version | cut -d':' -f2)"
     - echo $CURRENTVERSION
-    - git tag $CURRENTVERSION; git push https://eric.sheris:${NUGET_PAT}@gitlab.cdrentertainment.com/platform-services/$CI_PROJECT_NAME.git --tags
+    - git tag $CURRENTVERSION; git push https://eric.sheris:${NUGET_PAT}@gitlab.cdrentertainment.com/platform-services/$CI_PROJECT_NAME.git --tags -o ci.skip
   artifacts:
     paths:
       - bin/Release/net6.0/*
+  rules:
+    - if: $CI_COMMIT_REF_NAME == $CI_DEFAULT_BRANCH
 
 
 
