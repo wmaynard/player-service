@@ -101,7 +101,7 @@ build_image:
     - if: '$BUILD_DISABLED'
       when: never
     - if: $DEPLOY_TYPE == "beanstalk"
-      when: neverr
+      when: never
     - if: $DEPLOY_TYPE == "kubernetes" || $DEPLOY_TYPE == "both"
       when: always
     
