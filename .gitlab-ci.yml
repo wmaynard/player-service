@@ -62,6 +62,9 @@ build_app:
     - dotnet nuget add source --username eric.sheris --password $NUGET_PAT --store-password-in-clear-text --name github "https://gitlab.cdrentertainment.com/api/v4/projects/14/packages/nuget/index.json"
     - dotnet restore
     - dotnet build --no-restore --configuration Release
+    - VERSIONSTR=dotnet bin/Release/net6.0/player-service-v2.dll -version
+    - CURRENTVERSION="$(echo $VERSIONSTR | cut -d':' -f2)"
+    - git tag $CURRENTVERSION; git push origin $CURRENTVERSION
   artifacts:
     paths:
       - bin/Release/net6.0/*
