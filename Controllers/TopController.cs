@@ -117,7 +117,7 @@ public class TopController : PlatformController
 		List<Task<bool>> tasks = components.Select(data => ComponentServices[data.Require<string>(Component.FRIENDLY_KEY_NAME)]
 			.UpdateAsync(
 				accountId: Token.AccountId,
-				data: data.Require<string>(Component.FRIENDLY_KEY_DATA),
+				data: data.Require<GenericData>(Component.FRIENDLY_KEY_DATA).JSON,
 				session: session
 			)
 		).ToList();
