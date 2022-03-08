@@ -7,7 +7,6 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Configuration;
 using MongoDB.Driver;
 using PlayerService.Models;
-using PlayerService.Models.Responses;
 using Rumble.Platform.Common.Web;
 using PlayerService.Services;
 using PlayerService.Services.ComponentServices;
@@ -392,9 +391,6 @@ public class TopController : PlatformController
 			prefixes: config.Require<string>("clientVarPrefixesCSharp").Split(','), 
 			configs: config
 		);
-
-		LaunchResponse response = new LaunchResponse();
-		response.ClientVars = clientVars;
 
 		return Ok(new
 		{
