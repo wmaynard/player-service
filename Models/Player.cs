@@ -25,6 +25,7 @@ public class Player : PlatformCollectionDocument
 	internal const string DB_KEY_SCREENNAME = "sn";
 	internal const string DB_KEY_UPDATED = "lu";
 
+	internal const string FRIENDLY_KEY_ACCOUNT_ID = "accountId";
 	internal const string FRIENDLY_KEY_ACCOUNT_ID_OVERRIDE = "accountIdOverride";
 	internal const string FRIENDLY_KEY_ACCOUNT_MERGED_TO = "accountMergedTo";
 	internal const string FRIENDLY_KEY_CLIENT_VERSION = "clientVersion";

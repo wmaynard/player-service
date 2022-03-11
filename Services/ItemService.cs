@@ -39,33 +39,6 @@ public class ItemService : PlatformMongoService<Item>
 		else if (byType != null)
 			and = Builders<Item>.Filter.And(aid, byType);
 
-		BsonDocument filter = (and ?? aid).ToBsonDocument();
-		BsonDocument filter2 = new BsonDocument()
-		{
-			{ "aid", new ObjectId("621e842a7d13b7c545bbe7d4") }
-		};
-		try
-		{
-			// string json = FindRaw(filter: and ?? aid);
-			// var cmd = new BsonDocument()
-			// {
-			// 	{"find", "items"},
-			// 	{"filter", filter2 }
-			// 	// {"filter", new BsonDocument()
-			// 	// {
-			// 	// 	{"aid", new ObjectId("621e842a7d13b7c545bbe7d4")}
-			// 	// }}
-			// };
-			// BsonDocumentCommand<BsonDocument> cmd2 = new BsonDocumentCommand<BsonDocument>(cmd);
-			// string results = _database.RunCommand(cmd2).ToJson();
-			// GenericData g = results;
-			//
-			// return null;
-		}
-		catch (Exception ex)
-		{
-			var foo = ex;
-		}
 		return _collection.Find(filter: and ?? aid).ToList().ToArray();
 	}
 

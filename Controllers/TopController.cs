@@ -494,30 +494,22 @@ public class TopController : PlatformController
 		foreach (Component component in ComponentServices[Component.ACCOUNT].Find(accountIds))
 			if (!avatars.ContainsKey(component.AccountId) || avatars[component.AccountId] == null)
 				avatars[component.AccountId] = component.Data.Optional<string>("accountAvatar");
-		// Dictionary<string, string> avatars = ComponentServices[Component.ACCOUNT]
-		// 	.Find(accountIds)
-		// 	.ToDictionary(
-		// 		keySelector: component => component.AccountId,
-		// 		elementSelector: component => component.Data.Optional<string>("accountAvatar")
-		// 	);
 
-		Dictionary<string, GenericData> output = new Dictionary<string, GenericData>();
-		
+		List<GenericData> output = new List<GenericData>();
+
 		foreach (DiscriminatorGroup group in discriminators)
 			foreach (DiscriminatorMember member in group.Members.Where(member => accountIds.Contains(member.AccountId)))
-				output.Add(member.AccountId, new GenericData()
+				output.Add(new GenericData()
 				{
+					{ Player.FRIENDLY_KEY_ACCOUNT_ID, member.AccountId },
 					{ Player.FRIENDLY_KEY_SCREENNAME, member.ScreenName },
-					{ "discriminator", group.Number.ToString().PadLeft(4, '0') },
+					{ Profile.FRIENDLY_KEY_DISCRIMINATOR, group.Number.ToString().PadLeft(4, '0') },
 					{ "accountAvatar", avatars.ContainsKey(member.AccountId) ? avatars[member.AccountId] : null }
 				});
 
 		return Ok(new
 		{
-			Results = output.Select(pair => new GenericData()
-			{
-				{ pair.Key, pair.Value }
-			})
+			Results = output
 		});
 	}
 
