@@ -107,8 +107,7 @@ public class DiscriminatorService : PlatformMongoService<DiscriminatorGroup>
 		return output;
 	}
 
-	public DiscriminatorGroup[] Find(IEnumerable<string> accountIds) => _collection
+	public List<DiscriminatorGroup> Find(IEnumerable<string> accountIds) => _collection
 		.Find(Builders<DiscriminatorGroup>.Filter.In("members.aid", accountIds))
-		.ToList()
-		.ToArray();
+		.ToList();
 }

@@ -32,10 +32,9 @@ public abstract class ComponentService : PlatformMongoService<Component>
 
 	public void Delete(Player player) => _collection.DeleteMany(new FilterDefinitionBuilder<Component>().Eq(Component.DB_KEY_ACCOUNT_ID, player.AccountId));
 
-	public Component[] Find(IEnumerable<string> accountIds) => _collection
+	public List<Component> Find(IEnumerable<string> accountIds) => _collection
 		.Find(Builders<Component>.Filter.In(component => component.AccountId, accountIds))
-		.ToList()
-		.ToArray();
+		.ToList();
 
 	public async Task<bool> UpdateAsync(string accountId, GenericData data, IClientSessionHandle session, int retries = 5)
 	{

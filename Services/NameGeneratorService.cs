@@ -95,9 +95,9 @@ public class NameGeneratorService : PlatformService
 		int step = output.Count;
 		while (--step > 0)
 		{
-			int a = rando.Next(step + 1);
-			string temp = output[a];
-			output[a] = output[step];
+			int random = rando.Next(step + 1);
+			string temp = output[random];
+			output[random] = output[step];
 			output[step] = temp;
 		}
 

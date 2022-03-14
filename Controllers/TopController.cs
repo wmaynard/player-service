@@ -215,7 +215,7 @@ public class TopController : PlatformController
 
 		player ??= CreateNewAccount(installId, deviceType, clientVersion); // TODO: are these vars used anywhere else?
 
-		Profile[] profiles = _profileService.Find(player.AccountId, sso, out SsoData[] ssoData);
+		List<Profile> profiles = _profileService.Find(player.AccountId, sso, out List<SsoData> ssoData);
 		Profile[] conflictProfiles = profiles
 			.Where(profile => profile.AccountId != player.AccountId)
 			.ToArray();
@@ -436,7 +436,7 @@ public class TopController : PlatformController
 		string[] types = Optional<string>("types")?.Split(',');
 
 		long itemMS = Timestamp.UnixTimeMS;
-		Item[] output = _itemService.GetItemsFor(Token.AccountId, ids, types);
+		List<Item> output = _itemService.GetItemsFor(Token.AccountId, ids, types);
 		itemMS = Timestamp.UnixTimeMS - itemMS;
 		
 		return Ok(new { Items = output, itemMS = itemMS });
@@ -487,7 +487,7 @@ public class TopController : PlatformController
 		// TODO: This is a little janky, and once the SummaryComponent is implemented, this should just return those entries.
 		string[] accountIds = Require<string>("accountIds")?.Split(",");
 		
-		DiscriminatorGroup[] discriminators = _discriminatorService.Find(accountIds);
+		List<DiscriminatorGroup> discriminators = _discriminatorService.Find(accountIds);
 
 
 		Dictionary<string, string> avatars = new Dictionary<string, string>();

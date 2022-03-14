@@ -15,7 +15,7 @@ public class ItemService : PlatformMongoService<Item>
 {
 	public ItemService() : base("items") { }
 
-	public Item[] GetItemsFor(string accountId, string[] ids = null, string[] types = null)
+	public List<Item> GetItemsFor(string accountId, string[] ids = null, string[] types = null)
 	{
 		ids ??= Array.Empty<string>();
 		types ??= Array.Empty<string>();
@@ -39,7 +39,9 @@ public class ItemService : PlatformMongoService<Item>
 		else if (byType != null)
 			and = Builders<Item>.Filter.And(aid, byType);
 
-		return _collection.Find(filter: and ?? aid).ToList().ToArray();
+		return _collection
+			.Find(filter: and ?? aid)
+			.ToList();
 	}
 
 	public void UpdateItem(Item item)
@@ -132,5 +134,6 @@ public class ItemService : PlatformMongoService<Item>
 		}
 	}
 
-	public void Delete(Player player) => _collection.DeleteMany(new FilterDefinitionBuilder<Item>().Eq(Item.DB_KEY_ACCOUNT_ID, player.AccountId));
+	public void Delete(Player player) => _collection
+		.DeleteMany(new FilterDefinitionBuilder<Item>().Eq(Item.DB_KEY_ACCOUNT_ID, player.AccountId));
 }

@@ -19,7 +19,7 @@ public class ProfileService : PlatformMongoService<Profile>
 		
 	public ProfileService() : base("profiles") { }
 
-	public Profile[] Find(string installId, GenericData ssoData, out SsoData[] ssos)
+	public List<Profile> Find(string installId, GenericData ssoData, out List<SsoData> ssos)
 	{
 		ssoData ??= new GenericData();
 
@@ -39,8 +39,8 @@ public class ProfileService : PlatformMongoService<Profile>
 			});
 		}
 
-		ssos = ssoList.ToArray();
-		return output.ToArray();
+		ssos = ssoList;
+		return output;
 	}
 
 	public Profile[] FindByEmail(string term) => _collection

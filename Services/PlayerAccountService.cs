@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using MongoDB.Driver;
 using PlayerService.Models;
 using Rumble.Platform.Common.Web;
@@ -10,10 +11,9 @@ public class PlayerAccountService : PlatformMongoService<Player>
 
 	public Player Find(string accountId) => FindOne(player => player.Id == accountId);
 
-	public Player[] DirectoryLookup(params string[] accountIds) => _collection
+	public List<Player> DirectoryLookup(params string[] accountIds) => _collection
 		.Find(Builders<Player>.Filter.In(player => player.Id, accountIds))
-		.ToList()
-		.ToArray();
+		.ToList();
 
 	/// <summary>
 	/// When using SSO, this update gets called, which unifies all screennames.  New devices generate new screennames and need to be updated
