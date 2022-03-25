@@ -81,7 +81,11 @@ public class ProfileService : PlatformMongoService<Profile>
 		}
 		catch (Exception e)
 		{
-			throw new SsoInvalidException(token, "Google", inner: e);
+			Log.Error(Owner.Default, "Google token failed validation.", data: new
+			{
+				ssoData = sso
+			}, exception: e);
+			return Array.Empty<Profile>();
 		}
 	}
 
