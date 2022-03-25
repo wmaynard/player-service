@@ -447,9 +447,8 @@ public class TopController : PlatformController
 	{
 		string sn = Require<string>("screenname");
 		
+		_playerService.SyncScreenname(sn, Token.AccountId);
 		Player player = _playerService.Find(Token.AccountId);
-		player.Screenname = sn;
-		_playerService.Update(player);
 
 		int discriminator = _discriminatorService.Update(player);
 
