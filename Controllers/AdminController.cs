@@ -66,8 +66,11 @@ public class AdminController : PlatformController
 		GenericData components = new GenericData();
 		foreach (KeyValuePair<string, ComponentService> pair in ComponentServices)
 			components[pair.Key] = pair.Value.Lookup(accountId);
-		
-		output["player"] = _playerService.Find(accountId);
+
+		Player player = _playerService.Find(accountId);
+		player.Discriminator = _discriminatorService.Lookup(player);
+
+		output["player"] = player;
 		output["profiles"] = _profileService.Find(profile => profile.AccountId == accountId);
 		output["components"] = components;
 		output["items"] = _itemService.GetItemsFor(accountId);
