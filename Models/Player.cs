@@ -101,6 +101,14 @@ public class Player : PlatformCollectionDocument
 	[BsonIgnore]
 	[JsonInclude, JsonPropertyName("username")]
 	public string Username => (Screenname ?? "") + (Discriminator != null ? $"#{Discriminator}" : "");
+	
+	[BsonIgnore]
+	[JsonInclude, JsonPropertyName("linkedAccounts"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+	public Player[] LinkedAccounts { get; internal set; }
+	
+	[BsonIgnore]
+	[JsonIgnore]
+	public bool IsLinkedAccount => !string.IsNullOrWhiteSpace(AccountIdOverride);
 
 	public Player(string screenname)
 	{

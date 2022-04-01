@@ -122,8 +122,25 @@ public class AdminController : PlatformController
 			if (!players.Select(player => player.Id).Contains(accountId))
 				players.Add(_playerService.FindOne(player => player.Id == accountId));
 
+		Player[] parents = players
+			.Where(player => !player.IsLinkedAccount)
+			.ToArray();
+		foreach (Player parent in parents)
+			parent.LinkedAccounts = players
+				.Where(player => player.AccountIdOverride == parent.AccountId)
+				.ToArray();
+		Player[] orphans = players
+			.Where(player => player.IsLinkedAccount && !parents.Any(parent => parent.AccountId == player.AccountIdOverride))
+			.ToArray();
+		
+		if (orphans.Any())
+			Log.Warn(Owner.Default, "Linked accounts were found in the player search, but the parent account was not.", data: new
+			{
+				Orphans = orphans.Select(orphan => orphan.AccountIdOverride)
+			});
+		
 		float? sum = null; // Assigning to a field in the middle of a LINQ query is a little janky, but this prevents sum re-evaluation / requiring another loop.
-		GenericData[] results = players.OrderByDescending(player => player.WeighSearchTerm(term)).Select(player => new GenericData()
+		GenericData[] results = parents.OrderByDescending(player => player.WeighSearchTerm(term)).Select(player => new GenericData()
 		{
 			{ "player", player },
 			{ "score", player.SearchWeight },
