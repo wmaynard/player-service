@@ -69,6 +69,7 @@ public class AdminController : PlatformController
 		
 		output["player"] = _playerService.Find(accountId);
 		output["profiles"] = _profileService.Find(profile => profile.AccountId == accountId);
+		output["components"] = components;
 		output["items"] = _itemService.GetItemsFor(accountId);
 		
 		return Ok(value: output);
@@ -128,6 +129,7 @@ public class AdminController : PlatformController
 		foreach (Player parent in parents)
 			parent.LinkedAccounts = players
 				.Where(player => player.AccountIdOverride == parent.AccountId)
+				.OrderByDescending(player => player.CreatedTimestamp)
 				.ToArray();
 		Player[] orphans = players
 			.Where(player => player.IsLinkedAccount && !parents.Any(parent => parent.AccountId == player.AccountIdOverride))
