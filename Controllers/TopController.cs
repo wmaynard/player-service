@@ -490,9 +490,13 @@ public class TopController : PlatformController
 
 
 		Dictionary<string, string> avatars = new Dictionary<string, string>();
+		Dictionary<string, int> accountLevels = new Dictionary<string, int>();
 		foreach (Component component in ComponentServices[Component.ACCOUNT].Find(accountIds))
+		{
 			if (!avatars.ContainsKey(component.AccountId) || avatars[component.AccountId] == null)
 				avatars[component.AccountId] = component.Data.Optional<string>("accountAvatar");
+			accountLevels[component.AccountId] = component.Data.Optional<int?>("accountLevel") ?? -1;
+		}
 
 		List<GenericData> output = new List<GenericData>();
 
@@ -503,7 +507,8 @@ public class TopController : PlatformController
 					{ Player.FRIENDLY_KEY_ACCOUNT_ID, member.AccountId },
 					{ Player.FRIENDLY_KEY_SCREENNAME, member.ScreenName },
 					{ Profile.FRIENDLY_KEY_DISCRIMINATOR, group.Number.ToString().PadLeft(4, '0') },
-					{ "accountAvatar", avatars.ContainsKey(member.AccountId) ? avatars[member.AccountId] : null }
+					{ "accountAvatar", avatars.ContainsKey(member.AccountId) ? avatars[member.AccountId] : null },
+					{ "accountLevel", accountLevels.ContainsKey(member.AccountId) ? accountLevels[member.AccountId] : null }
 				});
 
 		return Ok(new
