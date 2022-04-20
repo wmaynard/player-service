@@ -14,10 +14,10 @@ using Rumble.Platform.Common.Services;
 
 namespace PlayerService.Controllers;
 
-[ApiController, Route("player/v2/admin"), RequireAuth(TokenType.ADMIN)]
+[ApiController, Route("player/v2/admin"), RequireAuth(AuthType.ADMIN_TOKEN)]
 public class AdminController : PlatformController
 {
-#pragma warning disable CS0649
+#pragma warning disable
 	private readonly PlayerAccountService _playerService;
 	private readonly DiscriminatorService _discriminatorService;
 	private readonly DynamicConfigService _dynamicConfigService;
@@ -37,7 +37,7 @@ public class AdminController : PlatformController
 	private readonly TutorialService _tutorialService;
 	private readonly WalletService _walletService;
 	private readonly WorldService _worldService;
-#pragma warning restore CS0649
+#pragma warning restore
 	private Dictionary<string, ComponentService> ComponentServices { get; init; }
 	
 	public AdminController(IConfiguration config) : base(config) =>

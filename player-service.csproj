@@ -9,13 +9,7 @@
 
 	<ItemGroup>
 	  <None Remove="adjectives.txt" />
-	  <Content Include="adjectives.txt">
-	    <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-	  </Content>
 	  <None Remove="nouns.txt" />
-	  <Content Include="nouns.txt">
-	    <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-	  </Content>
 	  <None Remove="GeoIP2-Country.mmdb" />
 	  <Content Include="GeoIP2-Country.mmdb">
 	    <CopyToOutputDirectory>Always</CopyToOutputDirectory>
@@ -26,11 +20,7 @@
 	<ItemGroup>
 	  <PackageReference Include="Google.Apis.Auth.AspNetCore3" Version="1.55.0" />
 	  <PackageReference Include="Microsoft.IdentityModel.Tokens" Version="6.15.0" />
-	  <PackageReference Include="platform-csharp-common" Version="1.0.126" />
-	</ItemGroup>
-
-	<ItemGroup>
-	  <ProjectReference Include="..\platform-csharp-common\platform-csharp-common.csproj" />
+	  <PackageReference Include="platform-csharp-common" Version="1.0.135" />
 	</ItemGroup>
 
 </Project>
