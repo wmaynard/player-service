@@ -23,7 +23,7 @@ public class TokenGeneratorService : PlatformService
 		if (accountId == null || screenname == null || discriminator < 0)
 			throw new InvalidUserException(accountId, screenname, discriminator);
 
-		string url = $"{_dynamicConfigService.PlatformUrl}secured/token/generate";
+		string url = PlatformEnvironment.Url("/secured/token/generate");
 		string token = _dynamicConfigService.GameConfig.Require<string>("playerServiceToken");
 
 		GenericData payload = new GenericData()

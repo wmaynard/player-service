@@ -19,7 +19,7 @@ namespace PlayerService.Controllers;
 [ApiController, Route("player/v2"), RequireAuth, UseMongoTransaction]
 public class TopController : PlatformController
 {
-#pragma warning disable CS0649
+#pragma warning disable
 	private readonly PlayerAccountService _playerService;
 	private readonly DiscriminatorService _discriminatorService;
 	private readonly DynamicConfigService _dynamicConfigService;
@@ -40,7 +40,7 @@ public class TopController : PlatformController
 	private readonly TutorialService _tutorialService;
 	private readonly WalletService _walletService;
 	private readonly WorldService _worldService;
-#pragma warning restore CS0649
+#pragma warning restore
 	private Dictionary<string, ComponentService> ComponentServices { get; init; }
 
 
