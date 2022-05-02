@@ -96,7 +96,7 @@ build_image:
     - tar -zxvf trivy*
     - chmod +x $CI_PROJECT_DIR/trivy
     - wget https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/html.tpl
-    - ./trivy --cache-dir $CI_PROJECT_DIR/.trivycache image --severity HIGH,CRITICAL --format template --template "@html.tpl" --output $CI_PROJECT_DIR/trivy/$CI_COMMIT_REF_SLUG-$CI_COMMIT_SHA.html $CI_REGISTRY_IMAGE/$CI_COMMIT_REF_SLUG:$CI_COMMIT_SHA
+    - ./trivy --cache-dir $CI_PROJECT_DIR/.trivycache image --severity HIGH,CRITICAL $CI_REGISTRY_IMAGE/$CI_COMMIT_REF_SLUG:$CI_COMMIT_SHA --destination $CI_REGISTRY_IMAGE/$CI_COMMIT_REF_SLUG:latest
   rules:
     - if: '$BUILD_DISABLED'
       when: never
