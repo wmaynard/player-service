@@ -1,6 +1,7 @@
 using System.Text.Json.Serialization;
 using Google.Apis.Auth;
 using MongoDB.Bson.Serialization.Attributes;
+using Rumble.Platform.Common.Models;
 using Rumble.Platform.Common.Web;
 
 namespace PlayerService.Models;

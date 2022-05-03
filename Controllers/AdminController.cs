@@ -154,12 +154,4 @@ public class AdminController : PlatformController
 		
 		return Ok(new { Results = results });
 	}
-	public override ActionResult HealthCheck()
-	{
-		return Ok(new
-		{
-			DynamicConfigUrl = _dynamicConfigService.Url,
-			PlatformUrl = _dynamicConfigService.PlatformUrl
-		});
-	}
 }

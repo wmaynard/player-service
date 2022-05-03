@@ -90,17 +90,6 @@ public class TopController : PlatformController
 			{ Component.WORLD, _worldService }
 		};
 
-	[HttpGet, Route("health"), NoAuth]
-	public override ActionResult HealthCheck() => Ok(
-		_playerService.HealthCheckResponseObject,
-		_discriminatorService.HealthCheckResponseObject,
-		_dynamicConfigService.HealthCheckResponseObject,
-		_itemService.HealthCheckResponseObject,
-		_nameGeneratorService.HealthCheckResponseObject,
-		_profileService.HealthCheckResponseObject,
-		_tokenGeneratorService.HealthCheckResponseObject
-	);
-
 	[HttpPatch, Route("update")]
 	public ActionResult Update()
 	{
@@ -182,7 +171,7 @@ public class TopController : PlatformController
 		});
 	}
 
-	[HttpPost, Route("launch"), NoAuth]
+	[HttpPost, Route("launch"), NoAuth, HealthMonitor(weight: 1)]
 	public ActionResult Launch()
 	{
 		string installId = Require<string>("installId");

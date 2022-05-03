@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using MongoDB.Driver;
 using PlayerService.Models;
+using Rumble.Platform.Common.Services;
 using Rumble.Platform.Common.Web;
 
 namespace PlayerService.Services;
