@@ -26,21 +26,19 @@ public class TokenGeneratorService : PlatformService
 		string url = PlatformEnvironment.Url("/secured/token/generate");
 		string token = _dynamicConfigService.GameConfig.Require<string>("playerServiceToken");
 
-		GenericData payload = new GenericData()
-		{
-			{ "aid", accountId },
-			{ "screenname", screenname },
-			{ "origin", "player-service-v2" },
-			{ "email", email },
-			{ "discriminator", discriminator },
-			{ "ipAddress", geoData?.IPAddress },
-			{ "countryCode", geoData?.CountryCode }
-		};
-
 		_apiService
 			.Request(url)
 			.AddAuthorization(token)
-			.SetPayload(payload)
+			.SetPayload(new GenericData
+			{
+				{ "aid", accountId },
+				{ "screenname", screenname },
+				{ "origin", "player-service-v2" },
+				{ "email", email },
+				{ "discriminator", discriminator },
+				{ "ipAddress", geoData?.IPAddress },
+				{ "countryCode", geoData?.CountryCode }
+			})
 			.OnFailure((sender, response) =>
 			{
 				Log.Error(Owner.Will, "Unable to generate token.");
@@ -63,8 +61,7 @@ public class TokenGeneratorService : PlatformService
 			Log.Error(Owner.Will, "An unexpected error occurred when generating a token.", data: new
 			{
 				Url = url,
-				Response = response,
-				Payload = payload
+				Response = response
 			}, exception: e);
 			throw;
 		}

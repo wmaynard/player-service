@@ -75,7 +75,7 @@ public class TopController : PlatformController
 	/// </summary>
 	[SuppressMessage("ReSharper", "SuggestBaseTypeForParameter")]
 	public TopController(IConfiguration config)  : base(config) =>
-		ComponentServices = new Dictionary<string, ComponentService>()
+		ComponentServices = new Dictionary<string, ComponentService>
 		{
 			{ Component.AB_TEST, _abTestService },
 			{ Component.ACCOUNT, _accountService },
@@ -90,7 +90,7 @@ public class TopController : PlatformController
 			{ Component.WORLD, _worldService }
 		};
 
-	[HttpPatch, Route("update")]
+	[HttpPatch, Route("update"), RequireAccountId]
 	public ActionResult Update()
 	{
 		IClientSessionHandle session = _itemService.StartTransaction();
@@ -146,7 +146,7 @@ public class TopController : PlatformController
 		});
 	}
 
-	[HttpGet, Route("read")]
+	[HttpGet, Route("read"), RequireAccountId]
 	public ActionResult Read()
 	{
 		// ~900 ms sequential reads
@@ -175,32 +175,11 @@ public class TopController : PlatformController
 	public ActionResult Launch()
 	{
 		string installId = Require<string>("installId");
-		string requestId = Optional<string>("requestId") ?? Guid.NewGuid().ToString();
 		string clientVersion = Optional<string>("clientVersion");
-		string clientType = Optional<string>("clientType");
-		string dataVersion = Optional<string>("dataVersion");
 		string deviceType = Optional<string>("deviceType");
-		string osVersion = Optional<string>("osVersion");
-		string systemLanguage = Optional<string>("systemLanguage");
-		string screenname = Optional<string>("screenName");
-		string mergeAccountId = Optional<string>("mergeAccountId");
-		string mergeToken = Optional<string>("mergeToken");
 		GenericData sso = Optional<GenericData>("sso");
 
 		Player player = _playerService.FindOne(player => player.InstallId == installId);
-
-		// This block is an upgrade for the new behavior for screennames.
-		// if (player.Screenname == null)
-		// {
-		// 	player.Screenname = screenname ?? ComponentServices[Component.ACCOUNT].Lookup(player.Id)?.Data?.Optional<string>("accountName");
-		// 	
-		// 	Log.Info(Owner.Will, "Looking up screenname from Account Component.", data: new
-		// 	{
-		// 		RetrievedName = player.Screenname,
-		// 		Detail = "A player record was found, but without a screenname.  This should be a one-time upgrade per account."
-		// 	});	
-		// 	_playerService.Update(player);
-		// }
 
 		player ??= CreateNewAccount(installId, deviceType, clientVersion); // TODO: are these vars used anywhere else?
 
@@ -267,17 +246,7 @@ public class TopController : PlatformController
 
 	private Player CreateNewAccount(string installId, string deviceType, string clientVersion)
 	{
-		// string installId = Require<string>("installId");
-		string requestId = Optional<string>("requestId") ?? Guid.NewGuid().ToString();
-		// string clientVersion = Optional<string>("clientVersion");
-		string clientType = Optional<string>("clientType");
 		string dataVersion = Optional<string>("dataVersion");
-		// string deviceType = Optional<string>("deviceType");
-		string osVersion = Optional<string>("osVersion");
-		string systemLanguage = Optional<string>("systemLanguage");
-		string screenname = Optional<string>("screenName");
-		string mergeAccountId = Optional<string>("mergeAccountId");
-		string mergeToken = Optional<string>("mergeToken");
 		
 		Player player = new Player(_nameGeneratorService.Next)
 		{
@@ -303,7 +272,7 @@ public class TopController : PlatformController
 
 	// TODO: Explore MongoTransaction attribute
 	// TODO: "link" instead of "transfer"?
-	[HttpPatch, Route("transfer")]
+	[HttpPatch, Route("transfer"), RequireAccountId]
 	public ActionResult Transfer()
 	{
 		string transferToken = Require<string>("transferToken");
@@ -418,7 +387,7 @@ public class TopController : PlatformController
 		return output;
 	}
 
-	[HttpGet, Route("items")]
+	[HttpGet, Route("items"), RequireAccountId]
 	public ActionResult GetItems()
 	{
 		string[] ids = Optional<string>("ids")?.Split(',');
@@ -431,7 +400,7 @@ public class TopController : PlatformController
 		return Ok(new { Items = output, itemMS = itemMS });
 	}
 
-	[HttpPatch, Route("screenname")]
+	[HttpPatch, Route("screenname"), RequireAccountId]
 	public ActionResult ChangeName()
 	{
 		string sn = Require<string>("screenname");
