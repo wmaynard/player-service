@@ -137,6 +137,18 @@ public class Player : PlatformCollectionDocument
 	public float SearchWeight { get; private set; }
 
 	/// <summary>
+	/// Sanitizes the output for /player/launch.  AccountIdOverride has caused confusion, so for clarity, the override
+	/// will just be provided as the ID for the game server.
+	/// </summary>
+	internal void PrepareIdForOutput()
+	{
+		if (string.IsNullOrWhiteSpace(AccountIdOverride))
+			return;
+		Id = AccountIdOverride;
+		AccountIdOverride = null;
+	}
+
+	/// <summary>
 	/// Uses arbitrary values to decide how relevant a search term is to this player.  Screennames are heavily favored over all other fields; consider a situation where we have 
 	/// a user with the screenname "Deadpool", and someone is searching with the term "dead".  Being all hex characters, we probably don't want Mongo IDs ranking before
 	/// "Deadpool".  For future reference, any user-generated field that we search on should rank earlier than ID fields.  If a portal user wants to search by ID, they're

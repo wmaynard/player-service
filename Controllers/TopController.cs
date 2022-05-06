@@ -230,6 +230,8 @@ public class TopController : PlatformController
 			// TODO: #378 updateAccountData
 		}
 
+		player.PrepareIdForOutput();
+
 		return Ok(new
 		{
 			RemoteAddr = GeoIPData.IPAddress ?? IpAddress, // fallbacks for local dev, since ::1 fails the lookups.
@@ -329,7 +331,7 @@ public class TopController : PlatformController
 			_profileService.Create(new Profile(player));
 
 			Token.ScreenName = other.Screenname;
-			Log.Info(Owner.Default, "AccountID overridden.", data: new
+			Log.Info(Owner.Default, "AccountID linked via AccountIdOverride.", data: new
 			{
 				Player = Token,
 				Account = player
