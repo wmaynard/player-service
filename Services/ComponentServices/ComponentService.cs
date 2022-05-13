@@ -41,7 +41,7 @@ public abstract class ComponentService : PlatformMongoService<Component>
 		.Find(Builders<Component>.Filter.In(component => component.AccountId, accountIds))
 		.ToList();
 
-	public async Task<bool> UpdateAsync(string accountId, GenericData data, IClientSessionHandle session, int? version = null, int retries = 5)
+	public async Task<bool> UpdateAsync(string accountId, GenericData data, IClientSessionHandle session, int? version, int retries = 5)
 	{
 		try
 		{
@@ -74,8 +74,9 @@ public abstract class ComponentService : PlatformMongoService<Component>
 		}
 		catch (MongoCommandException e)
 		{
+			Log.Local(Owner.Will, e.Message);
 			if (retries > 0)
-				return await UpdateAsync(accountId, data, session, --retries);
+				return await UpdateAsync(accountId, data, session, version, --retries);
 			Log.Error(Owner.Will, $"Could not update component {Name}.", data: new
 			{
 				Detail = $"Session state invalid, even after retrying {retries} times with exponential backoff."
@@ -90,7 +91,7 @@ public abstract class ComponentService : PlatformMongoService<Component>
 		// we'll return early to avoid one Mongo hit.
 		if (version == null)
 		{
-			await Record(accountId, new AuditLog());
+			// await Record(accountId, new AuditLog());
 			return false;
 		}
 
@@ -99,7 +100,7 @@ public abstract class ComponentService : PlatformMongoService<Component>
 			.Project(Builders<Component>.Projection.Expression(component => component.Version))
 			.First();
 
-		await Record(accountId, new AuditLog(current, (int)version));
+		// await Record(accountId, new AuditLog(current, (int)version));
 		
 		if (current != version - 1)
 			throw new ComponentVersionException(Name, currentVersion: current, updateVersion: (int)version);
