@@ -7,6 +7,7 @@ using Microsoft.Extensions.Configuration;
 using PlayerService.Models;
 using PlayerService.Services;
 using PlayerService.Services.ComponentServices;
+using RCL.Logging;
 using Rumble.Platform.Common.Attributes;
 using Rumble.Platform.Common.Utilities;
 using Rumble.Platform.Common.Web;

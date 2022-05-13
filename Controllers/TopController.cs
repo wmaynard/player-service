@@ -10,6 +10,7 @@ using PlayerService.Models;
 using Rumble.Platform.Common.Web;
 using PlayerService.Services;
 using PlayerService.Services.ComponentServices;
+using RCL.Logging;
 using Rumble.Platform.Common.Attributes;
 using Rumble.Platform.Common.Utilities;
 using Rumble.Platform.Common.Services;
@@ -90,7 +91,7 @@ public class TopController : PlatformController
 			{ Component.WORLD, _worldService }
 		};
 
-	[HttpPatch, Route("update"), RequireAccountId]
+	[HttpPatch, Route("update"), RequireAccountId, HealthMonitor(weight: 10)]
 	public ActionResult Update()
 	{
 		IClientSessionHandle session = _itemService.StartTransaction();
@@ -106,6 +107,7 @@ public class TopController : PlatformController
 			.UpdateAsync(
 				accountId: Token.AccountId,
 				data: data.Require<GenericData>(Component.FRIENDLY_KEY_DATA).JSON,
+				version: data.Optional<int?>(Component.FRIENDLY_KEY_VERSION),
 				session: session
 			)
 		).ToList();
@@ -123,8 +125,17 @@ public class TopController : PlatformController
 		if (toDelete.Any())
 			tasks.Add(_itemService.BulkDeleteAsync(toDelete, session));
 		itemMS = Timestamp.UnixTimeMS - itemMS;
-		
-		Task.WaitAll(tasks.ToArray());
+
+		try
+		{
+			Task.WaitAll(tasks.ToArray());
+		}
+		catch (AggregateException e)
+		{
+			if (e.InnerException != null)
+				throw e.InnerException;
+			throw;
+		}
 
 		if (tasks.Select(task => task.Result).Any(success => !success))
 		{
@@ -340,7 +351,7 @@ public class TopController : PlatformController
 		}
 	}
 
-	[HttpGet, Route("config"), NoAuth]
+	[HttpGet, Route("config"), NoAuth, HealthMonitor(weight: 5)]
 	public ActionResult GetConfig()
 	{
 		string clientVersion = Optional<string>("clientVersion");
@@ -499,4 +510,11 @@ public class TopController : PlatformController
 			LocustsKilled = locusts.Length
 		});
 	}
+
+	protected override GenericData AdditionalHealthData => new GenericData
+	{
+		{ "foobar", 1 },
+		{ "raboof", new int[] {1, 2, 3, 4, 5}},
+		{ "thirdValue", Token }
+	};
 }

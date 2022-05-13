@@ -1,9 +1,13 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using MongoDB.Driver;
+using PlayerService.Exceptions;
 using PlayerService.Models;
+using RCL.Logging;
+using Rumble.Platform.Common.Exceptions;
 using Rumble.Platform.Common.Services;
 using Rumble.Platform.Common.Utilities;
 using Rumble.Platform.Common.Web;
@@ -37,7 +41,7 @@ public abstract class ComponentService : PlatformMongoService<Component>
 		.Find(Builders<Component>.Filter.In(component => component.AccountId, accountIds))
 		.ToList();
 
-	public async Task<bool> UpdateAsync(string accountId, GenericData data, IClientSessionHandle session, int retries = 5)
+	public async Task<bool> UpdateAsync(string accountId, GenericData data, IClientSessionHandle session, int? version = null, int retries = 5)
 	{
 		try
 		{
@@ -49,15 +53,21 @@ public abstract class ComponentService : PlatformMongoService<Component>
 			// Increasing the duration makes it less likely, but every duration increase also means a longer response time
 			// to the client.  Retries are both more reliable and faster.
 			Thread.Sleep(new Random().Next(0, (int)Math.Pow(2, 6 - retries)));
-
+			
+			UpdateDefinitionBuilder<Component> builder = Builders<Component>.Update;
+			UpdateDefinition<Component> update = builder.Set(component => component.Data, data);
+			if (await VersionNumberProvided(accountId, version))
+				update = builder.Combine(update, builder.Set(component => component.Version, version));
+			
 			await _collection
 				.FindOneAndUpdateAsync<Component>(
 					session: session,
 					filter: component => component.AccountId == accountId,
-					update: Builders<Component>.Update.Set(component => component.Data, data),
+					update: update,
 					options: new FindOneAndUpdateOptions<Component>()
 					{
-						IsUpsert = true
+						IsUpsert = true,
+						ReturnDocument = ReturnDocument.After
 					}
 				);
 			return true;
@@ -72,6 +82,44 @@ public abstract class ComponentService : PlatformMongoService<Component>
 			}, exception: e);
 			return false;
 		}
+	}
+
+	public async Task<bool> VersionNumberProvided(string accountId, int? version)
+	{
+		// Getting the current version for any update might be useful, but until it's requested,
+		// we'll return early to avoid one Mongo hit.
+		if (version == null)
+		{
+			await Record(accountId, new AuditLog());
+			return false;
+		}
+
+		int current = _collection
+			.Find(filter: component => component.AccountId == accountId)
+			.Project(Builders<Component>.Projection.Expression(component => component.Version))
+			.First();
+
+		await Record(accountId, new AuditLog(current, (int)version));
 		
+		if (current != version - 1)
+			throw new ComponentVersionException(Name, currentVersion: current, updateVersion: (int)version);
+
+		return true;
+	}
+
+	// We do NOT want to use a session with this method; we want the record of failed transactions in it.
+	public async Task<long> Record(string accountId, AuditLog log)
+	{
+		UpdateResult result = await _collection.UpdateOneAsync(
+			filter: component => component.AccountId == accountId,
+			update: Builders<Component>.Update.AddToSet(component => component.AuditLogs, log)
+		);
+		if (result.ModifiedCount == 0)
+			Log.Warn(Owner.Will, "Unable to record audit log.", data: new
+			{
+				accountId = accountId,
+				auditLog = log
+			});
+		return result.ModifiedCount;
 	}
 }

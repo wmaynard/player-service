@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System.Text.Json.Serialization;
 using MongoDB.Bson;
 using MongoDB.Bson.Serialization.Attributes;
@@ -23,11 +24,15 @@ public class Component : PlatformCollectionDocument
 	
 	internal const string DB_KEY_ACCOUNT_ID = "aid";
 	internal const string DB_KEY_DATA = "data";
+	internal const string DB_KEY_VERSION = "v";
+	internal const string DB_KEY_AUDIT_LOGS = "log";
 
 	public const string FRIENDLY_KEY_ACCOUNT_ID = "aid";
 	public const string FRIENDLY_KEY_DATA = "data";
 	public const string FRIENDLY_KEY_NAME = "name";
-	
+	public const string FRIENDLY_KEY_VERSION = "version";
+	public const string FRIENDLY_KEY_AUDIT_LOGS = "auditLogs";
+
 	[BsonElement(DB_KEY_ACCOUNT_ID), BsonRepresentation(BsonType.ObjectId)]
 	[JsonInclude, JsonPropertyName(FRIENDLY_KEY_ACCOUNT_ID)]
 	public string AccountId { get; private set; }
@@ -39,11 +44,22 @@ public class Component : PlatformCollectionDocument
 	[BsonIgnore]
 	[JsonInclude, JsonPropertyName(FRIENDLY_KEY_NAME), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
 	public string Name { get; set; }
+	
+	[BsonElement(DB_KEY_VERSION)]
+	[JsonInclude, JsonPropertyName(FRIENDLY_KEY_VERSION), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
+	public int Version { get; set; }
+
+	[BsonElement(DB_KEY_AUDIT_LOGS)] [JsonInclude, JsonPropertyName(FRIENDLY_KEY_AUDIT_LOGS), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+	public List<AuditLog> AuditLogs { get; set; }
 
 	public Component(string accountId, string name = null, GenericData data = null)
 	{
 		AccountId = accountId;
 		Name = name;
+		Version = 0;
 		Data = data ?? new GenericData();
+		AuditLogs = new List<AuditLog>();
 	}
 }
+
+

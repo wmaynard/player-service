@@ -3,6 +3,7 @@ using System.Reflection;
 using Google.Apis.Auth.AspNetCore3;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.Extensions.DependencyInjection;
+using RCL.Logging;
 using Rumble.Platform.Common.Utilities;
 using Rumble.Platform.Common.Web;
 

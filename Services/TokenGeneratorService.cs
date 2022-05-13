@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using PlayerService.Exceptions;
+using RCL.Logging;
 using Rumble.Platform.Common.Utilities;
 using Rumble.Platform.Common.Web;
 using Rumble.Platform.Common.Models;
