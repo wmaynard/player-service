@@ -510,11 +510,4 @@ public class TopController : PlatformController
 			LocustsKilled = locusts.Length
 		});
 	}
-
-	protected override GenericData AdditionalHealthData => new GenericData
-	{
-		{ "foobar", 1 },
-		{ "raboof", new int[] {1, 2, 3, 4, 5}},
-		{ "thirdValue", Token }
-	};
 }
