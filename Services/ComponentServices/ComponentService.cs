@@ -16,7 +16,7 @@ namespace PlayerService.Services.ComponentServices;
 
 public abstract class ComponentService : PlatformMongoService<Component>
 {
-	private string Name { get; set; }
+	private new string Name { get; set; } // TODO: done to silence warning, but needs to be renamed.
 	protected ComponentService(string name) : base("c_" + name) => Name = name;
 
 	public Component Lookup(string accountId)

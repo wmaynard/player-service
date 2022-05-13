@@ -15,7 +15,7 @@ public class AuditLog : PlatformDataModel
 	public const string FRIENDLY_KEY_CURRENT_VERSION = "currentVersion";
 	public const string FRIENDLY_KEY_NEXT_VERSION = "nextVersion";
 	public const string FRIENDLY_KEY_TIMESTAMP = "timestamp";
-	public const string FRIENDLY_KEY_IS_INVALID = "isValid";
+	public const string FRIENDLY_KEY_IS_INVALID = "invalid";
 	public const string FRIENDLY_KEY_NO_VERSION_PROVIDED = "versionNotProvided";
 	
 	[BsonElement(DB_KEY_CURRENT_VERSION), BsonIgnoreIfDefault]
