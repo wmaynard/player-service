@@ -28,6 +28,7 @@ public class TopController : PlatformController
 	private readonly ProfileService _profileService;
 	private readonly NameGeneratorService _nameGeneratorService;
 	private readonly TokenGeneratorService _tokenGeneratorService;
+	private readonly AuditService _auditService;
 	
 	// Component Services
 	private readonly AbTestService _abTestService;
@@ -95,7 +96,7 @@ public class TopController : PlatformController
 	public ActionResult Update()
 	{
 		IClientSessionHandle session = _itemService.StartTransaction();
-		GenericData[] components = Require<GenericData[]>("components");
+		Component[] components = Require<Component[]>("components");
 		Item[] items = Optional<Item[]>("items") ?? Array.Empty<Item>();
 		foreach (Item item in items)
 			item.AccountId = Token.AccountId;
@@ -103,15 +104,17 @@ public class TopController : PlatformController
 		long totalMS = Timestamp.UnixTimeMS;
 		long componentMS = Timestamp.UnixTimeMS;
 
-		List<Task<bool>> tasks = components.Select(data => ComponentServices[data.Require<string>(Component.FRIENDLY_KEY_NAME)]
+		foreach (Component component in components)
+			_auditService.Record(Token.AccountId, component.Name, updateVersion: component.Version);
+
+		List<Task<bool>> tasks = components.Select(data => ComponentServices[data.Name]
 			.UpdateAsync(
 				accountId: Token.AccountId,
-				data: data.Require<GenericData>(Component.FRIENDLY_KEY_DATA).JSON,
-				version: data.Optional<int?>(Component.FRIENDLY_KEY_VERSION),
+				data: data.Data,
+				version: data.Version,
 				session: session
 			)
 		).ToList();
-
 
 		componentMS = Timestamp.UnixTimeMS - componentMS;
 
