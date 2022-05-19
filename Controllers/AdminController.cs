@@ -90,6 +90,8 @@ public class AdminController : PlatformController
 			throw new PlatformException("Invalid screenname.", code: ErrorCode.InvalidRequestData);
 		
 		int affected = _playerService.SyncScreenname(name, accountId);
+		
+		// TODO: Invalidate tokens
 
 		return Ok(new { AffectedAccounts = affected });
 	}

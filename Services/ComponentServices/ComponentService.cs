@@ -107,20 +107,4 @@ public abstract class ComponentService : PlatformMongoService<Component>
 
 		return true;
 	}
-
-	// We do NOT want to use a session with this method; we want the record of failed transactions in it.
-	public async Task<long> Record(string accountId, AuditLog log)
-	{
-		UpdateResult result = await _collection.UpdateOneAsync(
-			filter: component => component.AccountId == accountId,
-			update: Builders<Component>.Update.AddToSet(component => component.AuditLogs, log)
-		);
-		if (result.ModifiedCount == 0)
-			Log.Warn(Owner.Will, "Unable to record audit log.", data: new
-			{
-				accountId = accountId,
-				auditLog = log
-			});
-		return result.ModifiedCount;
-	}
 }

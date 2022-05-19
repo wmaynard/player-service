@@ -49,16 +49,12 @@ public class Component : PlatformCollectionDocument
 	[JsonInclude, JsonPropertyName(FRIENDLY_KEY_VERSION), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
 	public int Version { get; set; }
 
-	[BsonElement(DB_KEY_AUDIT_LOGS)] [JsonInclude, JsonPropertyName(FRIENDLY_KEY_AUDIT_LOGS), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-	public List<AuditLog> AuditLogs { get; set; }
-
 	public Component(string accountId, string name = null, GenericData data = null)
 	{
 		AccountId = accountId;
 		Name = name;
 		Version = 0;
 		Data = data ?? new GenericData();
-		AuditLogs = new List<AuditLog>();
 	}
 }
 
