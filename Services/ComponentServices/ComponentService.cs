@@ -89,7 +89,7 @@ public abstract class ComponentService : PlatformMongoService<Component>
 	{
 		// Getting the current version for any update might be useful, but until it's requested,
 		// we'll return early to avoid one Mongo hit.
-		if (version == null)
+		if (version is null or 0)
 		{
 			// await Record(accountId, new AuditLog());
 			return false;
