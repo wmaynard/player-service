@@ -6,12 +6,14 @@ using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Configuration;
 using MongoDB.Driver;
+using PlayerService.Exceptions;
 using PlayerService.Models;
 using Rumble.Platform.Common.Web;
 using PlayerService.Services;
 using PlayerService.Services.ComponentServices;
 using RCL.Logging;
 using Rumble.Platform.Common.Attributes;
+using Rumble.Platform.Common.Exceptions;
 using Rumble.Platform.Common.Utilities;
 using Rumble.Platform.Common.Services;
 
@@ -299,7 +301,11 @@ public class TopController : PlatformController
 		Player other = _playerService.FindOne(p => p.TransferToken == transferToken);
 
 		if (other == null)
-			throw new Exception("No player account found for transfer token.");
+			throw new AccountLinkException(
+				message: "No player found for transfer token.",
+				requester: Token.AccountId,
+				transferToken: transferToken
+			);
 
 		if (profileIds.Any()) // Move the specified profile IDs to the requesting player.  This reassigns SSO profiles to other accounts.
 		{
