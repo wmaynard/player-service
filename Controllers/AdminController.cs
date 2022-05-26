@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text.RegularExpressions;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Configuration;
+using MongoDB.Driver;
 using PlayerService.Models;
 using PlayerService.Services;
 using PlayerService.Services.ComponentServices;
@@ -16,7 +17,7 @@ using Rumble.Platform.Common.Services;
 
 namespace PlayerService.Controllers;
 
-[ApiController, Route("player/v2/admin"), RequireAuth(AuthType.ADMIN_TOKEN)]
+[ApiController, Route("player/v2/admin"), RequireAuth(AuthType.ADMIN_TOKEN), IgnorePerformance]
 public class AdminController : PlatformController
 {
 #pragma warning disable
@@ -57,6 +58,34 @@ public class AdminController : PlatformController
 			{ Component.WALLET, _walletService },
 			{ Component.WORLD, _worldService }
 		};
+
+	[HttpPatch, Route("component")]
+	public ActionResult UpdateComponent()
+	{
+		// TODO: Mock player?
+		Component update = Require<Component>("component");
+		
+		if (ComponentServices[update.Name]?.Lookup(update.AccountId) == null)
+			throw new PlatformException("Component not found.", code: ErrorCode.InvalidRequestData);
+		if (string.IsNullOrEmpty(update.AccountId))
+			throw new PlatformException("Component does not contain an accountId and can not be used for an update.", code: ErrorCode.InvalidRequestData);
+		
+		IClientSessionHandle session = ComponentServices[update.Name].StartTransaction();
+		try
+		{
+			ComponentServices[update.Name].UpdateAsync(update.AccountId, update.Data, session, update.Version).Wait();
+			session.CommitTransaction();
+		}
+		catch (Exception e)
+		{
+			session.AbortTransaction();
+			if (e.InnerException is PlatformException platEx)
+				throw platEx;
+			throw;
+		}
+		
+		return Ok();
+	}
 
 	[HttpGet, Route("details")]
 	public ActionResult Details()
