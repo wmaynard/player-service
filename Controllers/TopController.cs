@@ -279,7 +279,7 @@ public class TopController : PlatformController
 		{
 			username = username
 		});
-		Player player = new Player(_nameGeneratorService.Next)
+		Player player = new Player(username)
 		{
 			ClientVersion = clientVersion,
 			DeviceType = deviceType,
