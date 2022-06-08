@@ -265,7 +265,20 @@ public class TopController : PlatformController
 	private Player CreateNewAccount(string installId, string deviceType, string clientVersion)
 	{
 		string dataVersion = Optional<string>("dataVersion");
-		
+
+		string username = null;
+		try
+		{
+			username = _nameGeneratorService.Next;
+		}
+		catch (Exception e)
+		{
+			Log.Error(Owner.Will, "Could not generate a new player name.", exception: e);
+		}
+		Log.Info(Owner.Default, "Creating new account", data: new
+		{
+			username = username
+		});
 		Player player = new Player(_nameGeneratorService.Next)
 		{
 			ClientVersion = clientVersion,
