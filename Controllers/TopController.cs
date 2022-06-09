@@ -532,4 +532,23 @@ public class TopController : PlatformController
 			LocustsKilled = locusts.Length
 		});
 	}
+
+	[HttpDelete, Route("gpg"), NoAuth]
+	public ActionResult KillGPGProfile()
+	{
+		if (PlatformEnvironment.IsProd)
+		{
+			Log.Dev(Owner.Will, "The DELETE /gpg endpoint should not be called outside of Dev!");
+			throw new PlatformException("Not allowed on prod!");
+		}
+		
+		string email = Require<string>("email");
+		Profile[] profiles = _profileService.Find(filter: profile => profile.Email == email);
+		foreach (Profile p in profiles)
+			_profileService.Delete(p);
+		return Ok(new
+		{
+			DeletedProfiles = profiles.Length
+		});
+	}
 }
