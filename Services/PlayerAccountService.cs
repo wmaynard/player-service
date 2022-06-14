@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using MongoDB.Driver;
 using PlayerService.Models;
+using PlayerService.Services.ComponentServices;
 using Rumble.Platform.Common.Services;
 using Rumble.Platform.Common.Web;
 
@@ -8,7 +9,8 @@ namespace PlayerService.Services;
 
 public class PlayerAccountService : PlatformMongoService<Player>
 {
-	public PlayerAccountService() : base("player") { }
+	private readonly AccountService _accountService;
+	public PlayerAccountService(AccountService accountService) : base("player") => _accountService = accountService;
 
 	public Player Find(string accountId) => FindOne(player => player.Id == accountId);
 
@@ -23,8 +25,15 @@ public class PlayerAccountService : PlatformMongoService<Player>
 	/// <param name="screenname"></param>
 	/// <param name="accountId"></param>
 	/// <returns></returns>
-	public int SyncScreenname(string screenname, string accountId) => (int)_collection.UpdateMany(
-		filter: player => player.Id == accountId || player.AccountIdOverride == accountId,
-		update: Builders<Player>.Update.Set(player => player.Screenname, screenname)
-	).ModifiedCount;
+	public int SyncScreenname(string screenname, string accountId)
+	{
+		int affected = (int)_collection.UpdateMany(
+			filter: player => player.Id == accountId || player.AccountIdOverride == accountId,
+			update: Builders<Player>.Update.Set(player => player.Screenname, screenname)
+		).ModifiedCount;
+		
+		// TODO: project accountId / accountIdOverride, use that in AccountService to update field in components
+
+		return affected;
+	}
 }
