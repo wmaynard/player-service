@@ -201,4 +201,31 @@ public class AdminController : PlatformController
 		
 		return Ok(new { Results = results });
 	}
+
+	[HttpPost, Route("clone")]
+	public ActionResult Clone()
+	{
+		if (!(PlatformEnvironment.IsLocal || PlatformEnvironment.IsDev))
+			throw new PlatformException("Not allowed outside of local / dev.");
+
+		string source = Require<string>("sourceAccountId");
+		string target = Require<string>("targetAccountId");
+
+		try
+		{
+			foreach (ComponentService service in ComponentServices.Select(pair => pair.Value))
+			{
+				Component sourceComponent = service.Lookup(source);
+				Component targetComponent = service.Lookup(target);
+
+				targetComponent.Data = sourceComponent.Data;
+				service.Update(targetComponent);
+			}
+		}
+		catch (Exception e)
+		{
+			throw new PlatformException("Unable to clone account", inner: e);
+		}
+		return Ok();
+	}
 }
