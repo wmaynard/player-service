@@ -123,8 +123,8 @@ Notes:
 2. While there are profiles for `installIds`, these are possibly unnecessary with the changes to the way accounts are linked to their data.  For more information, see the [upgrade documentation](GROOVY_UPGRADE.md).
 
 ### Models.Responses
-| Name           | Description |
-|:---------------|:------------|
+| Name             | Description |
+|:-----------------|:------------|
 | `LaunchResponse` |             |
 
 ## Services
@@ -179,15 +179,15 @@ Similarly, the `items` collection is iffy.  As designed, every single item is st
 
 ### Top level
 
-| Method | Endpoint    | Description                                                                                                                       | Required Fields | Optional Fields |
-|-------:|:------------|:----------------------------------------------------------------------------------------------------------------------------------|:----------------|:----------------|
-|    GET | `/config`   | Returns dynamic config variables for the client.                                                                                  |||
-|    GET | `/health`   | Health check; returns the status of all services.                                                                                 |||
-|   POST | `/launch`   | Logs in to the game.  Creates a player record if none exist, then grants an `accessToken` for the account in question.            | `installId`     ||
-| GET | `/lookup` | Retrieves information about comma-separated accountIds for UI purposes.  Information should be cached on the frontend. | `accountIds`    ||
-| PATCH | `/screenname` | Changes the user's screenname.  Returns an updated token that must be used to reflect changes in platform services (such as chat). | `screenname`    ||
-|  PATCH | `/transfer` | Links an account to one with a corresponding SSO profile, transfers the SSO profile to the local account, or cancels the request. | `transferToken` | `profileIds`    |
-|  PATCH | `/update`   | Updates a player record (components, items).                                                                                      | `components`    ||
+| Method | Endpoint      | Description                                                                                                                        | Required Fields | Optional Fields |
+|-------:|:--------------|:-----------------------------------------------------------------------------------------------------------------------------------|:----------------|:----------------|
+|    GET | `/config`     | Returns dynamic config variables for the client.                                                                                   |||
+|    GET | `/health`     | Health check; returns the status of all services.                                                                                  |||
+|   POST | `/launch`     | Logs in to the game.  Creates a player record if none exist, then grants an `accessToken` for the account in question.             | `installId`     ||
+|    GET | `/lookup`     | Retrieves information about comma-separated accountIds for UI purposes.  Information should be cached on the frontend.             | `accountIds`    ||
+|  PATCH | `/screenname` | Changes the user's screenname.  Returns an updated token that must be used to reflect changes in platform services (such as chat). | `screenname`    ||
+|  PATCH | `/transfer`   | Links an account to one with a corresponding SSO profile, transfers the SSO profile to the local account, or cancels the request.  | `transferToken` | `profileIds`    |
+|  PATCH | `/update`     | Updates a player record (components, items).                                                                                       | `components`    ||
 
 ### Admin
 

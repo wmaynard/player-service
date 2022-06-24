@@ -178,7 +178,7 @@ public class AdminController : PlatformController
 			.ToArray();
 		foreach (Player parent in parents)
 			parent.LinkedAccounts = players
-				.Where(player => player.AccountIdOverride == parent.AccountId)
+				.Where(player => player.AccountIdOverride == parent.AccountId && player.IsLinkedAccount)
 				.OrderByDescending(player => player.CreatedTimestamp)
 				.ToArray();
 		Player[] orphans = players
@@ -192,7 +192,9 @@ public class AdminController : PlatformController
 			});
 		
 		float? sum = null; // Assigning to a field in the middle of a LINQ query is a little janky, but this prevents sum re-evaluation / requiring another loop.
-		GenericData[] results = parents.OrderByDescending(player => player.WeighSearchTerm(term)).Select(player => new GenericData()
+		GenericData[] results = parents
+			.OrderByDescending(player => player.WeighSearchTerm(term))
+			.Select(player => new GenericData()
 		{
 			{ "player", player },
 			{ "score", player.SearchWeight },

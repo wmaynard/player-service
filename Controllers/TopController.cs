@@ -353,7 +353,8 @@ public class TopController : PlatformController
 		}
 		else
 		{
-			player.AccountIdOverride = other.AccountId;
+			if (player.AccountId != other.AccountId)
+				player.AccountIdOverride = other.AccountId;
 			player.Screenname = other.Screenname;
 			other.TransferToken = null;
 			

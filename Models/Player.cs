@@ -109,7 +109,7 @@ public class Player : PlatformCollectionDocument
 	
 	[BsonIgnore]
 	[JsonIgnore]
-	public bool IsLinkedAccount => !string.IsNullOrWhiteSpace(AccountIdOverride);
+	public bool IsLinkedAccount => !string.IsNullOrWhiteSpace(AccountIdOverride) && AccountIdOverride != Id;
 
 	public Player(string screenname)
 	{
