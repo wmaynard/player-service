@@ -56,8 +56,7 @@ service:
   internalPort: 80
 ingress:
   enabled: true
-  paths: 
-    - "/player/v2/"
+  path: "/player/v2/"
   tls:
     enabled: false
     acme: false

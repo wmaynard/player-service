@@ -19,32 +19,11 @@
     - if: $DEPLOY_TYPE == "kubernetes" || $DEPLOY_TYPE == "both"
       when: manual
 
-.auto-deploy-prod:
-  image: "registry.gitlab.com/gitlab-org/cluster-integration/auto-deploy-image:v2.26.0"
-  dependencies: []
-  variables:
-    KUBE_CONTEXT: "platform-services/platform-services-agent:prod-platform-services"
-  allow_failure: false
-  script:
-    - auto-deploy check_kube_domain
-    - auto-deploy download_chart
-    - auto-deploy ensure_namespace
-    - auto-deploy create_secret
-    - auto-deploy deploy
-  rules:
-    - if: '$CI_KUBERNETES_ACTIVE == null || $CI_KUBERNETES_ACTIVE == ""'
-      when: never
-    - if: '$CI_COMMIT_BRANCH != $CI_DEFAULT_BRANCH'
-      when: never
-    - if: $CI_COMMIT_TAG
-      when: never
-    - if: $DEPLOY_TYPE == "kubernetes" || $DEPLOY_TYPE == "both"
-      when: manual
-
-
 dev:
   extends: .auto-deploy
   stage: dev
+  tags:
+    - cluster
   variables:
     KUBE_INGRESS_BASE_DOMAIN: nonprod.tower.cdrentertainment.com
     KUBE_NAMESPACE: player-service-v2-23-dev
@@ -56,6 +35,8 @@ dev:
 stage-a:
   extends: .auto-deploy
   stage: staging
+  tags:
+    - cluster
   variables:
     KUBE_INGRESS_BASE_DOMAIN: nonprod.tower.cdrentertainment.com
     KUBE_NAMESPACE: player-service-v2-23-stage-a
@@ -66,6 +47,8 @@ stage-a:
 stage-b:
   extends: .auto-deploy
   stage: staging
+  tags:
+    - cluster
   variables:
     KUBE_INGRESS_BASE_DOMAIN: nonprod.tower.cdrentertainment.com
     KUBE_NAMESPACE: player-service-v2-23-stage-b
@@ -76,6 +59,8 @@ stage-b:
 stage-c:
   extends: .auto-deploy
   stage: staging
+  tags:
+    - cluster
   variables:
     KUBE_INGRESS_BASE_DOMAIN: nonprod.tower.cdrentertainment.com
     KUBE_NAMESPACE: player-service-v2-23-stage-c
@@ -108,3 +93,16 @@ production-b:
   environment:
     name: production/platform-b
     url: https://platform-b.prod.tower.rumblegames.com/
+
+production-c:
+  extends: .auto-deploy
+  stage: production
+  variables:
+    KUBE_CONTEXT: "platform-services/platform-services-agent:prod-c-platform-services"
+    KUBE_INGRESS_BASE_DOMAIN: platform-c.prod.tower.rumblegames.com
+    KUBE_NAMESPACE: "player-service-v2"
+  tags:
+    - production-c
+  environment:
+    name: production/platform-c
+    url: https://platform-c.prod.tower.rumblegames.com/
