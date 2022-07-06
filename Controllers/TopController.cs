@@ -194,6 +194,12 @@ public class TopController : PlatformController
 		string clientVersion = Optional<string>("clientVersion");
 		string deviceType = Optional<string>("deviceType");
 		GenericData sso = Optional<GenericData>("sso");
+		
+		if (sso != null)
+			Log.Dev(Owner.Will, "SSO data found", data: new
+			{
+				ssoData = sso
+			});
 
 		Player player = _playerService.FindOne(player => player.InstallId == installId);
 
