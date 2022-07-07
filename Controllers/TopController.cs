@@ -232,12 +232,24 @@ public class TopController : PlatformController
 			// blocks login; this is because the profile was never correctly re-assigned to the parent account.
 			// My best guess for how this can occur is that the google token itself is inconsistently valid, and the profile
 			// was assigned to the wrong account and then transferred later.
-			if (other.AccountIdOverride != other.Id)
+			if (!string.IsNullOrWhiteSpace(other.AccountIdOverride) && other.AccountIdOverride != other.Id)
 			{
 				Log.Warn(Owner.Will, "An invalid profile was found.  Attempting to resolve automatically.");
-				other = _playerService.Find(other.AccountIdOverride);
-				conflictProfiles.First().AccountId = other.Id;
-				_profileService.Update(conflictProfiles.First());
+
+				try
+				{
+					other = _playerService.Find(other.AccountIdOverride);
+					conflictProfiles.First().AccountId = other.Id;
+					_profileService.Update(conflictProfiles.First());
+				}
+				catch (Exception e)
+				{
+					Log.Error(Owner.Will, "Unable to resolve invalid profile automatically.", data: new
+					{
+						otherAccount = other,
+						conflicts = conflictProfiles
+					});
+				}
 			}
 			
 			other.GenerateRecoveryToken();
