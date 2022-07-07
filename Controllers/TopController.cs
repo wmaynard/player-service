@@ -195,7 +195,7 @@ public class TopController : PlatformController
 		string deviceType = Optional<string>("deviceType");
 		GenericData sso = Optional<GenericData>("sso");
 		
-		if (sso != null)
+		if (!string.IsNullOrWhiteSpace(sso?.Optional<GenericData>("googlePlay")?.Optional<string>("idToken")))
 			Log.Dev(Owner.Will, "SSO data found", data: new
 			{
 				ssoData = sso
@@ -225,6 +225,21 @@ public class TopController : PlatformController
 		if (conflictProfiles.Any())
 		{
 			Player other = _playerService.Find(conflictProfiles.First().AccountId);
+
+			// Will on 2022.07.06:
+			// This conditional block is a fix for recent GPG issues.  Somehow, profiles were being assigned to
+			// child accounts.  When a child account was assigned a profile, the accountConflict status permanently
+			// blocks login; this is because the profile was never correctly re-assigned to the parent account.
+			// My best guess for how this can occur is that the google token itself is inconsistently valid, and the profile
+			// was assigned to the wrong account and then transferred later.
+			if (other.AccountIdOverride != other.Id)
+			{
+				Log.Warn(Owner.Will, "An invalid profile was found.  Attempting to resolve automatically.");
+				other = _playerService.Find(other.AccountIdOverride);
+				conflictProfiles.First().AccountId = other.Id;
+				_profileService.Update(conflictProfiles.First());
+			}
+			
 			other.GenerateRecoveryToken();
 			_playerService.Update(other);
 
