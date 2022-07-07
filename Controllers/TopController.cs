@@ -195,8 +195,9 @@ public class TopController : PlatformController
 		string deviceType = Optional<string>("deviceType");
 		GenericData sso = Optional<GenericData>("sso");
 		
-		if (!string.IsNullOrWhiteSpace(sso?.Optional<GenericData>("googlePlay")?.Optional<string>("idToken")))
-			Log.Dev(Owner.Will, "SSO data found", data: new
+		// TODO: Remove by 7/28 if this is not consistently used for GPG diagnosis
+		if (!PlatformEnvironment.IsProd && !string.IsNullOrWhiteSpace(sso?.Optional<GenericData>("googlePlay")?.Optional<string>("idToken")))
+			Log.Info(Owner.Will, "SSO data found", data: new
 			{
 				ssoData = sso
 			});
