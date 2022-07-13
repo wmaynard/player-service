@@ -1,16 +1,16 @@
 using System.Collections.Generic;
 using MongoDB.Driver;
 using PlayerService.Models;
-using PlayerService.Services.ComponentServices;
 using Rumble.Platform.Common.Services;
-using Rumble.Platform.Common.Web;
 
 namespace PlayerService.Services;
 
 public class PlayerAccountService : PlatformMongoService<Player>
 {
-	private readonly AccountService _accountService;
-	public PlayerAccountService(AccountService accountService) : base("player") => _accountService = accountService;
+	public PlayerAccountService() : base("player")
+	{
+	}
+
 
 	public Player Find(string accountId) => FindOne(player => player.Id == accountId);
 

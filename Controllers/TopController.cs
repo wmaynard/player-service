@@ -12,6 +12,7 @@ using Rumble.Platform.Common.Web;
 using PlayerService.Services;
 using PlayerService.Services.ComponentServices;
 using RCL.Logging;
+using RCL.Services;
 using Rumble.Platform.Common.Attributes;
 using Rumble.Platform.Common.Exceptions;
 using Rumble.Platform.Common.Utilities;
@@ -100,14 +101,19 @@ public class TopController : PlatformController
 		IClientSessionHandle session = _itemService.StartTransaction();
 		Component[] components = Require<Component[]>("components");
 		Item[] items = Optional<Item[]>("items") ?? Array.Empty<Item>();
+
 		foreach (Item item in items)
+		{
 			item.AccountId = Token.AccountId;
+		}
 
 		long totalMS = Timestamp.UnixTimeMS;
 		long componentMS = Timestamp.UnixTimeMS;
 
 		foreach (Component component in components)
-			_auditService.Record(Token.AccountId, component.Name, updateVersion: component.Version);
+		{
+			Task.Run(() => _auditService.Record(Token.AccountId, component.Name, updateVersion: component.Version));
+		}
 
 		List<Task<bool>> tasks = components.Select(data => ComponentServices[data.Name]
 			.UpdateAsync(
@@ -126,9 +132,15 @@ public class TopController : PlatformController
 		Item[] toDelete = items.Where(item => item.MarkedForDeletion).ToArray();
 
 		if (toSave.Any())
+		{
 			tasks.Add(_itemService.BulkUpdateAsync(toSave, session));
+		}
+
 		if (toDelete.Any())
+		{
 			tasks.Add(_itemService.BulkDeleteAsync(toDelete, session));
+		}
+
 		itemMS = Timestamp.UnixTimeMS - itemMS;
 
 		try
@@ -245,11 +257,14 @@ public class TopController : PlatformController
 				}
 				catch (Exception e)
 				{
-					Log.Error(Owner.Will, "Unable to resolve invalid profile automatically.", data: new
-					{
-						otherAccount = other,
-						conflicts = conflictProfiles
-					});
+					Log.Error(Owner.Will, "Unable to resolve invalid profile automatically.", 
+						exception: e,
+						data: new
+							{
+								otherAccount = other,
+								conflicts = conflictProfiles
+							}
+					);
 				}
 			}
 			

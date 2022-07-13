@@ -56,9 +56,11 @@ public abstract class ComponentService : PlatformMongoService<Component>
 			
 			UpdateDefinitionBuilder<Component> builder = Builders<Component>.Update;
 			UpdateDefinition<Component> update = builder.Set(component => component.Data, data);
-			if (await VersionNumberProvided(accountId, version))
+			if (VersionNumberProvided(accountId, version))
+			{
 				update = builder.Combine(update, builder.Set(component => component.Version, version));
-			
+			}
+
 			await _collection
 				.FindOneAndUpdateAsync<Component>(
 					session: session,
@@ -85,7 +87,7 @@ public abstract class ComponentService : PlatformMongoService<Component>
 		}
 	}
 
-	public async Task<bool> VersionNumberProvided(string accountId, int? version)
+	public bool VersionNumberProvided(string accountId, int? version)
 	{
 		// Getting the current version for any update might be useful, but until it's requested,
 		// we'll return early to avoid one Mongo hit.
