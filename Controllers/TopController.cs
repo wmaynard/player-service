@@ -622,5 +622,6 @@ public class TopController : PlatformController
 		{
 			LinkedAccountsAffected = count
 		});
+		return player.Screenname;
 	}
 }
