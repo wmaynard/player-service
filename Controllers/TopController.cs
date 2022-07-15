@@ -103,17 +103,13 @@ public class TopController : PlatformController
 		Item[] items = Optional<Item[]>("items") ?? Array.Empty<Item>();
 
 		foreach (Item item in items)
-		{
 			item.AccountId = Token.AccountId;
-		}
 
 		long totalMS = Timestamp.UnixTimeMS;
 		long componentMS = Timestamp.UnixTimeMS;
 
 		foreach (Component component in components)
-		{
 			Task.Run(() => _auditService.Record(Token.AccountId, component.Name, updateVersion: component.Version));
-		}
 
 		List<Task<bool>> tasks = components.Select(data => ComponentServices[data.Name]
 			.UpdateAsync(
@@ -132,14 +128,10 @@ public class TopController : PlatformController
 		Item[] toDelete = items.Where(item => item.MarkedForDeletion).ToArray();
 
 		if (toSave.Any())
-		{
 			tasks.Add(_itemService.BulkUpdateAsync(toSave, session));
-		}
 
 		if (toDelete.Any())
-		{
 			tasks.Add(_itemService.BulkDeleteAsync(toDelete, session));
-		}
 
 		itemMS = Timestamp.UnixTimeMS - itemMS;
 
@@ -232,6 +224,7 @@ public class TopController : PlatformController
 		}
 
 		int discriminator = _discriminatorService.Lookup(player);
+		ValidatePlayerScreenname(ref player);	// TD-12118: Prevent InvalidUserException
 
 		string token = _tokenGeneratorService.Generate(player.AccountId, player.Screenname, discriminator, geoData: GeoIPData, email: ssoData.FirstOrDefault(sso => sso.Email != null)?.Email);
 
@@ -599,6 +592,35 @@ public class TopController : PlatformController
 		return Ok(new
 		{
 			DeletedProfiles = profiles.Length
+		});
+	}
+	
+	// Will on 2022.07.15 | In rare situations an account can come through that does not have a screenname.
+	// The cause of these edge cases is currently unknown.  However, we can still add an insurance policy here.
+	/// <summary>
+	/// If a Player object does not have a screenname, this method looks up the screenname from their account component.
+	/// If one is not found, a new screenname is generated.
+	/// </summary>
+	/// <param name="player">The player object to validate.</param>
+	/// <returns>The found or generated screenname.</returns>
+	private string ValidatePlayerScreenname(ref Player player)
+	{
+		if (!string.IsNullOrWhiteSpace(player.Screenname))
+			return player.Screenname;
+		
+		Log.Warn(Owner.Default, "Player screenname is invalid.  Looking up account component's data to set it.");
+		player.Screenname = _accountService.Lookup(player.AccountId)?.Data?.Optional<string>("accountName");
+		
+		if (string.IsNullOrWhiteSpace(player.Screenname))
+		{
+			player.Screenname = _nameGeneratorService.Next;
+			Log.Warn(Owner.Default, "Player component screenname was also null; player has been assigned a new name.");
+		}
+		
+		int count = _playerService.SyncScreenname(player.Screenname, player.AccountId);
+		Log.Info(Owner.Default, "Screenname has been updated.", data: new
+		{
+			LinkedAccountsAffected = count
 		});
 	}
 }

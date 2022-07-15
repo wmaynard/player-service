@@ -76,7 +76,9 @@ public class ProfileService : PlatformMongoService<Profile>
 		{
 			Task<GoogleJsonWebSignature.Payload> task = GoogleJsonWebSignature.ValidateAsync(token);
 			task.Wait();
+			string accountId = (await GoogleJsonWebSignature.ValidateAsync(token)).Subject;
 			SsoData payload = task.Result;
+			
 			payload.Source = GOOGLE_PLAY;
 			list.Add(payload);
 			return Find(profile => profile.ProfileId == payload.AccountId).ToArray();

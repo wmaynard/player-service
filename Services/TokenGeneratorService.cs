@@ -47,14 +47,7 @@ public class TokenGeneratorService : PlatformService
 			.Post(out GenericData response, out int code);
 		try
 		{
-			if (response == null)
-			{
-				throw new TokenGenerationException("Response was null.");
-			}
-			else
-			{
-				return response.Require<GenericData>("authorization").Require<string>("token");
-			}
+			return response.Require<GenericData>("authorization").Require<string>("token");
 		}
 		catch (KeyNotFoundException)
 		{

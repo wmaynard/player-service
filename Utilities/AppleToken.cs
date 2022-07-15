@@ -38,7 +38,7 @@ public class AppleToken
 	// public void Decode()
 	// {
 	// 	List<JsonWebKey> ks = new List<JsonWebKey>();
-	// 	foreach (GenericData key in Keys.Values)
+	// 	foreach (GenericData key in Keys.AllValues)
 	// 	{
 	// 		ks.Add(new JsonWebKey(key.JSON));
 	// 	}

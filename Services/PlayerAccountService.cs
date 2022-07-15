@@ -7,10 +7,7 @@ namespace PlayerService.Services;
 
 public class PlayerAccountService : PlatformMongoService<Player>
 {
-	public PlayerAccountService() : base("player")
-	{
-	}
-
+	public PlayerAccountService() : base("player") { }
 
 	public Player Find(string accountId) => FindOne(player => player.Id == accountId);
 
