@@ -14,6 +14,7 @@ using PlayerService.Services.ComponentServices;
 using RCL.Logging;
 using RCL.Services;
 using Rumble.Platform.Common.Attributes;
+using Rumble.Platform.Common.Enums;
 using Rumble.Platform.Common.Exceptions;
 using Rumble.Platform.Common.Utilities;
 using Rumble.Platform.Common.Services;
@@ -197,8 +198,9 @@ public class TopController : PlatformController
 		string installId = Require<string>("installId");
 		string clientVersion = Optional<string>("clientVersion");
 		string deviceType = Optional<string>("deviceType");
+
 		GenericData sso = Optional<GenericData>("sso");
-		
+
 		// TODO: Remove by 7/28 if this is not consistently used for GPG diagnosis
 		if (!PlatformEnvironment.IsProd && !string.IsNullOrWhiteSpace(sso?.Optional<GenericData>("googlePlay")?.Optional<string>("idToken")))
 			Log.Info(Owner.Will, "SSO data found", data: new
@@ -218,8 +220,19 @@ public class TopController : PlatformController
 		// SSO data was provided, but there's no profile match.  We should create a profile for this SSO on this account.
 		foreach (SsoData data in ssoData)
 		{
-			if (profiles.Any(profile => profile.Type == data.Source))
+			Profile[] sameTypes = profiles.Where(profile => profile.Type == data.Source).ToArray();
+			if (sameTypes.Any())
+			{
+				// PLATF-6061: Update email addresses when elder accounts don't have one (or has changed).
+				Profile profile = sameTypes.FirstOrDefault(p => p.ProfileId == data.AccountId);
+				if (profile != null && profile.Email != data.Email)
+				{
+					profile.Email = data.Email;
+					_profileService.Update(profile);
+				}
 				continue;
+			}
+
 			_profileService.Create(new Profile(player.Id, data));
 		}
 
@@ -538,7 +551,7 @@ public class TopController : PlatformController
 
 		foreach (DiscriminatorGroup group in discriminators)
 			foreach (DiscriminatorMember member in group.Members.Where(member => accountIds.Contains(member.AccountId)))
-				output.Add(new GenericData()
+				output.Add(new GenericData
 				{
 					{ Player.FRIENDLY_KEY_ACCOUNT_ID, member.AccountId },
 					{ Player.FRIENDLY_KEY_SCREENNAME, member.ScreenName },
@@ -581,7 +594,7 @@ public class TopController : PlatformController
 	{
 		if (PlatformEnvironment.IsProd)
 		{
-			Log.Dev(Owner.Will, "The DELETE /gpg endpoint should not be called outside of Dev!");
+			Log.Error(Owner.Will, "The DELETE /gpg endpoint should not be called outside of Dev!");
 			throw new PlatformException("Not allowed on prod!");
 		}
 		

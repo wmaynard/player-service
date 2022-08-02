@@ -105,7 +105,7 @@ public class Profile : PlatformCollectionDocument
 	
 	[BsonElement(DB_KEY_EMAIL), BsonIgnoreIfNull]
 	[JsonInclude, JsonPropertyName(FRIENDLY_KEY_EMAIL)]
-	public string Email { get; private set; }
+	public string Email { get; internal set; }
 	
 	// [BsonElement(Player.DB_KEY_TRANSFER_TOKEN), BsonIgnoreIfNull]
 	// [JsonInclude, JsonPropertyName(Player.FRIENDLY_KEY_TRANSFER_TOKEN), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
