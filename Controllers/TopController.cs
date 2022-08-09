@@ -102,9 +102,9 @@ public class TopController : PlatformController
 		IClientSessionHandle session = _itemService.StartTransaction();
 		Component[] components = Require<Component[]>("components");
 		Item[] items = Optional<Item[]>("items") ?? Array.Empty<Item>();
-		Item[] itemUpdates = Optional<Item[]>(key: "updatedItems");
-		Item[] itemCreations = Optional<Item[]>(key: "newItems");
-		Item[] itemDeletions = Optional<Item[]>(key: "deletedItems");
+		Item[] itemUpdates = Optional<Item[]>(key: "updatedItems") ?? Array.Empty<Item>();
+		Item[] itemCreations = Optional<Item[]>(key: "newItems") ?? Array.Empty<Item>();
+		Item[] itemDeletions = Optional<Item[]>(key: "deletedItems") ?? Array.Empty<Item>();
 		
 		// TODO: Remove this when "items" is removed.
 		if ((itemCreations.Any() || itemUpdates.Any() || itemDeletions.Any()) && items.Any())
