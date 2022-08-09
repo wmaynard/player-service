@@ -105,6 +105,10 @@ public class TopController : PlatformController
 		Item[] itemUpdates = Optional<Item[]>(key: "updatedItems");
 		Item[] itemCreations = Optional<Item[]>(key: "newItems");
 		Item[] itemDeletions = Optional<Item[]>(key: "deletedItems");
+		
+		// TODO: Remove this when "items" is removed.
+		if ((itemCreations.Any() || itemUpdates.Any() || itemDeletions.Any()) && items.Any())
+			throw new PlatformException("If using the new item update capabilities, passing 'items' is not supported.  Remove the key from your request.");
 
 		foreach (Item item in items)
 			item.AccountId = Token.AccountId;
