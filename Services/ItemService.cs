@@ -96,10 +96,75 @@ public class ItemService : PlatformMongoService<Item>
 		}
 	}
 
-	public async Task<bool> BulkUpdateAsync(Item[] items, IClientSessionHandle session, int retries = 5)
+	public async Task<bool> InsertAsync(IEnumerable<Item> items, IClientSessionHandle session, int retries = 5)
 	{
+		if (!items.Any())
+			return true;
+		try
+		{
+			Thread.Sleep(new Random().Next(0, (int)Math.Pow(2, 6 - retries)));
+			await _collection.InsertManyAsync(
+				session: session,
+				documents: items.Where(item => item.Id == null)
+			);
+			return true;
+		}
+		catch (MongoCommandException e)
+		{
+			if (retries > 0)
+				return await BulkUpdateAsync(items, session, --retries);
+			Log.Error(Owner.Will, $"Could not insert items.", data: new
+			{
+				Detail = $"Session state invalid, even after retrying {retries} times with exponential backoff."
+			}, exception: e);
+			return false;
+		}
+	}
+	
+	public async Task<bool> BulkUpdateAsync2(IEnumerable<Item> items, IClientSessionHandle session, int retries = 5)
+	{
+		if (!items.Any())
+			return true;
 		List<WriteModel<Item>> bulk = new List<WriteModel<Item>>();
-		
+
+		bulk.AddRange(items.Select(item => new UpdateOneModel<Item>(
+			filter: Builders<Item>.Filter.Eq(dbItem => dbItem.Id, item.Id), 
+			update: Builders<Item>.Update
+				.Set(dbItem => dbItem.AccountId, item.AccountId)
+				.Set(dbItem => dbItem.ItemId, item.ItemId)
+				.Set(dbItem => dbItem.Type, item.Type)
+				.Set(dbItem => dbItem.Data, item.Data)
+		)
+		{
+			IsUpsert = true
+		}));
+
+		try
+		{
+			// See comment in ComponentService.UpdateAsync() for below sleep explanation.
+			Thread.Sleep(new Random().Next(0, (int)Math.Pow(2, 6 - retries)));
+			await _collection.BulkWriteAsync(session, bulk);
+			return true;
+		}
+		catch (MongoCommandException e)
+		{
+			if (retries > 0)
+				return await BulkUpdateAsync(items, session, --retries);
+			Log.Error(Owner.Will, $"Could not update items.", data: new
+			{
+				Detail = $"Session state invalid, even after retrying {retries} times with exponential backoff."
+			}, exception: e);
+			return false;
+		}
+	}
+	
+	
+	public async Task<bool> BulkUpdateAsync(IEnumerable<Item> items, IClientSessionHandle session, int retries = 5)
+	{
+		if (!items.Any())
+			return true;
+		List<WriteModel<Item>> bulk = new List<WriteModel<Item>>();
+
 		// var filter = Builders<Item>.Filter.And(
 		// 	Builders<Item>.Filter.Eq(item => item.AccountId, item.AccountId),
 		// 	Builders<Item>.Filter.Eq(item => item.ItemId, item.ItemId));
@@ -114,7 +179,7 @@ public class ItemService : PlatformMongoService<Item>
 				.Set(dbItem => dbItem.Data, item.Data)
 		)
 		{
-			IsUpsert = true
+			IsUpsert = true,
 		}));
 
 		try

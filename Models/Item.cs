@@ -41,4 +41,21 @@ public class Item : PlatformCollectionDocument
 	[BsonIgnore]
 	[JsonInclude, JsonPropertyName(FRIENDLY_KEY_DELETE), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
 	public bool MarkedForDeletion { get; set; }
+
+	[BsonIgnore]
+	[JsonIgnore]
+	internal IdMap Map => new IdMap
+	{
+		Id = Id,
+		ItemId = ItemId
+	};
+
+	internal class IdMap : PlatformDataModel
+	{
+		public string Id { get; set; }
+		
+		[BsonElement(DB_KEY_ITEM_ID)]
+		[JsonInclude, JsonPropertyName(FRIENDLY_KEY_ITEM_ID)]
+		public string ItemId { get; set; }
+	}
 }

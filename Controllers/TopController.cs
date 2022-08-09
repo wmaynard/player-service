@@ -102,8 +102,15 @@ public class TopController : PlatformController
 		IClientSessionHandle session = _itemService.StartTransaction();
 		Component[] components = Require<Component[]>("components");
 		Item[] items = Optional<Item[]>("items") ?? Array.Empty<Item>();
+		Item[] itemUpdates = Optional<Item[]>(key: "updatedItems");
+		Item[] itemCreations = Optional<Item[]>(key: "newItems");
+		Item[] itemDeletions = Optional<Item[]>(key: "deletedItems");
 
 		foreach (Item item in items)
+			item.AccountId = Token.AccountId;
+		foreach (Item item in itemUpdates)
+			item.AccountId = Token.AccountId;
+		foreach (Item item in itemCreations)
 			item.AccountId = Token.AccountId;
 
 		long totalMS = Timestamp.UnixTimeMS;
@@ -125,14 +132,22 @@ public class TopController : PlatformController
 
 		long itemMS = Timestamp.UnixTimeMS;
 
+#region Deprecated Item Code
 		Item[] toSave = items.Where(item => !item.MarkedForDeletion).ToArray();
 		Item[] toDelete = items.Where(item => item.MarkedForDeletion).ToArray();
 
 		if (toSave.Any())
 			tasks.Add(_itemService.BulkUpdateAsync(toSave, session));
-
 		if (toDelete.Any())
 			tasks.Add(_itemService.BulkDeleteAsync(toDelete, session));
+#endregion
+
+		if (itemCreations.Any())
+			tasks.Add(_itemService.InsertAsync(itemCreations, session));
+		if (itemUpdates.Any())
+			tasks.Add(_itemService.BulkUpdateAsync2(itemUpdates, session));
+		if (itemDeletions.Any())
+			tasks.Add(_itemService.BulkDeleteAsync(itemDeletions, session));
 
 		itemMS = Timestamp.UnixTimeMS - itemMS;
 
@@ -163,7 +178,8 @@ public class TopController : PlatformController
 			Token = Token, 
 			componentTaskCreationMS = componentMS, 
 			itemTaskCreationMS = itemMS, 
-			totalMS = totalMS
+			totalMS = totalMS,
+			itemMap = itemCreations.Select(item => item.Map)
 		});
 	}
 
@@ -198,6 +214,8 @@ public class TopController : PlatformController
 		string installId = Require<string>("installId");
 		string clientVersion = Optional<string>("clientVersion");
 		string deviceType = Optional<string>("deviceType");
+
+		bool foo = Optional<bool>("foobar");
 
 		GenericData sso = Optional<GenericData>("sso");
 

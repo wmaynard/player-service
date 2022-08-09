@@ -31,5 +31,6 @@ public class Startup : PlatformStartup
 
 	protected override PlatformOptions Configure(PlatformOptions options) => options
 		.SetProjectOwner(Owner.Will)
-		.SetPerformanceThresholds(warnMS: 5_000, errorMS: 30_000, criticalMS: 90_000);
+		.SetPerformanceThresholds(warnMS: 5_000, errorMS: 30_000, criticalMS: 90_000)
+		.SetLogglyThrottleThreshold(suppressAfter: 100, period: 1800);
 }
