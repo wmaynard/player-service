@@ -55,6 +55,7 @@ service:
   externalPort: 5001
   internalPort: 80
 ingress:
+  className: nginx
   enabled: true
   path: "/player/v2/"
   tls:
