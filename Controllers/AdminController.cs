@@ -100,6 +100,8 @@ public class AdminController : PlatformController
 			components[pair.Key] = pair.Value.Lookup(accountId);
 
 		Player player = _playerService.Find(accountId);
+		if (player == null)
+			throw new PlatformException("Player not found.", code: ErrorCode.InvalidRequestData);
 		player.Discriminator = _discriminatorService.Lookup(player);
 
 		output["player"] = player;

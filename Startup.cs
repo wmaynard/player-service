@@ -15,7 +15,7 @@ public class Startup : PlatformStartup
 	{
 		base.ConfigureServices(services);
 		
-		// TODO: This might be unnecessary for Google OAuth with the new solution; will need to test it.
+		// TODO: This is likely unnecessary; it's not needed for portal, which uses the same auth.
 		services.AddAuthentication(o =>
 		{
 			o.DefaultChallengeScheme = GoogleOpenIdConnectDefaults.AuthenticationScheme;
@@ -31,6 +31,8 @@ public class Startup : PlatformStartup
 
 	protected override PlatformOptions Configure(PlatformOptions options) => options
 		.SetProjectOwner(Owner.Will)
+		.SetRegistrationName(name: "Player Service")
 		.SetPerformanceThresholds(warnMS: 5_000, errorMS: 30_000, criticalMS: 90_000)
+		.DisableFeatures(CommonFeature.ConsoleObjectPrinting)
 		.SetLogglyThrottleThreshold(suppressAfter: 100, period: 1800);
 }
