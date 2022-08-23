@@ -104,8 +104,7 @@ public class ProfileService : PlatformMongoService<Profile>
 			: null;
 	}
 
-	private static Profile[] FromFacebook(GenericData sso)
-	{
-		return null;
-	}
+	private static Profile[] FromFacebook(GenericData sso) => null;
+
+	public long DeleteByEmail(string email) => _collection.DeleteMany(filter: profile => profile.Email == email).DeletedCount;
 }

@@ -233,4 +233,15 @@ public class AdminController : PlatformController
 		}
 		return Ok();
 	}
+	
+	[HttpDelete, Route("profiles/unlink")]
+	public ActionResult KillGPGProfile()
+	{
+		string email = Require<string>("email");
+		
+		return Ok(new
+		{
+			DeletedProfiles = _profileService.DeleteByEmail(email);
+		});
+	}
 }
