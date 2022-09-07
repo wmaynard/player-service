@@ -29,7 +29,7 @@ public class Startup : PlatformStartup
 		});
 	}
 
-	protected override PlatformOptions Configure(PlatformOptions options) => options
+	protected override PlatformOptions ConfigureOptions(PlatformOptions options) => options
 		.SetProjectOwner(Owner.Will)
 		.SetRegistrationName(name: "Player Service")
 		.SetPerformanceThresholds(warnMS: 5_000, errorMS: 30_000, criticalMS: 90_000)

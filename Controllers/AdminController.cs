@@ -244,4 +244,20 @@ public class AdminController : PlatformController
 			DeletedProfiles = _profileService.DeleteByEmail(email)
 		});
 	}
+
+	[HttpPatch, Route("player/currency")]
+	public ActionResult UpdateCurrency()
+	{
+		string accountId = Require<string>("accountId");
+		string name = Require<string>("name");
+		long amount = Require<long>("amount");
+		int version = Require<int>("version");
+
+		bool success = ((WalletService)ComponentServices[Component.WALLET]).SetCurrency(accountId, name, amount, version);
+
+		return Ok(new GenericData
+		{
+			{ "success", success }
+		});
+	}
 }

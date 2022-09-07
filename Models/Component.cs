@@ -53,7 +53,7 @@ public class Component : PlatformCollectionDocument
 	{
 		AccountId = accountId;
 		Name = name;
-		Version = 0;
+		Version = 1;
 		Data = data ?? new GenericData();
 	}
 }

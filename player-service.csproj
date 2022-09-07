@@ -23,4 +23,8 @@
 	  <PackageReference Include="platform-csharp-common" Version="1.1.57" />
 	</ItemGroup>
 
+	<ItemGroup>
+	  <ProjectReference Include="..\platform-csharp-common\platform-csharp-common.csproj" />
+	</ItemGroup>
+
 </Project>
