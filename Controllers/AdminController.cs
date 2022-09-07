@@ -245,7 +245,7 @@ public class AdminController : PlatformController
 		});
 	}
 
-	[HttpPatch, Route("player/currency")]
+	[HttpPatch, Route("currency")]
 	public ActionResult UpdateCurrency()
 	{
 		string accountId = Require<string>("accountId");
