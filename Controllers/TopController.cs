@@ -216,14 +216,47 @@ public class TopController : PlatformController
 		});
 	}
 
+	/// <summary>
+	/// Used for Titans Website logins.  Since the website does not have access to installId, this performs the same operations on SSO data.
+	/// If there's an account conflict, this will fail 100% of the time.  Account conflicts *should* be impossible without installId information,
+	/// however.
+	/// </summary>
+	/// <returns></returns>
+	/// <exception cref="PlatformException"></exception>
+	[HttpPost, Route("login"), NoAuth]
+	public ActionResult Login()
+	{
+		GenericData sso = Optional<GenericData>("sso");
+
+		List<Profile> profiles = _profileService.Find(sso, out List<SsoData> ssoData);
+		string[] accountIds = profiles.Select(profile => profile.AccountId).Distinct().ToArray();
+
+		if (!accountIds.Any())
+			throw new PlatformException("Account does not yet exist, or SSO is invalid.", code: ErrorCode.MongoRecordNotFound);
+		if (accountIds.Length > 1)
+			throw new PlatformException("Profile was found on multiple accounts!");
+
+		Player player = _playerService.Find(accountIds.First());
+
+		int discriminator = _discriminatorService.Lookup(player);
+		string email = profiles.FirstOrDefault(profile => profile.Email != null)?.Email;
+
+		string token = _tokenGeneratorService.Generate(player.AccountId, player.Screenname, discriminator, GeoIPData, email);
+
+		return Ok(new GenericData
+		{
+			{ "player", player },
+			{ "discriminator", discriminator },
+			{ "accessToken", token }
+		});
+	}
+
 	[HttpPost, Route("launch"), NoAuth, HealthMonitor(weight: 1)]
 	public ActionResult Launch()
 	{
 		string installId = Require<string>("installId");
 		string clientVersion = Optional<string>("clientVersion");
 		string deviceType = Optional<string>("deviceType");
-
-		bool foo = Optional<bool>("foobar");
 
 		GenericData sso = Optional<GenericData>("sso");
 

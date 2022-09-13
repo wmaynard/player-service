@@ -23,11 +23,18 @@ public class ProfileService : PlatformMongoService<Profile>
 
 	public List<Profile> Find(string installId, GenericData ssoData, out List<SsoData> ssos)
 	{
+		List<Profile> output = Find(ssoData, out ssos);
+		output.AddRange(base.Find(profile => profile.Type == Profile.TYPE_INSTALL && profile.AccountId == installId));
+		return output;
+	}
+	
+	public List<Profile> Find(GenericData ssoData, out List<SsoData> ssos)
+	{
 		ssoData ??= new GenericData();
 
 		List<SsoData> ssoList = new List<SsoData>();
 		List<Profile> output = new List<Profile>();
-		output.AddRange(base.Find(profile => profile.Type == Profile.TYPE_INSTALL && profile.AccountId == installId));
+		
 		foreach (string provider in ssoData.Keys)
 		{
 			GenericData data = ssoData.Require<GenericData>(provider);
