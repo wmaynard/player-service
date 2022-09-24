@@ -256,9 +256,6 @@ public class TopController : PlatformController
 	[HttpPost, Route("launch"), NoAuth, HealthMonitor(weight: 1)]
 	public ActionResult Launch()
 	{
-		_health.Fail(Reason.Unspecified);
-		_health.Fail(Reason.PvpNotSpawned);
-		_health.Fail(Reason.GameDataNotLoaded);
 		string installId = Require<string>("installId");
 		string clientVersion = Optional<string>("clientVersion");
 		string deviceType = Optional<string>("deviceType");
