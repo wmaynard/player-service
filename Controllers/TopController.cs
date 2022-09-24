@@ -124,8 +124,9 @@ public class TopController : PlatformController
 		long totalMS = Timestamp.UnixTimeMS;
 		long componentMS = Timestamp.UnixTimeMS;
 
+		string aid = Token.AccountId;
 		foreach (Component component in components)
-			Task.Run(() => _auditService.Record(Token.AccountId, component.Name, updateVersion: component.Version));
+			Task.Run(() => _auditService.Record(aid, component.Name, updateVersion: component.Version));
 
 		List<Task<bool>> tasks = components.Select(data => ComponentServices[data.Name]
 			.UpdateAsync(
@@ -200,11 +201,12 @@ public class TopController : PlatformController
 
 		List<Task<Component>> tasks = new List<Task<Component>>();
 
+		string aid = Token.AccountId;
 		foreach (string name in names)
 		{
 			if (!ComponentServices.ContainsKey(name))
 				continue;
-			tasks.Add(ComponentServices[name].LookupAsync(Token.AccountId));
+			tasks.Add(ComponentServices[name].LookupAsync(aid));
 		}
 
 		Task.WaitAll(tasks.ToArray());
@@ -254,6 +256,9 @@ public class TopController : PlatformController
 	[HttpPost, Route("launch"), NoAuth, HealthMonitor(weight: 1)]
 	public ActionResult Launch()
 	{
+		_health.Fail(Reason.Unspecified);
+		_health.Fail(Reason.PvpNotSpawned);
+		_health.Fail(Reason.GameDataNotLoaded);
 		string installId = Require<string>("installId");
 		string clientVersion = Optional<string>("clientVersion");
 		string deviceType = Optional<string>("deviceType");
