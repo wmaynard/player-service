@@ -27,31 +27,37 @@ public class TokenGeneratorService : PlatformService
 		string url = PlatformEnvironment.Url("/secured/token/generate");
 		string token = _dynamicConfigService.GameConfig.Require<string>("playerServiceToken");
 
+		GenericData payload = new GenericData
+		{
+			{ "aid", accountId },
+			{ "screenname", screenname },
+			{ "origin", "player-service-v2" },
+			{ "email", email },
+			{ "discriminator", discriminator },
+			{ "ipAddress", geoData?.IPAddress },
+			{ "countryCode", geoData?.CountryCode }
+		};
 		_apiService
 			.Request(url)
 			.AddAuthorization(token)
-			.SetPayload(new GenericData
+			.SetPayload(payload)
+			.OnFailure(response =>
 			{
-				{ "aid", accountId },
-				{ "screenname", screenname },
-				{ "origin", "player-service-v2" },
-				{ "email", email },
-				{ "discriminator", discriminator },
-				{ "ipAddress", geoData?.IPAddress },
-				{ "countryCode", geoData?.CountryCode }
+				Log.Error(Owner.Will, "Unable to generate token.", data: new
+				{
+					Payload = payload,
+					Response = response,
+					Url = response.RequestUrl
+				});
 			})
-			.OnFailure((sender, response) =>
-			{
-				Log.Error(Owner.Will, "Unable to generate token.");
-			})
-			.Post(out GenericData response, out int code);
+			.Post(out GenericData json, out int code);
 		try
 		{
-			return response.Require<GenericData>("authorization").Require<string>("token");
+			return json.Require<GenericData>("authorization").Require<string>("token");
 		}
 		catch (KeyNotFoundException)
 		{
-			throw new TokenGenerationException(response?.Optional<string>("message"));
+			throw new TokenGenerationException(json?.Optional<string>("message"));
 		}
 		catch (NullReferenceException)
 		{
@@ -62,7 +68,7 @@ public class TokenGeneratorService : PlatformService
 			Log.Error(Owner.Will, "An unexpected error occurred when generating a token.", data: new
 			{
 				Url = url,
-				Response = response
+				Response = json
 			}, exception: e);
 			throw;
 		}
