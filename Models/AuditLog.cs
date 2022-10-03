@@ -4,6 +4,7 @@ using System.Text.Json.Serialization;
 using MongoDB.Bson.Serialization.Attributes;
 using Rumble.Platform.Common.Attributes;
 using Rumble.Platform.Common.Models;
+using Rumble.Platform.Data;
 
 namespace PlayerService.Models;
 
@@ -69,7 +70,7 @@ public class AuditLog : PlatformCollectionDocument
 
 		public Entry()
 		{
-			Timestamp = UnixTime;
+			Timestamp = Rumble.Platform.Common.Utilities.Timestamp.UnixTime;
 			CurrentVersion = 0;
 			NextVersion = 0;
 		}

@@ -5,6 +5,7 @@ using Rumble.Platform.Common.Attributes;
 using Rumble.Platform.Common.Models;
 using Rumble.Platform.Common.Utilities;
 using Rumble.Platform.Common.Web;
+using Rumble.Platform.Data;
 
 namespace PlayerService.Models;
 public class Item : PlatformCollectionDocument
@@ -32,7 +33,7 @@ public class Item : PlatformCollectionDocument
 	
 	[BsonElement(DB_KEY_DATA)]
 	[JsonInclude, JsonPropertyName(FRIENDLY_KEY_DATA), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-	public GenericData Data { get; set; }
+	public RumbleJson Data { get; set; }
 	
 	[BsonElement(DB_KEY_TYPE)]
 	[JsonInclude, JsonPropertyName(FRIENDLY_KEY_TYPE), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]

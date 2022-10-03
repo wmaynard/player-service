@@ -1,9 +1,12 @@
 using System;
+using System.Text.Json;
 using System.Text.Json.Serialization;
 using MongoDB.Bson.Serialization.Attributes;
 using Rumble.Platform.Common.Models;
-using Rumble.Platform.Common.Utilities.Serializers;
+using Rumble.Platform.Common.Utilities;
 using Rumble.Platform.Common.Web;
+using Rumble.Platform.Data;
+using Rumble.Platform.Data.Serializers;
 
 namespace PlayerService.Models;
 
@@ -113,7 +116,7 @@ public class Player : PlatformCollectionDocument
 
 	public Player(string screenname)
 	{
-		CreatedTimestamp = UnixTime;
+		CreatedTimestamp = Timestamp.UnixTime;
 		Screenname = screenname;
 		// ModifiedTimestamp = CreatedTimestamp;
 		// UpdatedTimestamp = CreatedTimestamp;

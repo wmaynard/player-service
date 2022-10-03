@@ -4,6 +4,7 @@ using System.Text.Json.Serialization;
 using MongoDB.Bson.Serialization.Attributes;
 using Rumble.Platform.Common.Models;
 using Rumble.Platform.Common.Web;
+using Rumble.Platform.Data;
 
 namespace PlayerService.Models;
 public class DiscriminatorGroup : PlatformCollectionDocument

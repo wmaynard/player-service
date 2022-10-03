@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
+using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
@@ -22,6 +23,7 @@ using Rumble.Platform.Common.Extensions;
 using Rumble.Platform.Common.Models;
 using Rumble.Platform.Common.Utilities;
 using Rumble.Platform.Common.Services;
+using Rumble.Platform.Data;
 
 namespace PlayerService.Controllers;
 
@@ -211,7 +213,7 @@ public class TopController : PlatformController
 
 		Task.WaitAll(tasks.ToArray());
 
-		return Ok(value: new GenericData()
+		return Ok(value: new RumbleJson
 		{
 			{ "accountId", Token.AccountId },
 			{ "components", tasks.Select(task => task.Result) }
@@ -228,7 +230,7 @@ public class TopController : PlatformController
 	[HttpPost, Route("login"), NoAuth]
 	public ActionResult Login()
 	{
-		GenericData sso = Optional<GenericData>("sso");
+		RumbleJson sso = Optional<RumbleJson>("sso");
 
 		List<Profile> profiles = _profileService.Find(sso, out List<SsoData> ssoData);
 		string[] accountIds = profiles.Select(profile => profile.AccountId).Distinct().ToArray();
@@ -245,7 +247,7 @@ public class TopController : PlatformController
 
 		string token = _tokenGeneratorService.Generate(player.AccountId, player.Screenname, discriminator, GeoIPData, email);
 
-		return Ok(new GenericData
+		return Ok(new RumbleJson
 		{
 			{ "player", player },
 			{ "discriminator", discriminator },
@@ -260,10 +262,10 @@ public class TopController : PlatformController
 		string clientVersion = Optional<string>("clientVersion");
 		string deviceType = Optional<string>("deviceType");
 
-		GenericData sso = Optional<GenericData>("sso");
+		RumbleJson sso = Optional<RumbleJson>("sso");
 
 		// TODO: Remove by 7/28 if this is not consistently used for GPG diagnosis
-		if (!PlatformEnvironment.IsProd && !string.IsNullOrWhiteSpace(sso?.Optional<GenericData>("googlePlay")?.Optional<string>("idToken")))
+		if (!PlatformEnvironment.IsProd && !string.IsNullOrWhiteSpace(sso?.Optional<RumbleJson>("googlePlay")?.Optional<string>("idToken")))
 			Log.Info(Owner.Will, "SSO data found", data: new
 			{
 				ssoData = sso
@@ -327,10 +329,10 @@ public class TopController : PlatformController
 					Log.Error(Owner.Will, "Unable to resolve invalid profile automatically.", 
 						exception: e,
 						data: new
-							{
-								otherAccount = other,
-								conflicts = conflictProfiles
-							}
+						{
+							otherAccount = other,
+							conflicts = conflictProfiles
+						}
 					);
 				}
 			}
@@ -494,9 +496,9 @@ public class TopController : PlatformController
 	public ActionResult GetConfig()
 	{
 		string clientVersion = Optional<string>("clientVersion");
-		GenericData config = _dynamicConfigService.GameConfig;
+		RumbleJson config = _dynamicConfigService.GameConfig;
 		
-		GenericData clientVars = ExtractClientVars(
+		RumbleJson clientVars = ExtractClientVars(
 			clientVersion, 
 			prefixes: config.Require<string>("clientVarPrefixesCSharp").Split(','), 
 			configs: config
@@ -508,7 +510,7 @@ public class TopController : PlatformController
 			ClientVars = clientVars
 		});
 	}
-	private GenericData ExtractClientVars(string clientVersion, string[] prefixes, params GenericData[] configs)
+	private RumbleJson ExtractClientVars(string clientVersion, string[] prefixes, params RumbleJson[] configs)
 	{
 		List<string> clientVersions = new List<string>();
 		if (clientVersion != null)
@@ -518,14 +520,14 @@ public class TopController : PlatformController
 				clientVersions.Add(clientVersion = clientVersion[..clientVersion.LastIndexOf('.')]);
 		}
 
-		GenericData output = new GenericData();
+		RumbleJson output = new RumbleJson();
 		foreach (string prefix in prefixes)
 		{
 			string defaultVar = prefix + "default:";
 			string[] versionVars = clientVersions
 				.Select(it => prefix + it + ":")
 				.ToArray();
-			foreach (GenericData config in configs)
+			foreach (RumbleJson config in configs)
 				foreach (string key in config.Keys)
 				{
 					string defaultKey = key.Replace(defaultVar, "");
@@ -581,13 +583,13 @@ public class TopController : PlatformController
 	[HttpPost, Route("iostest"), NoAuth]
 	public void AppleTest()
 	{
-		// string token = Require<GenericData>("sso").Require<GenericData>("appleId").Require<string>("token");
+		// string token = Require<RumbleJson>("sso").Require<RumbleJson>("appleId").Require<string>("token");
 		// AppleToken at = new AppleToken(token);
 		// at.Decode();
 		//
 		//
-		// GenericData payload = new GenericData();
-		// GenericData response = PlatformRequest.Post("https://appleid.apple.com/auth/token", payload: payload).Send();
+		// RumbleJson payload = new RumbleJson();
+		// RumbleJson response = PlatformRequest.Post("https://appleid.apple.com/auth/token", payload: payload).Send();
 	}
 
 	[HttpGet, Route("lookup")]
@@ -608,11 +610,13 @@ public class TopController : PlatformController
 			accountLevels[component.AccountId] = component.Data.Optional<int?>("accountLevel") ?? -1;
 		}
 
-		List<GenericData> output = new List<GenericData>();
+		List<RumbleJson> output = new List<RumbleJson>();
+		
+		// TODO: Add borders to lookup data.
 
 		foreach (DiscriminatorGroup group in discriminators)
 			foreach (DiscriminatorMember member in group.Members.Where(member => accountIds.Contains(member.AccountId)))
-				output.Add(new GenericData
+				output.Add(new RumbleJson
 				{
 					{ Player.FRIENDLY_KEY_ACCOUNT_ID, member.AccountId },
 					{ Player.FRIENDLY_KEY_SCREENNAME, member.ScreenName },

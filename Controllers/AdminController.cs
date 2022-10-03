@@ -15,6 +15,7 @@ using Rumble.Platform.Common.Exceptions;
 using Rumble.Platform.Common.Utilities;
 using Rumble.Platform.Common.Web;
 using Rumble.Platform.Common.Services;
+using Rumble.Platform.Data;
 
 namespace PlayerService.Controllers;
 
@@ -93,9 +94,9 @@ public class AdminController : PlatformController
 	{
 		string accountId = Require<string>("accountId");
 
-		GenericData output = new GenericData();
+		RumbleJson output = new RumbleJson();
 
-		GenericData components = new GenericData();
+		RumbleJson components = new RumbleJson();
 		foreach (KeyValuePair<string, ComponentService> pair in ComponentServices)
 			components[pair.Key] = pair.Value.Lookup(accountId);
 
@@ -160,7 +161,7 @@ public class AdminController : PlatformController
 		).ToList();
 		players.AddRange(PlayerIdMatches);
 
-		GenericData discs = _discriminatorService.Search(players.Select(player => player.AccountId).ToArray());
+		RumbleJson discs = _discriminatorService.Search(players.Select(player => player.AccountId).ToArray());
 		foreach (Player player in players)
 			player.Discriminator = discs.Optional<int?>(player.AccountId);
 		
@@ -195,9 +196,9 @@ public class AdminController : PlatformController
 			});
 		
 		float? sum = null; // Assigning to a field in the middle of a LINQ query is a little janky, but this prevents sum re-evaluation / requiring another loop.
-		GenericData[] results = parents
+		RumbleJson[] results = parents
 			.OrderByDescending(player => player.WeighSearchTerm(term))
-			.Select(player => new GenericData()
+			.Select(player => new RumbleJson()
 		{
 			{ "player", player },
 			{ "score", player.SearchWeight },
@@ -255,7 +256,7 @@ public class AdminController : PlatformController
 
 		bool success = ((WalletService)ComponentServices[Component.WALLET]).SetCurrency(accountId, name, amount, version);
 
-		return Ok(new GenericData
+		return Ok(new RumbleJson
 		{
 			{ "success", success }
 		});

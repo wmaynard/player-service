@@ -6,6 +6,7 @@ using Rumble.Platform.Common.Enums;
 using Rumble.Platform.Common.Exceptions;
 using Rumble.Platform.Common.Models;
 using Rumble.Platform.Common.Utilities;
+using Rumble.Platform.Data;
 
 namespace PlayerService.Services.ComponentServices;
 
@@ -16,8 +17,8 @@ public class WalletService : ComponentService
 	public bool SetCurrency(string accountId, string name, long amount, int version)
 	{
 		Component wallet = Lookup(accountId);
-		List<GenericData> currencies = wallet.Data.Require<List<GenericData>>("currencies");
-		GenericData currency = currencies.FirstOrDefault(currency => currency.Require<string>("currencyId") == name);
+		List<RumbleJson> currencies = wallet.Data.Require<List<RumbleJson>>("currencies");
+		RumbleJson currency = currencies.FirstOrDefault(currency => currency.Require<string>("currencyId") == name);
 		if (currency != null)
 		{
 			currencies.Remove(currency);
@@ -26,7 +27,7 @@ public class WalletService : ComponentService
 		}
 		else
 		{
-			currencies.Add(new GenericData
+			currencies.Add(new RumbleJson
 			{
 				{ "currencyId", name },
 				{ "amount", amount }

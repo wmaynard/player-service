@@ -15,6 +15,7 @@ using Rumble.Platform.Common.Models;
 using Rumble.Platform.Common.Services;
 using Rumble.Platform.Common.Utilities;
 using Rumble.Platform.Common.Web;
+using Rumble.Platform.Data;
 
 namespace PlayerService.Controllers;
 
@@ -40,7 +41,7 @@ public class MongoTestController : PlatformController
 		_hulkService.DeleteAll();
 		
 		Log.Local(Owner.Will, "Fetching Preacher", emphasis: Log.LogType.INFO);
-		GenericData failure = null;
+		RumbleJson failure = null;
 		// Read Taylor's account in prod for a wealth of items
 		_apiService
 			.Request("https://platform-b.prod.tower.rumblegames.com/player/v2/admin/details")
@@ -48,10 +49,10 @@ public class MongoTestController : PlatformController
 			.AddParameter(key: "accountId", value: "61396d1daf4b0ccddac01f26")
 			.OnFailure((_, response) =>
 			{
-				failure = response.AsGenericData;
+				failure = response.AsRumbleJson;
 				Log.Local(Owner.Will, response.ErrorCode.ToString(), emphasis: Log.LogType.ERROR);
 			})
-			.Get(out GenericData response, out int code);
+			.Get(out RumbleJson response, out int code);
 
 		if (!code.Between(200, 299))
 			return Problem(failure);
@@ -75,8 +76,8 @@ public class MongoTestController : PlatformController
 		Item[] items = expando.DistinctBy(item => item.Id).ToArray();
 		Log.Local(Owner.Will, $"Multiplied: {expando.Count}, Items: {items.Length}");
 
-		List<GenericData> bulks = new List<GenericData>();
-		List<GenericData> hulks = new List<GenericData>();
+		List<RumbleJson> bulks = new List<RumbleJson>();
+		List<RumbleJson> hulks = new List<RumbleJson>();
 
 		for (int i = 0; i < tests; i++)
 		{
@@ -88,11 +89,11 @@ public class MongoTestController : PlatformController
 
 		return Ok(new
 		{
-			Data = new GenericData
+			Data = new RumbleJson
 			{
 				{ "itemCount", items.Length },
 				{ "testCount", tests },
-				{ "bulk", new GenericData
+				{ "bulk", new RumbleJson
 				{
 					{ "avgPreparedTime", bulks.Average(data => data.Require<long>("prepared")) },
 					{ "avgInsertedTime", bulks.Average(data => data.Require<long>("inserted")) },
@@ -103,7 +104,7 @@ public class MongoTestController : PlatformController
 					{ "medianDeletedTime", bulks.Median(data => data.Require<long>("deleted")) },
 					{ "medianTotalTime", bulks.Median(data => data.Require<long>("total")) }
 				}},
-				{ "component", new GenericData
+				{ "component", new RumbleJson
 				{
 					{ "avgPreparedTime", hulks.Average(data => data.Require<long>("prepared")) },
 					{ "avgInsertedTime", hulks.Average(data => data.Require<long>("inserted")) },
@@ -114,7 +115,7 @@ public class MongoTestController : PlatformController
 					{ "medianDeletedTime", hulks.Median(data => data.Require<long>("deleted")) },
 					{ "medianTotalTime", hulks.Median(data => data.Require<long>("total")) }
 				}},
-				{ "bulkVsComponent", new GenericData
+				{ "bulkVsComponent", new RumbleJson
 				{
 					{ "avgPreparedTime", bulks.Average(data => data.Require<long>("prepared")) - hulks.Average(data => data.Require<long>("prepared")) },
 					{ "avgInsertedTime", bulks.Average(data => data.Require<long>("inserted")) - hulks.Average(data => data.Require<long>("inserted")) },
@@ -158,7 +159,7 @@ public class BulkTestService : PlatformMongoService<Item>
 {
 	public BulkTestService() : base("item_bulk_test") {}
 	
-	public GenericData TestInsert(string accountId, Item[] items)
+	public RumbleJson TestInsert(string accountId, Item[] items)
 	{
 		long start = Timestamp.UnixTimeMS;
 		List<WriteModel<Item>> bulk = new List<WriteModel<Item>>();
@@ -184,7 +185,7 @@ public class BulkTestService : PlatformMongoService<Item>
 
 		long deleted = Timestamp.UnixTimeMS;
 		
-		return new GenericData
+		return new RumbleJson
 		{
 			{ "itemsProcessed", items.Length },
 			{ "prepared", prepared - start },
@@ -199,7 +200,7 @@ public class CollectionTestService : PlatformMongoService<MongoTestModelItemColl
 {
 	public CollectionTestService() : base("item_collection_test") {}
 
-	public GenericData TestInsert(string accountId, Item[] items)
+	public RumbleJson TestInsert(string accountId, Item[] items)
 	{
 		long start = Timestamp.UnixTimeMS;
 		
@@ -218,7 +219,7 @@ public class CollectionTestService : PlatformMongoService<MongoTestModelItemColl
 
 		long deleted = Timestamp.UnixTimeMS;
 		
-		return new GenericData
+		return new RumbleJson
 		{
 			{ "itemsProcessed", items.Length },
 			{ "prepared", prepared - start },

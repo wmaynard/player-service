@@ -1,11 +1,14 @@
 using System;
 using System.Collections.Generic;
 using PlayerService.Exceptions;
+using PlayerService.Models;
+using PlayerService.Services.ComponentServices;
 using RCL.Logging;
 using Rumble.Platform.Common.Utilities;
 using Rumble.Platform.Common.Web;
 using Rumble.Platform.Common.Models;
 using Rumble.Platform.Common.Services;
+using Rumble.Platform.Data;
 
 namespace PlayerService.Services;
 
@@ -13,10 +16,13 @@ public class TokenGeneratorService : PlatformService
 {
 	private readonly DynamicConfigService _dynamicConfigService;
 	private readonly ApiService _apiService;
-	public TokenGeneratorService(DynamicConfigService dynamicConfigService, ApiService apiService)
+	private readonly AccountService _accountService;
+	
+	public TokenGeneratorService(AccountService accountService, ApiService apiService, DynamicConfigService dynamicConfigService)
 	{
-		_dynamicConfigService = dynamicConfigService;
+		_accountService = accountService;
 		_apiService = apiService;
+		_dynamicConfigService = dynamicConfigService;
 	}
 
 	public string Generate(string accountId, string screenname, int discriminator, GeoIPData geoData = null, string email = null)
@@ -27,13 +33,15 @@ public class TokenGeneratorService : PlatformService
 		string url = PlatformEnvironment.Url("/secured/token/generate");
 		string token = _dynamicConfigService.GameConfig.Require<string>("playerServiceToken");
 
-		GenericData payload = new GenericData
+		Component account = _accountService.Lookup(accountId);
+
+		RumbleJson payload = new RumbleJson
 		{
-			{ "aid", accountId },
-			{ "screenname", screenname },
+			{ TokenInfo.FRIENDLY_KEY_ACCOUNT_ID, accountId },
+			{ TokenInfo.FRIENDLY_KEY_SCREENNAME, screenname },
 			{ "origin", "player-service-v2" },
-			{ "email", email },
-			{ "discriminator", discriminator },
+			{ TokenInfo.FRIENDLY_KEY_EMAIL_ADDRESS, email },
+			{ TokenInfo.FRIENDLY_KEY_DISCRIMINATOR, discriminator },
 			{ "ipAddress", geoData?.IPAddress },
 			{ "countryCode", geoData?.CountryCode }
 		};
@@ -50,10 +58,10 @@ public class TokenGeneratorService : PlatformService
 					Url = response.RequestUrl
 				});
 			})
-			.Post(out GenericData json, out int code);
+			.Post(out RumbleJson json, out int code);
 		try
 		{
-			return json.Require<GenericData>("authorization").Require<string>("token");
+			return json.Require<RumbleJson>("authorization").Require<string>("token");
 		}
 		catch (KeyNotFoundException)
 		{

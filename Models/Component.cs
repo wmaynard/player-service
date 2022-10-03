@@ -5,6 +5,7 @@ using MongoDB.Bson.Serialization.Attributes;
 using Rumble.Platform.Common.Models;
 using Rumble.Platform.Common.Utilities;
 using Rumble.Platform.Common.Web;
+using Rumble.Platform.Data;
 
 namespace PlayerService.Models;
 [BsonIgnoreExtraElements]
@@ -39,7 +40,7 @@ public class Component : PlatformCollectionDocument
 	
 	[BsonElement(DB_KEY_DATA)]
 	[JsonInclude, JsonPropertyName(FRIENDLY_KEY_DATA)]
-	public GenericData Data { get; set; }
+	public RumbleJson Data { get; set; }
 	
 	[BsonIgnore]
 	[JsonInclude, JsonPropertyName(FRIENDLY_KEY_NAME), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
@@ -49,12 +50,12 @@ public class Component : PlatformCollectionDocument
 	[JsonInclude, JsonPropertyName(FRIENDLY_KEY_VERSION), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
 	public int Version { get; set; }
 
-	public Component(string accountId, string name = null, GenericData data = null)
+	public Component(string accountId, string name = null, RumbleJson data = null)
 	{
 		AccountId = accountId;
 		Name = name;
 		Version = 1;
-		Data = data ?? new GenericData();
+		Data = data ?? new RumbleJson();
 	}
 }
 

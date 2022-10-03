@@ -10,6 +10,7 @@ using RCL.Logging;
 using Rumble.Platform.Common.Services;
 using Rumble.Platform.Common.Utilities;
 using Rumble.Platform.Common.Web;
+using Rumble.Platform.Data;
 
 namespace PlayerService.Services;
 
@@ -21,23 +22,23 @@ public class ProfileService : PlatformMongoService<Profile>
 		
 	public ProfileService() : base("profiles") { }
 
-	public List<Profile> Find(string installId, GenericData ssoData, out List<SsoData> ssos)
+	public List<Profile> Find(string installId, RumbleJson ssoData, out List<SsoData> ssos)
 	{
 		List<Profile> output = Find(ssoData, out ssos);
 		output.AddRange(base.Find(profile => profile.Type == Profile.TYPE_INSTALL && profile.AccountId == installId));
 		return output;
 	}
 	
-	public List<Profile> Find(GenericData ssoData, out List<SsoData> ssos)
+	public List<Profile> Find(RumbleJson ssoData, out List<SsoData> ssos)
 	{
-		ssoData ??= new GenericData();
+		ssoData ??= new RumbleJson();
 
 		List<SsoData> ssoList = new List<SsoData>();
 		List<Profile> output = new List<Profile>();
 		
 		foreach (string provider in ssoData.Keys)
 		{
-			GenericData data = ssoData.Require<GenericData>(provider);
+			RumbleJson data = ssoData.Require<RumbleJson>(provider);
 
 			output.AddRange(provider switch
 			{
@@ -57,12 +58,12 @@ public class ProfileService : PlatformMongoService<Profile>
 		.ToList()
 		.ToArray();
 
-	// public Profile[] FromSSO(GenericData ssoData)
+	// public Profile[] FromSSO(RumbleJson ssoData)
 	// {
 	// 	List<Profile> output = new List<Profile>();
 	// 	foreach (string provider in ssoData.Keys)
 	// 	{
-	// 		GenericData data = ssoData.Require<GenericData>(provider);
+	// 		RumbleJson data = ssoData.Require<RumbleJson>(provider);
 	// 		output.AddRange(provider switch
 	// 		{
 	// 			"gameCenter" => FromGameCenter(data),
@@ -74,7 +75,7 @@ public class ProfileService : PlatformMongoService<Profile>
 	// 	return output.ToArray();
 	// }
 
-	private Profile[] FromGooglePlay(GenericData sso, ref List<SsoData> list)
+	private Profile[] FromGooglePlay(RumbleJson sso, ref List<SsoData> list)
 	{
 		string token = sso.Require<string>("idToken");
 		if (string.IsNullOrWhiteSpace(token))
@@ -102,7 +103,7 @@ public class ProfileService : PlatformMongoService<Profile>
 
 	// TODO GameCenter is old and deprecated and should be removed.  This is only here for testing purposes
 	// and should not be deployed.
-	private Profile[] FromGameCenter(GenericData sso)
+	private Profile[] FromGameCenter(RumbleJson sso)
 	{
 		string profileId = sso.Optional<string>("playerId");
 
@@ -111,7 +112,7 @@ public class ProfileService : PlatformMongoService<Profile>
 			: null;
 	}
 
-	private static Profile[] FromFacebook(GenericData sso) => null;
+	private static Profile[] FromFacebook(RumbleJson sso) => null;
 
 	public long DeleteByEmail(string email) => _collection.DeleteMany(filter: profile => profile.Email == email).DeletedCount;
 }

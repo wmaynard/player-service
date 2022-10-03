@@ -9,6 +9,7 @@ using RCL.Logging;
 using Rumble.Platform.Common.Services;
 using Rumble.Platform.Common.Utilities;
 using Rumble.Platform.Common.Web;
+using Rumble.Platform.Data;
 
 namespace PlayerService.Services;
 
@@ -93,9 +94,9 @@ public class DiscriminatorService : PlatformMongoService<DiscriminatorGroup>
 		return existing.Number;
 	}
 
-	public GenericData Search(params string[] accountIds)
+	public RumbleJson Search(params string[] accountIds)
 	{
-		GenericData output = new GenericData();
+		RumbleJson output = new RumbleJson();
 
 		DiscriminatorGroup[] groups = _collection
 			.Find(Builders<DiscriminatorGroup>.Filter.In("members.aid", accountIds))

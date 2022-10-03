@@ -11,6 +11,7 @@ using Rumble.Platform.Common.Exceptions;
 using Rumble.Platform.Common.Services;
 using Rumble.Platform.Common.Utilities;
 using Rumble.Platform.Common.Web;
+using Rumble.Platform.Data;
 
 namespace PlayerService.Services.ComponentServices;
 
@@ -41,7 +42,7 @@ public abstract class ComponentService : PlatformMongoService<Component>
 		.Find(Builders<Component>.Filter.In(component => component.AccountId, accountIds))
 		.ToList();
 
-	public async Task<bool> UpdateAsync(string accountId, GenericData data, IClientSessionHandle session, int? version, int retries = 5)
+	public async Task<bool> UpdateAsync(string accountId, RumbleJson data, IClientSessionHandle session, int? version, int retries = 5)
 	{
 		try
 		{

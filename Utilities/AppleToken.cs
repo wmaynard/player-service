@@ -15,8 +15,8 @@ public class AppleToken
 {
 	// private const string PUBLIC_KEY_URL = "https://appleid.apple.com/auth/keys";
 	// private static readonly PlatformRequest GetPublicKey = PlatformRequest.Get(PUBLIC_KEY_URL);
-	// public GenericData Keys { get; init; }
-	// // private static readonly GenericData PublicKey = GetPublicKey.Send();
+	// public RumbleJson Keys { get; init; }
+	// // private static readonly RumbleJson PublicKey = GetPublicKey.Send();
 	// public string Token { get; set; }
 	//
 	// public AppleToken(string token)
@@ -24,8 +24,8 @@ public class AppleToken
 	// 	Token = token;
 	//
 	// 	PlatformRequest req = PlatformRequest.Get(PUBLIC_KEY_URL);
-	// 	GenericData response = req.Send(out HttpStatusCode code);
-	// 	GenericData[] data = response.Require<GenericData[]>("keys");
+	// 	RumbleJson response = req.Send(out HttpStatusCode code);
+	// 	RumbleJson[] data = response.Require<RumbleJson[]>("keys");
 	// 	
 	// 	if (code != HttpStatusCode.OK)
 	// 		Log.Error(Owner.Will, "Could not retrieve auth keys from Apple.", data: new
@@ -38,7 +38,7 @@ public class AppleToken
 	// public void Decode()
 	// {
 	// 	List<JsonWebKey> ks = new List<JsonWebKey>();
-	// 	foreach (GenericData key in Keys.AllValues)
+	// 	foreach (RumbleJson key in Keys.AllValues)
 	// 	{
 	// 		ks.Add(new JsonWebKey(key.JSON));
 	// 	}
