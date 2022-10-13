@@ -88,6 +88,7 @@ public abstract class ComponentService : PlatformMongoService<Component>
 
 	public bool VersionNumberProvided(string accountId, int? version)
 	{
+		// Log.Local(Owner.Will, $"{Name} | {version}");
 		// Getting the current version for any update might be useful, but until it's requested,
 		// we'll return early to avoid one Mongo hit.
 		if (version is null or 0)
@@ -99,10 +100,8 @@ public abstract class ComponentService : PlatformMongoService<Component>
 				.Find(filter: component => component.AccountId == accountId)
 				.Project(Builders<Component>.Projection.Expression(component => component.Version))
 				.First();
-
-			// await Record(accountId, new AuditLog(current, (int)version));
 		
-			if (current != version - 1)
+			if (current != version - 1 && !PlatformEnvironment.SwarmMode)
 				throw new ComponentVersionException(Name, currentVersion: current, updateVersion: (int)version);
 
 			return true;
