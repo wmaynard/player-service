@@ -168,9 +168,7 @@ public class TopController : PlatformController
 		}
 		catch (AggregateException e)
 		{
-			if (e.InnerException != null)
-				throw e.InnerException;
-			throw;
+			throw e.InnerException ?? e;
 		}
 
 		if (tasks.Select(task => task.Result).Any(success => !success))

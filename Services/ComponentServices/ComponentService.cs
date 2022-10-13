@@ -93,16 +93,24 @@ public abstract class ComponentService : PlatformMongoService<Component>
 		if (version is null or 0)
 			return false;
 
-		int current = _collection
-			.Find(filter: component => component.AccountId == accountId)
-			.Project(Builders<Component>.Projection.Expression(component => component.Version))
-			.First();
+		try
+		{
+			int current = _collection
+				.Find(filter: component => component.AccountId == accountId)
+				.Project(Builders<Component>.Projection.Expression(component => component.Version))
+				.First();
 
-		// await Record(accountId, new AuditLog(current, (int)version));
+			// await Record(accountId, new AuditLog(current, (int)version));
 		
-		if (current != version - 1)
-			throw new ComponentVersionException(Name, currentVersion: current, updateVersion: (int)version);
+			if (current != version - 1)
+				throw new ComponentVersionException(Name, currentVersion: current, updateVersion: (int)version);
 
-		return true;
+			return true;
+		}
+		catch (InvalidOperationException) // thrown when a component isn't found
+		{
+			return false;
+		}
+		
 	}
 }
