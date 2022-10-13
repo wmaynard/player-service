@@ -109,7 +109,17 @@ public abstract class ComponentService : PlatformMongoService<Component>
 		}
 		catch (InvalidOperationException) // thrown when a component isn't found
 		{
-			return false;
+			_collection.UpdateOne(
+				filter: component => component.AccountId == accountId,
+				update: Builders<Component>.Update
+					.Set(component => component.AccountId, accountId)
+					.Set(component => component.Version, 0),
+				options: new UpdateOptions
+				{
+					IsUpsert = true
+				}
+			);
+			return true;
 		}
 		
 	}
