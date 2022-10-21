@@ -25,7 +25,6 @@ public class AdminController : PlatformController
 #pragma warning disable
 	private readonly PlayerAccountService _playerService;
 	private readonly DiscriminatorService _discriminatorService;
-	private readonly DynamicConfigService _dynamicConfigService;
 	private readonly ProfileService _profileService;
 	private readonly NameGeneratorService _nameGeneratorService;
 	private readonly ItemService _itemService;

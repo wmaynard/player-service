@@ -32,6 +32,7 @@ public class Startup : PlatformStartup
 	protected override PlatformOptions ConfigureOptions(PlatformOptions options) => options
 		.SetProjectOwner(Owner.Will)
 		.SetRegistrationName(name: "Player Service")
+		.SetTokenAudience(Audience.PlayerService)
 		.SetPerformanceThresholds(warnMS: 5_000, errorMS: 30_000, criticalMS: 90_000)
 		.DisableFeatures(CommonFeature.ConsoleObjectPrinting)
 		.SetLogglyThrottleThreshold(suppressAfter: 100, period: 1800);

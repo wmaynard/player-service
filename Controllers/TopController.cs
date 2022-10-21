@@ -2,12 +2,9 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
-using System.Text.Json;
-using System.Text.Json.Serialization;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Configuration;
-using MongoDB.Bson.Serialization.Attributes;
 using MongoDB.Driver;
 using PlayerService.Exceptions;
 using PlayerService.Models;
@@ -15,29 +12,39 @@ using Rumble.Platform.Common.Web;
 using PlayerService.Services;
 using PlayerService.Services.ComponentServices;
 using RCL.Logging;
-using RCL.Services;
 using Rumble.Platform.Common.Attributes;
 using Rumble.Platform.Common.Enums;
 using Rumble.Platform.Common.Exceptions;
-using Rumble.Platform.Common.Extensions;
-using Rumble.Platform.Common.Models;
 using Rumble.Platform.Common.Utilities;
 using Rumble.Platform.Common.Services;
 using Rumble.Platform.Data;
+#pragma warning disable CS0618
 
 namespace PlayerService.Controllers;
 
 [ApiController, Route("player/v2"), RequireAuth, UseMongoTransaction]
+[SuppressMessage("ReSharper", "CoVariantArrayConversion")]
 public class TopController : PlatformController
 {
+	private const Audience TOKEN_AUDIENCE = 
+		Audience.ChatService
+		| Audience.DmzService
+		| Audience.LeaderboardService
+		| Audience.MailService
+		| Audience.MatchmakingService
+		| Audience.MultiplayerService
+		| Audience.NftService
+		| Audience.PlayerService
+		| Audience.PvpService
+		| Audience.ReceiptService;
+	
 #pragma warning disable
 	private readonly PlayerAccountService _playerService;
+	private readonly DC2Service _dc2Service;
 	private readonly DiscriminatorService _discriminatorService;
-	private readonly DynamicConfigService _dynamicConfigService;
 	private readonly ItemService _itemService;
 	private readonly ProfileService _profileService;
 	private readonly NameGeneratorService _nameGeneratorService;
-	private readonly TokenGeneratorService _tokenGeneratorService;
 	private readonly AuditService _auditService;
 	
 	// Component Services
@@ -54,8 +61,7 @@ public class TopController : PlatformController
 	private readonly WorldService _worldService;
 #pragma warning restore
 	private Dictionary<string, ComponentService> ComponentServices { get; init; }
-
-
+	
 	/// <summary>
 	/// Will on 2021.12.16
 	/// Normally, so many newlines for a constructor is discouraged.  However, for something that requires so many
@@ -86,6 +92,7 @@ public class TopController : PlatformController
 	/// for TH, but we should re-evaluate it for the next game if that's the case.
 	/// </summary>
 	[SuppressMessage("ReSharper", "SuggestBaseTypeForParameter")]
+	[SuppressMessage("ReSharper", "ExpressionIsAlwaysNull")]
 	public TopController(IConfiguration config)  : base(config) =>
 		ComponentServices = new Dictionary<string, ComponentService>
 		{
@@ -243,7 +250,7 @@ public class TopController : PlatformController
 		int discriminator = _discriminatorService.Lookup(player);
 		string email = profiles.FirstOrDefault(profile => profile.Email != null)?.Email;
 
-		string token = _tokenGeneratorService.Generate(player.AccountId, player.Screenname, discriminator, GeoIPData, email);
+		string token = _apiService.GenerateToken(player.AccountId, player.Screenname, email, discriminator, TOKEN_AUDIENCE);
 
 		return Ok(new RumbleJson
 		{
@@ -300,7 +307,12 @@ public class TopController : PlatformController
 		int discriminator = _discriminatorService.Lookup(player);
 		ValidatePlayerScreenname(ref player);	// TD-12118: Prevent InvalidUserException
 
-		string token = _tokenGeneratorService.Generate(player.AccountId, player.Screenname, discriminator, geoData: GeoIPData, email: ssoData.FirstOrDefault(sso => sso.Email != null)?.Email);
+		string token = _apiService.GenerateToken(player.AccountId, player.Screenname, ssoData.FirstOrDefault(data => data.Email != null)?.Email, discriminator, TOKEN_AUDIENCE);
+		//
+		// Task<string> task = 
+		// task.Wait();
+		// token = task.Result;
+		// GeoIPData _ddd = GeoIPData;
 
 		if (conflictProfiles.Any())
 		{
@@ -493,50 +505,19 @@ public class TopController : PlatformController
 	[HttpGet, Route("config"), NoAuth, HealthMonitor(weight: 5)]
 	public ActionResult GetConfig()
 	{
-		string clientVersion = Optional<string>("clientVersion");
-		RumbleJson config = _dynamicConfigService.GameConfig;
-		
-		RumbleJson clientVars = ExtractClientVars(
-			clientVersion, 
-			prefixes: config.Require<string>("clientVarPrefixesCSharp").Split(','), 
-			configs: config
-		);
+		string clientVersion = Optional<string>("clientVersion") ?? "default";
+
+		RumbleJson clientVar = _dc2Service.GetValuesFor(Audience.GameClient);
+
+		RumbleJson output = new RumbleJson();
+		foreach (KeyValuePair<string, object> pair in clientVar.Where(pair => pair.Key.StartsWith("default") || pair.Key.StartsWith(clientVersion)))
+			output[pair.Key.Replace("default:", "").Replace($"{clientVersion}:", "")] = pair.Value;
 
 		return Ok(new
 		{
 			ClientVersion = clientVersion,
-			ClientVars = clientVars
+			ClientVars = output
 		});
-	}
-	private RumbleJson ExtractClientVars(string clientVersion, string[] prefixes, params RumbleJson[] configs)
-	{
-		List<string> clientVersions = new List<string>();
-		if (clientVersion != null)
-		{
-			clientVersions.Add(clientVersion);
-			while (clientVersion.IndexOf('.') > 0)
-				clientVersions.Add(clientVersion = clientVersion[..clientVersion.LastIndexOf('.')]);
-		}
-
-		RumbleJson output = new RumbleJson();
-		foreach (string prefix in prefixes)
-		{
-			string defaultVar = prefix + "default:";
-			string[] versionVars = clientVersions
-				.Select(it => prefix + it + ":")
-				.ToArray();
-			foreach (RumbleJson config in configs)
-				foreach (string key in config.Keys)
-				{
-					string defaultKey = key.Replace(defaultVar, "");
-					if (key.StartsWith(defaultVar) && !output.ContainsKey(defaultKey))
-						output[defaultKey] = config.Require<string>(key);
-					foreach(string it in versionVars)
-						if (key.StartsWith(it))
-							output[key.Replace(it, "")] = config.Require<string>(key);
-				}
-		}
-		return output;
 	}
 
 	[HttpGet, Route("items"), RequireAccountId]
@@ -561,14 +542,8 @@ public class TopController : PlatformController
 		Player player = _playerService.Find(Token.AccountId);
 
 		int discriminator = _discriminatorService.Update(player);
-
-		string token = _tokenGeneratorService.Generate(
-			accountId: player.AccountId, 
-			screenname: player.Screenname, 
-			discriminator: discriminator,
-			geoData: GeoIPData, 
-			email: Token.Email
-		);
+		
+		string token = _apiService.GenerateToken(player.AccountId, player.Screenname, Token.Email, discriminator, TOKEN_AUDIENCE);
 
 		return Ok(new
 		{
@@ -578,18 +553,6 @@ public class TopController : PlatformController
 		});
 	}
 
-	[HttpPost, Route("iostest"), NoAuth]
-	public void AppleTest()
-	{
-		// string token = Require<RumbleJson>("sso").Require<RumbleJson>("appleId").Require<string>("token");
-		// AppleToken at = new AppleToken(token);
-		// at.Decode();
-		//
-		//
-		// RumbleJson payload = new RumbleJson();
-		// RumbleJson response = PlatformRequest.Post("https://appleid.apple.com/auth/token", payload: payload).Send();
-	}
-
 	[HttpGet, Route("lookup")]
 	public ActionResult PlayerLookup()
 	{
@@ -597,7 +560,6 @@ public class TopController : PlatformController
 		string[] accountIds = Require<string>("accountIds")?.Split(",");
 		
 		List<DiscriminatorGroup> discriminators = _discriminatorService.Find(accountIds);
-
 
 		Dictionary<string, string> avatars = new Dictionary<string, string>();
 		Dictionary<string, int> accountLevels = new Dictionary<string, int>();
