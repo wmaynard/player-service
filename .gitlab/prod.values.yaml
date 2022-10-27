@@ -64,8 +64,8 @@ ingress:
     secretName: "player-service-v2-prod"
     useDefaultSecret: false
   annotations:
-    nginx.ingress.kubernetes.io/client-body-buffer-size: 2m
-    nginx.ingress.kubernetes.io/proxy-body-size: 2m
+    nginx.ingress.kubernetes.io/client-body-buffer-size: 10m
+    nginx.ingress.kubernetes.io/proxy-body-size: 10m
   modSecurity:
     enabled: false
     secRuleEngine: "On"
