@@ -239,7 +239,7 @@ public class TopController : PlatformController
 		int discriminator = _discriminatorService.Lookup(player);
 		string email = profiles.FirstOrDefault(profile => profile.Email != null)?.Email;
 
-		string token = _apiService.GenerateToken(player.AccountId, player.Screenname, email, discriminator, TOKEN_AUDIENCE);
+		string token = _apiService.GenerateToken(player.AccountId, player.Screenname, email, discriminator, LaunchController.TOKEN_AUDIENCE);
 
 		return Ok(new RumbleJson
 		{
