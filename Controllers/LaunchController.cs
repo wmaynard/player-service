@@ -7,6 +7,7 @@ using PlayerService.Models;
 using PlayerService.Models.Sso;
 using PlayerService.Services;
 using PlayerService.Services.ComponentServices;
+using RCL.Logging;
 using Rumble.Platform.Common.Attributes;
 using Rumble.Platform.Common.Enums;
 using Rumble.Platform.Common.Exceptions;
@@ -20,6 +21,18 @@ namespace PlayerService.Controllers;
 [ApiController, Route("player/v2/temp"), UseMongoTransaction]
 public class LaunchController : PlatformController
 {
+    public const Audience TOKEN_AUDIENCE = 
+        Audience.ChatService
+        | Audience.DmzService
+        | Audience.LeaderboardService
+        | Audience.MailService
+        | Audience.MatchmakingService
+        | Audience.MultiplayerService
+        | Audience.NftService
+        | Audience.PlayerService
+        | Audience.PvpService
+        | Audience.ReceiptService;
+    
 #pragma warning disable
     private readonly PlayerAccountService _playerService;
     private readonly DC2Service _dc2Service;
@@ -141,6 +154,7 @@ public class LaunchController : PlatformController
         int discriminator = _discriminatorService.Lookup(player);        
         player.Screenname ??= _nameGeneratorService.Next;
         player.LastLogin = Timestamp.UnixTime;
+        ValidatePlayerScreenname(ref player);
         
         player.Token = GenerateToken(player);
 
@@ -199,7 +213,40 @@ public class LaunchController : PlatformController
                 player.Screenname,
                 email: null, 
                 discriminator, 
-                audiences: Audience.All
+                audiences: TOKEN_AUDIENCE
             );
+    }
+    
+    // Will on 2022.07.15 | In rare situations an account can come through that does not have a screenname.
+    // The cause of these edge cases is currently unknown.  However, we can still add an insurance policy here.
+    /// <summary>
+    /// If a Player object does not have a screenname, this method looks up the screenname from their account component.
+    /// If one is not found, a new screenname is generated.
+    /// </summary>
+    /// <param name="player">The player object to validate.</param>
+    /// <returns>The found or generated screenname.</returns>
+    private string ValidatePlayerScreenname(ref Player player)
+    {
+        if (!string.IsNullOrWhiteSpace(player.Screenname))
+            return player.Screenname;
+		
+        Log.Warn(Owner.Default, "Player screenname is invalid.  Looking up account component's data to set it.");
+        player.Screenname = _accountService
+            .Lookup(player.AccountId)
+            ?.Data
+            ?.Optional<string>("accountName");
+		
+        if (string.IsNullOrWhiteSpace(player.Screenname))
+        {
+            player.Screenname = _nameGeneratorService.Next;
+            Log.Warn(Owner.Default, "Player component screenname was also null; player has been assigned a new name.");
+        }
+		
+        int count = _playerService.SyncScreenname(player.Screenname, player.AccountId);
+        Log.Info(Owner.Default, "Screenname has been updated.", data: new
+        {
+            LinkedAccountsAffected = count
+        });
+        return player.Screenname;
     }
 }

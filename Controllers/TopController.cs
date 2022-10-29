@@ -26,18 +26,7 @@ namespace PlayerService.Controllers;
 [SuppressMessage("ReSharper", "CoVariantArrayConversion")]
 public class TopController : PlatformController
 {
-	private const Audience TOKEN_AUDIENCE = 
-		Audience.ChatService
-		| Audience.DmzService
-		| Audience.LeaderboardService
-		| Audience.MailService
-		| Audience.MatchmakingService
-		| Audience.MultiplayerService
-		| Audience.NftService
-		| Audience.PlayerService
-		| Audience.PvpService
-		| Audience.ReceiptService;
-	
+
 #pragma warning disable
 	private readonly PlayerAccountService _playerService;
 	private readonly DC2Service _dc2Service;
@@ -260,220 +249,6 @@ public class TopController : PlatformController
 		});
 	}
 
-#if RELEASE
-	[HttpPost, Route("launch"), NoAuth, HealthMonitor(weight: 1)]
-	public ActionResult Launch()
-	{
-		string installId = Require<string>("installId");
-		string clientVersion = Optional<string>("clientVersion");
-		string deviceType = Optional<string>("deviceType");
-
-		RumbleJson sso = Optional<RumbleJson>("sso");
-
-		// TODO: Remove by 7/28 if this is not consistently used for GPG diagnosis
-		if (!PlatformEnvironment.IsProd && !string.IsNullOrWhiteSpace(sso?.Optional<RumbleJson>("googlePlay")?.Optional<string>("idToken")))
-			Log.Info(Owner.Will, "SSO data found", data: new
-			{
-				ssoData = sso
-			});
-
-		Player player = _playerService.FindOne(player => player.InstallId == installId);
-		
-		string googleToken = sso?.Optional<string>("googleToken")
-			?? sso?.Optional<RumbleJson>("googlePlay")?.Optional<string>("idToken");
-		string username = sso?.Optional<RumbleJson>("rumble")?.Optional<string>("username");
-		string hash = sso?.Optional<RumbleJson>("rumble")?.Optional<string>("hash");
-		
-		Player device = _playerService.FromDevice(installId);
-		Player google = _playerService.FromGoogle(googleToken);
-		Player rumble = _playerService.FromPassword(username, hash);
-
-		player ??= CreateNewAccount(installId, deviceType, clientVersion); // TODO: are these vars used anywhere else?
-
-		List<Profile> profiles = _profileService.Find(player.AccountId, sso, out List<SsoData> ssoData);
-		Profile[] conflictProfiles = profiles
-			.Where(profile => profile.AccountId != player.AccountId)
-			.ToArray();
-		
-		// SSO data was provided, but there's no profile match.  We should create a profile for this SSO on this account.
-		foreach (SsoData data in ssoData)
-		{
-			Profile[] sameTypes = profiles.Where(profile => profile.Type == data.Source).ToArray();
-			if (sameTypes.Any())
-			{
-				// PLATF-6061: Update email addresses when elder accounts don't have one (or has changed).
-				Profile profile = sameTypes.FirstOrDefault(p => p.ProfileId == data.AccountId);
-				if (profile != null && profile.Email != data.Email)
-				{
-					profile.Email = data.Email;
-					_profileService.Update(profile);
-				}
-				continue;
-			}
-
-			_profileService.Create(new Profile(player.Id, data));
-		}
-
-		int discriminator = _discriminatorService.Lookup(player);
-		ValidatePlayerScreenname(ref player);	// TD-12118: Prevent InvalidUserException
-
-		string token = _apiService.GenerateToken(player.AccountId, player.Screenname, ssoData.FirstOrDefault(data => data.Email != null)?.Email, discriminator, TOKEN_AUDIENCE);
-		//
-		// Task<string> task = 
-		// task.Wait();
-		// token = task.Result;
-		// GeoIPData _ddd = GeoIPData;
-
-		if (conflictProfiles.Any())
-		{
-			Player other = _playerService.Find(conflictProfiles.First().AccountId);
-
-			// Will on 2022.07.06:
-			// This conditional block is a fix for recent GPG issues.  Somehow, profiles were being assigned to
-			// child accounts.  When a child account was assigned a profile, the accountConflict status permanently
-			// blocks login; this is because the profile was never correctly re-assigned to the parent account.
-			// My best guess for how this can occur is that the google token itself is inconsistently valid, and the profile
-			// was assigned to the wrong account and then transferred later.
-			if (!string.IsNullOrWhiteSpace(other.AccountIdOverride) && other.AccountIdOverride != other.Id)
-			{
-				Log.Warn(Owner.Will, "An invalid profile was found.  Attempting to resolve automatically.");
-
-				try
-				{
-					other = _playerService.Find(other.AccountIdOverride);
-					conflictProfiles.First().AccountId = other.Id;
-					_profileService.Update(conflictProfiles.First());
-				}
-				catch (Exception e)
-				{
-					Log.Error(Owner.Will, "Unable to resolve invalid profile automatically.", 
-						exception: e,
-						data: new
-						{
-							otherAccount = other,
-							conflicts = conflictProfiles
-						}
-					);
-				}
-			}
-			
-			other.GenerateRecoveryToken();
-			_playerService.Update(other);
-
-			object response = new
-			{
-				ErrorCode = "accountConflict",
-				AccessToken = token,
-				AccountId = player.AccountId,
-				ConflictingAccountId = conflictProfiles.First().AccountId,
-				ConflictingProfiles = conflictProfiles,
-				TransferToken = other.LinkCode,
-				SsoData = ssoData
-			};
-			
-			Log.Info(Owner.Default, "Account Conflict", data: response);
-			return Ok(response);
-		}
-		else if (player.InstallId != installId) // TODO: Not sure what this actually accomplishes.
-			return Ok(new { ErrorCode = "installConflict", ConflictingAccountId = player.AccountId });
-		else // No conflict
-		{
-			// TODO: #370 saveInstallIdProfile
-			foreach (Profile p in profiles)
-				_profileService.Update(p); // Are we even modifying anything?
-			// TODO: #378 updateAccountData
-		}
-
-		player.PrepareIdForOutput();
-
-		return Ok(new
-		{
-			RemoteAddr = GeoIPData.IPAddress ?? IpAddress, // fallbacks for local dev, since ::1 fails the lookups.
-			GeoipAddr = GeoIPData.IPAddress ?? IpAddress,
-			Country = GeoIPData.CountryCode,
-			ServerTime = Timestamp.UnixTime,
-			RequestId = HttpContext.Request.Headers["X-Request-ID"].ToString() ?? Guid.NewGuid().ToString(),
-			AccessToken = token,
-			Player = player,
-			Discriminator = discriminator,
-			SsoData = ssoData
-		});
-	}
-	
-#endif	
-
-	// TODO: Explore MongoTransaction attribute
-	// TODO: "link" instead of "transfer"?
-	[HttpPatch, Route("transfer"), RequireAccountId]
-	public ActionResult Transfer()
-	{
-		string transferToken = Require<string>("transferToken");
-		string[] profileIds = Optional<string[]>("profileIds") ?? new string[]{};
-		// TODO: Optional<bool>("cancel")
-
-		Player player = _playerService.Find(Token.AccountId);
-		Player other = _playerService.FindOne(p => p.LinkCode == transferToken);
-
-		if (other == null)
-			throw new AccountLinkException(
-				message: "No player found for transfer token.",
-				requester: Token.AccountId,
-				transferToken: transferToken
-			);
-
-		if (profileIds.Any()) // Move the specified profile IDs to the requesting player.  This reassigns SSO profiles to other accounts.
-		{
-			if (player.AccountIdOverride != null)
-				Log.Warn(Owner.Default, "AccountIDOverride is not null for a transfer; this should be impossible.", data: new
-				{
-					Player = Token,
-					OtherPlayer = other,
-					TransferToken = transferToken
-				});
-			player.AccountIdOverride = null;
-			
-			Profile[] sso = _profileService.Find(p => profileIds.Contains(p.ProfileId) && p.Type != Profile.TYPE_INSTALL);
-			foreach (Profile profile in sso)
-			{
-				profile.PreviousAccountIds.Add(other.AccountId);
-				profile.AccountId = player.Id;
-				_profileService.Update(profile);
-			}
-			// other.AccountMergedTo = player.Id;
-			
-			_playerService.Update(player);
-			_playerService.Update(other);
-			Log.Info(Owner.Default, "Profiles transferred.", data: new
-			{
-				Player = Token,
-				PreviousAccount = other,
-				Profiles = sso
-			});
-			
-			return Ok(new { TransferredProfiles = sso });
-		}
-		else
-		{
-			if (player.AccountId != other.AccountId)
-				player.AccountIdOverride = other.AccountId;
-			player.Screenname = other.Screenname;
-			other.LinkCode = null;
-			
-			_playerService.Update(player);
-			_playerService.Update(other);
-			_playerService.SyncScreenname(other.Screenname, other.AccountId); // TODO: Can combine these updates into one query
-
-			_profileService.Create(new Profile(player));
-
-			Token.ScreenName = other.Screenname;
-			Log.Info(Owner.Default, "AccountID linked via AccountIdOverride.", data: new
-			{
-				Player = Token,
-				Account = player
-			});
-			return Ok(new { Account = player });
-		}
-	}
 
 	[HttpGet, Route("config"), NoAuth, HealthMonitor(weight: 5)]
 	public ActionResult GetConfig()
@@ -516,7 +291,7 @@ public class TopController : PlatformController
 
 		int discriminator = _discriminatorService.Update(player);
 		
-		string token = _apiService.GenerateToken(player.AccountId, player.Screenname, Token.Email, discriminator, TOKEN_AUDIENCE);
+		string token = _apiService.GenerateToken(player.AccountId, player.Screenname, Token.Email, discriminator, LaunchController.TOKEN_AUDIENCE);
 
 		return Ok(new
 		{
@@ -606,33 +381,5 @@ public class TopController : PlatformController
 		});
 	}
 	
-	// Will on 2022.07.15 | In rare situations an account can come through that does not have a screenname.
-	// The cause of these edge cases is currently unknown.  However, we can still add an insurance policy here.
-	/// <summary>
-	/// If a Player object does not have a screenname, this method looks up the screenname from their account component.
-	/// If one is not found, a new screenname is generated.
-	/// </summary>
-	/// <param name="player">The player object to validate.</param>
-	/// <returns>The found or generated screenname.</returns>
-	private string ValidatePlayerScreenname(ref Player player)
-	{
-		if (!string.IsNullOrWhiteSpace(player.Screenname))
-			return player.Screenname;
-		
-		Log.Warn(Owner.Default, "Player screenname is invalid.  Looking up account component's data to set it.");
-		player.Screenname = _accountService.Lookup(player.AccountId)?.Data?.Optional<string>("accountName");
-		
-		if (string.IsNullOrWhiteSpace(player.Screenname))
-		{
-			player.Screenname = _nameGeneratorService.Next;
-			Log.Warn(Owner.Default, "Player component screenname was also null; player has been assigned a new name.");
-		}
-		
-		int count = _playerService.SyncScreenname(player.Screenname, player.AccountId);
-		Log.Info(Owner.Default, "Screenname has been updated.", data: new
-		{
-			LinkedAccountsAffected = count
-		});
-		return player.Screenname;
-	}
+
 }
