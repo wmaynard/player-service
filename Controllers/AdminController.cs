@@ -155,7 +155,7 @@ public class AdminController : PlatformController
 		List<Player> players = _playerService.Find(player =>
 			player.Id.ToLower().Contains(term)
 			|| player.Screenname.ToLower().Contains(term)
-			|| player.InstallId.ToLower().Contains(term)
+			|| player.Device.InstallId.ToLower().Contains(term)
 			|| player.AccountIdOverride.ToLower().Contains(term)
 		).ToList();
 		players.AddRange(PlayerIdMatches);

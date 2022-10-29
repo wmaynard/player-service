@@ -260,6 +260,7 @@ public class TopController : PlatformController
 		});
 	}
 
+#if RELEASE
 	[HttpPost, Route("launch"), NoAuth, HealthMonitor(weight: 1)]
 	public ActionResult Launch()
 	{
@@ -277,6 +278,15 @@ public class TopController : PlatformController
 			});
 
 		Player player = _playerService.FindOne(player => player.InstallId == installId);
+		
+		string googleToken = sso?.Optional<string>("googleToken")
+			?? sso?.Optional<RumbleJson>("googlePlay")?.Optional<string>("idToken");
+		string username = sso?.Optional<RumbleJson>("rumble")?.Optional<string>("username");
+		string hash = sso?.Optional<RumbleJson>("rumble")?.Optional<string>("hash");
+		
+		Player device = _playerService.FromDevice(installId);
+		Player google = _playerService.FromGoogle(googleToken);
+		Player rumble = _playerService.FromPassword(username, hash);
 
 		player ??= CreateNewAccount(installId, deviceType, clientVersion); // TODO: are these vars used anywhere else?
 
@@ -357,7 +367,7 @@ public class TopController : PlatformController
 				AccountId = player.AccountId,
 				ConflictingAccountId = conflictProfiles.First().AccountId,
 				ConflictingProfiles = conflictProfiles,
-				TransferToken = other.TransferToken,
+				TransferToken = other.LinkCode,
 				SsoData = ssoData
 			};
 			
@@ -389,45 +399,8 @@ public class TopController : PlatformController
 			SsoData = ssoData
 		});
 	}
-
-	private Player CreateNewAccount(string installId, string deviceType, string clientVersion)
-	{
-		string dataVersion = Optional<string>("dataVersion");
-
-		string username = null;
-		try
-		{
-			username = _nameGeneratorService.Next;
-		}
-		catch (Exception e)
-		{
-			Log.Error(Owner.Will, "Could not generate a new player name.", exception: e);
-		}
-		Log.Info(Owner.Default, "Creating new account", data: new
-		{
-			username = username
-		});
-		Player player = new Player(username)
-		{
-			ClientVersion = clientVersion,
-			DeviceType = deviceType,
-			InstallId = installId,
-			DataVersion = dataVersion,
-			PreviousDataVersion = null,
-			UpdatedTimestamp = 0
-		};
-		_playerService.Create(player);
-		Profile profile = new Profile(player);
-		_profileService.Create(profile);
-		if (!PlatformEnvironment.SwarmMode)
-			Log.Info(Owner.Default, "New account created.", data: new
-			{
-				InstallId = player.AccountId,
-				ProfileId = profile.Id,
-				AccountId = profile.AccountId
-			});
-		return player;
-	}
+	
+#endif	
 
 	// TODO: Explore MongoTransaction attribute
 	// TODO: "link" instead of "transfer"?
@@ -439,7 +412,7 @@ public class TopController : PlatformController
 		// TODO: Optional<bool>("cancel")
 
 		Player player = _playerService.Find(Token.AccountId);
-		Player other = _playerService.FindOne(p => p.TransferToken == transferToken);
+		Player other = _playerService.FindOne(p => p.LinkCode == transferToken);
 
 		if (other == null)
 			throw new AccountLinkException(
@@ -466,7 +439,7 @@ public class TopController : PlatformController
 				profile.AccountId = player.Id;
 				_profileService.Update(profile);
 			}
-			other.AccountMergedTo = player.Id;
+			// other.AccountMergedTo = player.Id;
 			
 			_playerService.Update(player);
 			_playerService.Update(other);
@@ -484,7 +457,7 @@ public class TopController : PlatformController
 			if (player.AccountId != other.AccountId)
 				player.AccountIdOverride = other.AccountId;
 			player.Screenname = other.Screenname;
-			other.TransferToken = null;
+			other.LinkCode = null;
 			
 			_playerService.Update(player);
 			_playerService.Update(other);
@@ -579,7 +552,7 @@ public class TopController : PlatformController
 				output.Add(new RumbleJson
 				{
 					{ Player.FRIENDLY_KEY_ACCOUNT_ID, member.AccountId },
-					{ Player.FRIENDLY_KEY_SCREENNAME, member.ScreenName },
+					// { Player.FRIENDLY_KEY_SCREENNAME, member.ScreenName },
 					{ Profile.FRIENDLY_KEY_DISCRIMINATOR, group.Number.ToString().PadLeft(4, '0') },
 					{ "accountAvatar", avatars.ContainsKey(member.AccountId) ? avatars[member.AccountId] : null },
 					{ "accountLevel", accountLevels.ContainsKey(member.AccountId) ? accountLevels[member.AccountId] : null }
@@ -596,7 +569,7 @@ public class TopController : PlatformController
 	{
 		// TODO: This should require admin, and optimize queries
 
-		Player[] locusts = _playerService.Find(filter: player => player.InstallId.StartsWith("locust-"));
+		Player[] locusts = _playerService.Find(filter: player => player.Device.InstallId.StartsWith("locust-"));
 
 		foreach (Player locust in locusts)
 		{

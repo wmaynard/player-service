@@ -2,6 +2,7 @@ using System;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using MongoDB.Bson.Serialization.Attributes;
+using PlayerService.Models.Sso;
 using Rumble.Platform.Common.Models;
 using Rumble.Platform.Common.Utilities;
 using Rumble.Platform.Common.Web;
@@ -16,95 +17,59 @@ namespace PlayerService.Models;
 public class Player : PlatformCollectionDocument
 {
 	internal const string DB_KEY_ACCOUNT_ID_OVERRIDE = "oaid";
-	internal const string DB_KEY_ACCOUNT_MERGED_TO = "ma";
-	internal const string DB_KEY_CLIENT_VERSION = "cv";
-	internal const string DB_KEY_CREATED = "cd";
-	internal const string DB_KEY_DATA_VERSION = "dv";
-	internal const string DB_KEY_DEVICE_TYPE = "dt";
-	internal const string DB_KEY_INSTALL_ID = "lsi";
-	internal const string DB_KEY_TRANSFER_TOKEN = "mt";
-	internal const string DB_KEY_MERGED_VERSION = "mv";
-	internal const string DB_KEY_MODIFIED = "lc";
-	internal const string DB_KEY_PREVIOUS_DATA_VERSION = "ldv";
-	internal const string DB_KEY_SCREENNAME = "sn";
-	internal const string DB_KEY_UPDATED = "lu";
-
 	internal const string FRIENDLY_KEY_ACCOUNT_ID = "accountId";
 	internal const string FRIENDLY_KEY_ACCOUNT_ID_OVERRIDE = "accountIdOverride";
-	internal const string FRIENDLY_KEY_ACCOUNT_MERGED_TO = "accountMergedTo";
-	internal const string FRIENDLY_KEY_CLIENT_VERSION = "clientVersion";
-	internal const string FRIENDLY_KEY_CREATED = "dateCreated";
-	internal const string FRIENDLY_KEY_DATA_VERSION = "dataVersion";
-	internal const string FRIENDLY_KEY_DEVICE_TYPE = "deviceType";
-	internal const string FRIENDLY_KEY_INSTALL_ID = "lastSavedInstallId";
-	internal const string FRIENDLY_KEY_TRANSFER_TOKEN = "mergeTransactionId";
-	internal const string FRIENDLY_KEY_MERGED_VERSION = "mergeVersion";
-	internal const string FRIENDLY_KEY_MODIFIED = "lastChanged";
-	internal const string FRIENDLY_KEY_PREVIOUS_DATA_VERSION = "lastDataVersion";
-	internal const string FRIENDLY_KEY_SCREENNAME = "screenname";
-	internal const string FRIENDLY_KEY_UPDATED = "lastUpdated";
-	
-	[BsonElement(DB_KEY_ACCOUNT_MERGED_TO), BsonIgnoreIfNull]
-	[JsonInclude, JsonPropertyName(FRIENDLY_KEY_ACCOUNT_MERGED_TO), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-	public string AccountMergedTo { get; set; }
-	
-	[BsonElement(DB_KEY_CLIENT_VERSION), BsonIgnoreIfNull]
-	[JsonInclude, JsonPropertyName(FRIENDLY_KEY_CLIENT_VERSION), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-	public string ClientVersion { get; set; }
-	
-	[BsonElement(DB_KEY_CREATED), BsonIgnoreIfDefault]
-	[JsonInclude, JsonPropertyName(FRIENDLY_KEY_CREATED), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
+
+	[BsonElement("created"), JsonPropertyName("created"), BsonIgnoreIfDefault, JsonInclude, JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
 	public long CreatedTimestamp { get; set; }
 	
-	[BsonElement(DB_KEY_DATA_VERSION), BsonSaveAsString, BsonIgnoreIfNull]
-	[JsonInclude, JsonPropertyName(FRIENDLY_KEY_DATA_VERSION), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-	public string DataVersion { get; set; }
+	[BsonElement("login"), JsonPropertyName("lastLogin"), JsonInclude]
+	public long LastLogin { get; set; }
 	
-	[BsonElement(DB_KEY_DEVICE_TYPE), BsonIgnoreIfNull]
-	[JsonInclude, JsonPropertyName(FRIENDLY_KEY_DEVICE_TYPE), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-	public string DeviceType { get; set; }
+	[BsonElement("linkCode"), JsonPropertyName("linkCode"), BsonIgnoreIfNull, JsonInclude, JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+	public string LinkCode { get; set; }
 	
-	[BsonElement(DB_KEY_INSTALL_ID), BsonIgnoreIfNull]
-	[JsonInclude, JsonPropertyName(FRIENDLY_KEY_INSTALL_ID), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-	public string InstallId { get; set; }
-	//
-	[BsonElement(DB_KEY_TRANSFER_TOKEN), BsonIgnoreIfNull]
-	[JsonInclude, JsonPropertyName(FRIENDLY_KEY_TRANSFER_TOKEN), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-	public string TransferToken { get; set; }
-	
-	[BsonElement(DB_KEY_MERGED_VERSION), BsonSaveAsString, BsonIgnoreIfNull]
-	[JsonInclude, JsonPropertyName(FRIENDLY_KEY_MERGED_VERSION), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-	public string MergeVersion { get; set; } // Merge Version?
-	
-	[BsonElement(DB_KEY_MODIFIED), BsonIgnoreIfDefault]
-	[JsonInclude, JsonPropertyName(FRIENDLY_KEY_MODIFIED), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
-	public long ModifiedTimestamp { get; set; }
-	
-	[BsonElement(DB_KEY_PREVIOUS_DATA_VERSION), BsonSaveAsString, BsonIgnoreIfNull]
-	[JsonInclude, JsonPropertyName(FRIENDLY_KEY_PREVIOUS_DATA_VERSION), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-	public string PreviousDataVersion { get; set; }
-	
-	[BsonElement(DB_KEY_SCREENNAME), BsonIgnoreIfNull]
-	[JsonInclude, JsonPropertyName(FRIENDLY_KEY_SCREENNAME), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+	[BsonElement("linkExpiration"), BsonIgnoreIfDefault, JsonIgnore]
+	public long LinkExpiration { get; set; }
+
+	[BsonElement("sn"), JsonPropertyName("screenname"), BsonIgnoreIfNull, JsonInclude, JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
 	public string Screenname { get; set; }
 	
-	[BsonElement(DB_KEY_UPDATED), BsonIgnoreIfDefault]
-	[JsonInclude, JsonPropertyName(FRIENDLY_KEY_UPDATED), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
-	public long UpdatedTimestamp { get; set; }
+	[BsonElement("device"), JsonPropertyName("device"), JsonInclude]
+	public DeviceInfo Device { get; set; }
 	
-	/// <summary>
-	/// This is used exclusively by the admin portal at the moment - it's a frontend-only field that is never stored in MongoDB.
-	/// This is needed to join the discriminator to /admin/search Player results.
-	/// </summary>
+	[BsonElement("google"), JsonPropertyName("googleAccount")]
+	public GoogleAccount GoogleAccount { get; set; }
+	
+	[BsonElement("ios"), JsonPropertyName("iosAccount")]
+	public IosAccount IosAccount { get; set; }
+	
+	[BsonElement("rumble"), JsonPropertyName("rumbleAccount")]
+	public RumbleAccount RumbleAccount { get; set; }
+	
+	[BsonIgnore, JsonIgnore]
+	public Player Parent { get; set; }
+	
+	[BsonElement("link"), JsonPropertyName("linkedAccountId"), BsonIgnoreIfDefault, JsonInclude, JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+	public string AccountIdOverride { get; set; }
+	
+	[BsonIgnore]
+	[JsonPropertyName("token")]
+	public string Token { get; set; }
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
 	[BsonIgnore]
 	[JsonInclude, JsonPropertyName("discriminator"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
 	public int? Discriminator { get; internal set; }
-	/// <summary>
-	/// Another feature for frontend readability.  Creates the fully-qualified screenname (e.g. JoeMcFugal#1234).
-	/// </summary>
-	[BsonIgnore]
-	[JsonInclude, JsonPropertyName("username")]
-	public string Username => (Screenname ?? "") + (Discriminator != null ? $"#{Discriminator}" : "");
 	
 	[BsonIgnore]
 	[JsonInclude, JsonPropertyName("linkedAccounts"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
@@ -122,7 +87,7 @@ public class Player : PlatformCollectionDocument
 		// UpdatedTimestamp = CreatedTimestamp;
 	}
 
-	public void GenerateRecoveryToken() => TransferToken = Guid.NewGuid().ToString();
+	public void GenerateRecoveryToken() => LinkCode = Guid.NewGuid().ToString();
 
 	// This is a sanity check because using "install.Id" is confusing and hard to understand.
 	// This is a temporary kluge because this model should be called `Account`... it's unfortunate we have a component called `Account` as well, but no way around it.
@@ -130,9 +95,7 @@ public class Player : PlatformCollectionDocument
 	[JsonIgnore]
 	public string AccountId => AccountIdOverride ?? Id;
 	
-	[BsonElement(DB_KEY_ACCOUNT_ID_OVERRIDE), BsonIgnoreIfDefault]
-	[JsonInclude, JsonPropertyName(FRIENDLY_KEY_ACCOUNT_ID_OVERRIDE), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-	public string AccountIdOverride { get; set; }
+
 	
 	
 	[BsonIgnore]
@@ -186,10 +149,27 @@ public class Player : PlatformCollectionDocument
 			output += weigh(Id, baseWeight: WEIGHT_ID);
 		if (AccountIdOverride != null && AccountIdOverride.Contains(term))
 			output += weigh(AccountIdOverride, baseWeight: WEIGHT_ID_OVERRIDE);
-		if (InstallId.Contains(term))
-			output += weigh(InstallId, baseWeight: WEIGHT_ID_INSTALL);
+		if (Device.InstallId.Contains(term))
+			output += weigh(Device.InstallId, baseWeight: WEIGHT_ID_INSTALL);
 		output += termWeight;
 		
 		return SearchWeight = output;  // If we later evaluate search terms separately later, remove this assignment.
+	}
+
+	internal void UpdateSso(SsoInput sso)
+	{
+		if (sso == null)
+			return;
+
+		if (GoogleAccount?.Id != sso.GoogleAccount?.Id)
+			GoogleAccount = sso.GoogleAccount;
+		if (IosAccount?.Id != sso.IosAccount?.Id)
+			IosAccount = sso.IosAccount;
+
+		if (RumbleAccount.Status != RumbleAccount.AccountStatus.None)
+			return;
+		
+		RumbleAccount = sso.RumbleAccount;
+		RumbleAccount.Status = RumbleAccount.AccountStatus.NeedsConfirmation;
 	}
 }

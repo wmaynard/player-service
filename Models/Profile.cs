@@ -109,9 +109,9 @@ public class Profile : PlatformCollectionDocument
 	[JsonInclude, JsonPropertyName(FRIENDLY_KEY_EMAIL)]
 	public string Email { get; internal set; }
 	
-	// [BsonElement(Player.DB_KEY_TRANSFER_TOKEN), BsonIgnoreIfNull]
+	// [BsonElement(Player.DB_KEY_LINK_CODE), BsonIgnoreIfNull]
 	// [JsonInclude, JsonPropertyName(Player.FRIENDLY_KEY_TRANSFER_TOKEN), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-	// public string TransferToken { get; set; }
+	// public string LinkCode { get; set; }
 	
 	#region PROBABLY_UNUSED_FIELDS
 	// These are all keys found on some data points, but not those that are created in recent usage of player-service.
@@ -155,9 +155,9 @@ public class Profile : PlatformCollectionDocument
 	{
 		PreviousAccountIds = new HashSet<string>();
 		CreatedTimestamp = player.CreatedTimestamp;
-		ModifiedTimestamp = player.ModifiedTimestamp;
-		ClientVersion = player.ClientVersion;
-		ProfileId = player.InstallId;
+		// ModifiedTimestamp = player.ModifiedTimestamp;
+		// ClientVersion = player.ClientVersion;
+		// ProfileId = player.InstallId;
 		AccountId = player.AccountId;
 		Type = TYPE_INSTALL; // TODO: const or enum
 	}
