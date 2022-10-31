@@ -31,6 +31,7 @@ public class RumbleAccount : PlatformDataModel
         NeedsConfirmation   = 0b0001, 
         Confirmed           = 0b0010,
         ResetRequested      = 0b0110,
+        PasswordResetPrimed      = 0b1010,
     }
 
     public static string GenerateCode(int segments = 2)

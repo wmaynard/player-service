@@ -120,8 +120,10 @@ public class PlayerAccountService : PlatformMongoService<Player>
 		List<Player> accounts = _collection
 			.Find(
 				Builders<Player>.Filter.And(
-					Builders<Player>.Filter.Eq(player => player.RumbleAccount.Username, rumble.Username),
-					Builders<Player>.Filter.Eq(player => player.RumbleAccount.Email, rumble.Email),
+					Builders<Player>.Filter.Or(
+						Builders<Player>.Filter.Eq(player => player.RumbleAccount.Username, rumble.Username),
+						Builders<Player>.Filter.Eq(player => player.RumbleAccount.Email, rumble.Email)
+					),
 					Builders<Player>.Filter.Eq(player => player.RumbleAccount.Hash, rumble.Hash)
 				)
 			)
@@ -135,6 +137,34 @@ public class PlayerAccountService : PlatformMongoService<Player>
 		};
 	}
 
+	public Player UpdateHash(string username, string oldHash, string newHash) =>
+		(oldHash == null
+			? _collection.FindOneAndUpdate(
+				filter: Builders<Player>.Filter.And(
+					Builders<Player>.Filter.Eq(player => player.RumbleAccount.Username, username),
+					Builders<Player>.Filter.Eq(player => player.RumbleAccount.Status, RumbleAccount.AccountStatus.PasswordResetPrimed)
+				),
+				update: Builders<Player>.Update
+					.Set(player => player.RumbleAccount.Hash, newHash)
+					.Set(player => player.RumbleAccount.Status, RumbleAccount.AccountStatus.Confirmed),
+				options: new FindOneAndUpdateOptions<Player>
+				{
+					IsUpsert = false,
+					ReturnDocument = ReturnDocument.After
+				})
+			: _collection.FindOneAndUpdate(
+				filter: Builders<Player>.Filter.And(
+					Builders<Player>.Filter.Eq(player => player.RumbleAccount.Username, username),
+					Builders<Player>.Filter.Eq(player => player.RumbleAccount.Hash, oldHash)
+				),
+				update: Builders<Player>.Update.Set(player => player.RumbleAccount.Hash, newHash),
+				options: new FindOneAndUpdateOptions<Player>
+				{
+					IsUpsert = false,
+					ReturnDocument = ReturnDocument.After
+				})
+		) ?? throw new PlatformException("Account not found.");
+
 	public Player AttachRumble(Player player, RumbleAccount rumble)
 	{
 		rumble.Status = RumbleAccount.AccountStatus.NeedsConfirmation;
@@ -143,6 +173,13 @@ public class PlayerAccountService : PlatformMongoService<Player>
 		player.RumbleAccount = rumble;
 		Update(player);
 
+		return player;
+	}
+
+	public Player AttachGoogle(Player player, GoogleAccount google)
+	{
+		player.GoogleAccount = google;
+		Update(player);
 		return player;
 	}
 
@@ -185,22 +222,40 @@ public class PlayerAccountService : PlatformMongoService<Player>
 		return output;
 	}
 
-	public Player BeginRecovery(string email, string pendingHash) =>_collection
+	public Player BeginReset(string email) =>_collection
 		.FindOneAndUpdate(
 			filter: Builders<Player>.Filter.And(
 				Builders<Player>.Filter.Eq(player => player.RumbleAccount.Email, email)
 			),
 			update: Builders<Player>.Update
 				.Set(player => player.RumbleAccount.CodeExpiration, Timestamp.UnixTime * 15 * 60)
-				.Set(player => player.RumbleAccount.ConfirmationCode, RumbleAccount.GenerateCode(segments: 10))
-				.Set(player => player.RumbleAccount.Status, RumbleAccount.AccountStatus.ResetRequested)
-				.Set(player => player.RumbleAccount.PendingHash, pendingHash),
+				.Set(player => player.RumbleAccount.ConfirmationCode, RumbleAccount.GenerateCode(segments: 2))
+				.Set(player => player.RumbleAccount.Status, RumbleAccount.AccountStatus.ResetRequested),
 			options: new FindOneAndUpdateOptions<Player>
 			{
 				IsUpsert = false,
 				ReturnDocument = ReturnDocument.After
 			}
-		);
+		) ?? throw new PlatformException("Account not found.");
+	
+	public Player CompleteReset(string username, string code)
+	{
+		return _collection.FindOneAndUpdate(
+			filter: Builders<Player>.Filter.And(
+				Builders<Player>.Filter.Eq(player => player.RumbleAccount.Username, username),
+				Builders<Player>.Filter.Eq(player => player.RumbleAccount.ConfirmationCode, code),
+				Builders<Player>.Filter.Gt(player => player.RumbleAccount.CodeExpiration, Timestamp.UnixTime)
+			),
+			update: Builders<Player>.Update
+				.Unset(player => player.RumbleAccount.ConfirmationCode)
+				.Unset(player => player.RumbleAccount.CodeExpiration)
+				.Set(player => player.RumbleAccount.Status, RumbleAccount.AccountStatus.PasswordResetPrimed),
+			options: new FindOneAndUpdateOptions<Player>
+			{
+				IsUpsert = false,
+				ReturnDocument = ReturnDocument.After
+			}) ?? throw new PlatformException("Account not found.");
+	}
 
 	public string SetLinkCode(string[] ids)
 	{
@@ -288,4 +343,11 @@ public class PlayerAccountService : PlatformMongoService<Player>
 		
 		return player;
 	}
+
+	public long RemoveExpiredLinkCodes() => _collection.UpdateMany(
+			filter: Builders<Player>.Filter.Lte(player => player.LinkExpiration, Timestamp.UnixTime),
+			update: Builders<Player>.Update
+				.Unset(player => player.LinkCode)
+				.Unset(player => player.LinkExpiration)
+		).ModifiedCount;
 }

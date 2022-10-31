@@ -84,12 +84,13 @@ public class AccountController : PlatformController
         Player fromDevice = _playerService.FromDevice(device, isUpsert: true);
         Player fromGoogle = _playerService.FromGoogle(google);
 
-        if (fromDevice.Id != fromGoogle?.Id)
+        if (fromGoogle != null && fromDevice.Id != fromGoogle.Id)
             throw new PlatformException("Account conflict.");
         
-        fromDevice.GoogleAccount = google;
-        _playerService.Update(fromDevice);
-        return Ok(fromDevice);
+        if (fromGoogle != null)
+            throw new PlatformException("Account already linked.");
+
+        return Ok(_playerService.AttachGoogle(fromDevice, google));
     }
     
     [HttpPatch, Route("rumble")]
@@ -123,23 +124,40 @@ public class AccountController : PlatformController
         return Ok(player);
     }
 
+    [HttpPatch, Route("reset")]
+    public ActionResult UsePasswordRecoveryCode()
+    {
+        string username = Require<string>("username");
+        string code = Require<string>("code");
+
+        return Ok(_playerService.CompleteReset(username, code));
+    }
+
     [HttpPatch, Route("recover")]
     public ActionResult RecoverAccount()
     {
         string email = Require<string>("email");
-        string hash = Require<string>("hash");
 
-        Player recovery = _playerService.BeginRecovery(email, hash)
-            ?? throw new PlatformException("Account not found.");
-
-        return Ok(recovery);
+        return Ok(_playerService.BeginReset(email));
     }
 
-    [HttpPatch, Route("link"), RequireAuth]
-    public ActionResult Link()
+    [HttpPatch, Route("password")]
+    public ActionResult ChangePassword()
     {
-        return Ok(_playerService.LinkAccounts(Token.AccountId));
+        string username = Require<string>("username");
+        string oldHash = Optional<string>("oldHash");
+        string newHash = Require<string>("newHash");
+
+        if (oldHash == newHash)
+            throw new PlatformException("Invalid hash.  Passwords cannot be the same.");
+        if (string.IsNullOrWhiteSpace(newHash))
+            throw new PlatformException("Invalid hash.  Cannot be empty or null.");
+
+        return Ok(_playerService.UpdateHash(username, oldHash, newHash));
     }
+
+    [HttpPatch, Route("annex"), RequireAuth]
+    public ActionResult Link() => Ok(_playerService.LinkAccounts(Token.AccountId));
 
     [HttpPost, Route("login"), NoAuth, HealthMonitor(weight: 1)]
     public ActionResult Login()
@@ -151,7 +169,7 @@ public class AccountController : PlatformController
         Player player = fromDevice.Parent ?? fromDevice;
         Player[] others = _playerService.FromSso(sso);
         
-        int discriminator = _discriminatorService.Lookup(player);        
+        player.Discriminator = _discriminatorService.Lookup(player);
         player.Screenname ??= _nameGeneratorService.Next;
         player.LastLogin = Timestamp.UnixTime;
         ValidatePlayerScreenname(ref player);
@@ -172,23 +190,21 @@ public class AccountController : PlatformController
                 .ToArray();
             string code = _playerService.SetLinkCode(ids);
 
-            return Ok(new RumbleJson
+            return Problem(new RumbleJson
             {
                 { "errorCode", "accountConflict" },
-                { "accountId", player.AccountId },
                 { "player", player },
                 { "conflicts", others.Where(other => other.Id != player.Id) },
-                { "transferToken", code },
-                { "sso", sso }
+                { "transferToken", code }
             });
         }
 
-
-
         player.GoogleAccount ??= sso?.GoogleAccount;
         player.IosAccount ??= sso?.IosAccount;
-        
-        
+
+        if (player.LinkExpiration > 0 && player.LinkExpiration <= Timestamp.UnixTime)
+            _playerService.RemoveExpiredLinkCodes();
+
         _playerService.Update(player);
 
         return Ok(new RumbleJson
@@ -196,14 +212,13 @@ public class AccountController : PlatformController
             { "remoteAddr", GeoIPData?.IPAddress ?? IpAddress },
             { "geoipAddr", GeoIPData?.IPAddress ?? IpAddress },
             { "country", GeoIPData?.CountryCode },
-            { "serverTime", Timestamp.UnixTime },
+            // { "serverTime", Timestamp.UnixTime },
             { "requestId", HttpContext.Request.Headers["X-Request-ID"].ToString() ?? Guid.NewGuid().ToString() },
-            { "player", player },
-            { "discriminator", discriminator },
-            { "ssoData", sso }
+            { "player", player }
         });
     }
 
+#region Utilities
     private string GenerateToken(Player player)
     {
         int discriminator = _discriminatorService.Lookup(player);
@@ -249,4 +264,5 @@ public class AccountController : PlatformController
         });
         return player.Screenname;
     }
+#endregion Utilities
 }
