@@ -18,8 +18,8 @@ using Rumble.Platform.Data;
 
 namespace PlayerService.Controllers;
 
-[ApiController, Route("player/v2/temp"), UseMongoTransaction]
-public class LaunchController : PlatformController
+[ApiController, Route("player/v2/account"), UseMongoTransaction]
+public class AccountController : PlatformController
 {
     public const Audience TOKEN_AUDIENCE = 
         Audience.ChatService
@@ -60,7 +60,7 @@ public class LaunchController : PlatformController
     
     [SuppressMessage("ReSharper", "SuggestBaseTypeForParameter")]
     [SuppressMessage("ReSharper", "ExpressionIsAlwaysNull")]
-    public LaunchController() => ComponentServices = new Dictionary<string, ComponentService>
+    public AccountController() => ComponentServices = new Dictionary<string, ComponentService>
         {
             { Component.AB_TEST, _abTestService },
             { Component.ACCOUNT, _accountService },
