@@ -77,8 +77,8 @@ public class AccountController : PlatformController
     [HttpPatch, Route("google")]
     public ActionResult LinkGoogle()
     {
-        DeviceInfo device = Require<DeviceInfo>("device");
-        GoogleAccount google = GoogleAccount.ValidateToken(Require<string>("googleToken"));
+        DeviceInfo device = Require<DeviceInfo>(Player.FRIENDLY_KEY_DEVICE);
+        GoogleAccount google = GoogleAccount.ValidateToken(Require<string>(SsoData.FRIENDLY_KEY_GOOGLE_TOKEN));
         
         Player fromDevice = _playerService.FromDevice(device, isUpsert: true);
         Player fromGoogle = _playerService.FromGoogle(google);
@@ -95,8 +95,8 @@ public class AccountController : PlatformController
     [HttpPatch, Route("rumble")]
     public ActionResult LinkRumble()
     {
-        DeviceInfo device = Require<DeviceInfo>("device");
-        RumbleAccount rumble = Require<RumbleAccount>("rumble");
+        DeviceInfo device = Require<DeviceInfo>(Player.FRIENDLY_KEY_DEVICE);
+        RumbleAccount rumble = Require<RumbleAccount>(Player.FRIENDLY_KEY_RUMBLE_ACCOUNT);
 
         Player fromDevice = _playerService.FromDevice(device, isUpsert: true);
         Player fromRumble = _playerService.FromRumble(rumble);
@@ -115,7 +115,7 @@ public class AccountController : PlatformController
     public ActionResult ConfirmAccount()
     {
         string id = Require<string>("id");
-        string code = Require<string>("code");
+        string code = Require<string>(RumbleAccount.FRIENDLY_KEY_CODE);
 
         Player player = _playerService.UseConfirmationCode(id, code)
             ?? throw new PlatformException("Incorrect or expired code.");
@@ -126,8 +126,8 @@ public class AccountController : PlatformController
     [HttpPatch, Route("reset")]
     public ActionResult UsePasswordRecoveryCode()
     {
-        string username = Require<string>("username");
-        string code = Require<string>("code");
+        string username = Require<string>(RumbleAccount.FRIENDLY_KEY_USERNAME);
+        string code = Require<string>(RumbleAccount.FRIENDLY_KEY_CODE);
 
         return Ok(_playerService.CompleteReset(username, code));
     }
@@ -135,7 +135,7 @@ public class AccountController : PlatformController
     [HttpPatch, Route("recover")]
     public ActionResult RecoverAccount()
     {
-        string email = Require<string>("email");
+        string email = Require<string>(RumbleAccount.FRIENDLY_KEY_EMAIL);
 
         return Ok(_playerService.BeginReset(email));
     }
@@ -143,7 +143,7 @@ public class AccountController : PlatformController
     [HttpPatch, Route("password")]
     public ActionResult ChangePassword()
     {
-        string username = Require<string>("username");
+        string username = Require<string>(RumbleAccount.FRIENDLY_KEY_USERNAME);
         string oldHash = Optional<string>("oldHash");
         string newHash = Require<string>("newHash");
 
@@ -164,7 +164,7 @@ public class AccountController : PlatformController
     [HttpPost, Route("login"), NoAuth, HealthMonitor(weight: 1)]
     public ActionResult Login()
     {
-        DeviceInfo device = Require<DeviceInfo>("device");
+        DeviceInfo device = Require<DeviceInfo>(Player.FRIENDLY_KEY_DEVICE);
         SsoData sso = Optional<SsoData>("sso")?.ValidateTokens();
 
         Player fromDevice = _playerService.FromDevice(device, isUpsert: true);

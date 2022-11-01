@@ -17,11 +17,11 @@ public class RumbleAccount : PlatformDataModel
     private const string DB_KEY_STATUS = "status";
     private const string DB_KEY_USERNAME = "username";
     
-    private const string FRIENDLY_KEY_CODE = "code";
-    private const string FRIENDLY_KEY_CODE_EXPIRATION = "expiration";
-    private const string FRIENDLY_KEY_EMAIL = "email";
-    private const string FRIENDLY_KEY_STATUS = "status";
-    private const string FRIENDLY_KEY_USERNAME = "username";
+    public const string FRIENDLY_KEY_CODE = "code";
+    public const string FRIENDLY_KEY_CODE_EXPIRATION = "expiration";
+    public const string FRIENDLY_KEY_EMAIL = "email";
+    public const string FRIENDLY_KEY_STATUS = "status";
+    public const string FRIENDLY_KEY_USERNAME = "username";
 
     [BsonElement(DB_KEY_CODE)]
     [JsonPropertyName(FRIENDLY_KEY_CODE)]
