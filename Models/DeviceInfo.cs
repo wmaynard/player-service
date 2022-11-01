@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text.Json.Serialization;
 using System.Threading.Tasks;
 using Google.Apis.Auth;
@@ -54,6 +55,10 @@ public class SsoInput : PlatformDataModel
     
     public GoogleAccount GoogleAccount { get; set; }
     public IosAccount IosAccount { get; set; }
+    
+    [BsonIgnore]
+    [JsonIgnore]
+    public bool AccountsProvided => RumbleAccount != null || GoogleAccount != null || IosAccount != null;
 
     public SsoInput ValidateTokens()
     {
@@ -81,6 +86,21 @@ public class SsoInput : PlatformDataModel
     
         return this;
     }
+
+    public void ValidatePlayers(Player[] players)
+    {
+        if (!AccountsProvided)
+            return;
+        if (players == null || players.Length == 0)
+            throw new PlatformException("No players found for SSO.");
+        if (GoogleAccount != null && !players.Any(player => player.GoogleAccount != null))
+            throw new PlatformException("Missing Google account.");
+        if (IosAccount != null && !players.Any(player => player.IosAccount != null))
+            throw new PlatformException("Missing iOS account.");
+        if (RumbleAccount != null && !players.Any(player => player.RumbleAccount != null))
+            throw new PlatformException("Missing Rumble account.");
+    }
+    
 }
 
 public class GoogleAccount : PlatformDataModel

@@ -153,10 +153,13 @@ public class AccountController : PlatformController
         if (string.IsNullOrWhiteSpace(newHash))
             throw new PlatformException("Invalid hash.  Cannot be empty or null.");
 
-        return Ok(_playerService.UpdateHash(username, oldHash, newHash));
+        Player output = _playerService.UpdateHash(username, oldHash, newHash);
+        output.Token = GenerateToken(output);
+
+        return Ok(output);
     }
 
-    [HttpPatch, Route("annex"), RequireAuth]
+    [HttpPatch, Route("adopt"), RequireAuth]
     public ActionResult Link() => Ok(_playerService.LinkAccounts(Token.AccountId));
 
     [HttpPost, Route("login"), NoAuth, HealthMonitor(weight: 1)]
@@ -172,8 +175,10 @@ public class AccountController : PlatformController
         player.Discriminator = _discriminatorService.Lookup(player);
         player.Screenname ??= _nameGeneratorService.Next;
         player.LastLogin = Timestamp.UnixTime;
-        ValidatePlayerScreenname(ref player);
         
+        ValidatePlayerScreenname(ref player);
+        sso?.ValidatePlayers(others.Union(new []{ player }).ToArray());
+
         player.Token = GenerateToken(player);
 
         Player[] conflicts = others
@@ -183,7 +188,11 @@ public class AccountController : PlatformController
         {
             _playerService.Update(player);
             foreach (Player conflict in conflicts)
+            {
+                conflict.Discriminator = _discriminatorService.Lookup(conflict);
                 conflict.Token = GenerateToken(conflict);
+            }
+
             string[] ids = others
                 .Select(other => other.Id)
                 .Union(new[] { player.Id })

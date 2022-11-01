@@ -71,9 +71,6 @@ public class PlayerAccountService : PlatformMongoService<Player>
 		FilterDefinitionBuilder<Player> builder = Builders<Player>.Filter;
 
 		List<FilterDefinition<Player>> filters = new List<FilterDefinition<Player>>();
-
-
-		builder.ElemMatch("rumble", Builders<RumbleAccount>.Filter.Eq(account => account.Username, sso.RumbleAccount.Username));
 		// builder.ElemMatch(field: player => player.GoogleAccount, filter: )
 
 		if (sso.GoogleAccount != null)
@@ -83,7 +80,8 @@ public class PlayerAccountService : PlatformMongoService<Player>
 		if (sso.RumbleAccount != null)
 			filters.Add(builder.And(
 				builder.Eq(player => player.RumbleAccount.Username, sso.RumbleAccount.Username),
-				builder.Eq(player => player.RumbleAccount.Hash, sso.RumbleAccount.Hash)
+				builder.Eq(player => player.RumbleAccount.Hash, sso.RumbleAccount.Hash),
+				builder.Gte(player => player.RumbleAccount.Status, RumbleAccount.AccountStatus.Confirmed)
 			));
 		
 		if (!filters.Any())
@@ -142,7 +140,7 @@ public class PlayerAccountService : PlatformMongoService<Player>
 			? _collection.FindOneAndUpdate(
 				filter: Builders<Player>.Filter.And(
 					Builders<Player>.Filter.Eq(player => player.RumbleAccount.Username, username),
-					Builders<Player>.Filter.Eq(player => player.RumbleAccount.Status, RumbleAccount.AccountStatus.PasswordResetPrimed)
+					Builders<Player>.Filter.Eq(player => player.RumbleAccount.Status, RumbleAccount.AccountStatus.ResetPrimed)
 				),
 				update: Builders<Player>.Update
 					.Set(player => player.RumbleAccount.Hash, newHash)
@@ -249,7 +247,7 @@ public class PlayerAccountService : PlatformMongoService<Player>
 			update: Builders<Player>.Update
 				.Unset(player => player.RumbleAccount.ConfirmationCode)
 				.Unset(player => player.RumbleAccount.CodeExpiration)
-				.Set(player => player.RumbleAccount.Status, RumbleAccount.AccountStatus.PasswordResetPrimed),
+				.Set(player => player.RumbleAccount.Status, RumbleAccount.AccountStatus.ResetPrimed),
 			options: new FindOneAndUpdateOptions<Player>
 			{
 				IsUpsert = false,
