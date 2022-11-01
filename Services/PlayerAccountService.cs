@@ -68,6 +68,9 @@ public class PlayerAccountService : PlatformMongoService<Player>
 
 	public Player[] FromSso(SsoData sso)
 	{
+		if (sso == null)
+			return Array.Empty<Player>();
+		
 		FilterDefinitionBuilder<Player> builder = Builders<Player>.Filter;
 
 		List<FilterDefinition<Player>> filters = new List<FilterDefinition<Player>>();

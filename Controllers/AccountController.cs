@@ -74,6 +74,9 @@ public class AccountController : PlatformController
             { Component.WORLD, _worldService }
         };
 
+    /// <summary>
+    /// Adds a Google account to the player's record.
+    /// </summary>
     [HttpPatch, Route("google")]
     public ActionResult LinkGoogle()
     {
@@ -92,6 +95,9 @@ public class AccountController : PlatformController
         return Ok(_playerService.AttachGoogle(fromDevice, google));
     }
     
+    /// <summary>
+    /// Adds a Rumble account to the player's record.  Requires external email confirmation to actually be used.
+    /// </summary>
     [HttpPatch, Route("rumble")]
     public ActionResult LinkRumble()
     {
@@ -111,6 +117,9 @@ public class AccountController : PlatformController
         return Ok(fromDevice);
     }
 
+    /// <summary>
+    /// Confirms an email address for a Rumble account.  Enables the Rumble account to be used as a login.
+    /// </summary>
     [HttpGet, Route("confirm")]
     public ActionResult ConfirmAccount()
     {
@@ -123,6 +132,15 @@ public class AccountController : PlatformController
         return Ok(player);
     }
 
+    /// <summary>
+    /// Starts the password reset process.  Doing this sends an email to the player with a 2FA recovery code.
+    /// </summary>
+    [HttpPatch, Route("recover")]
+    public ActionResult RecoverAccount() => Ok(_playerService.BeginReset(Require<string>(RumbleAccount.FRIENDLY_KEY_EMAIL)));
+
+    /// <summary>
+    /// Primes a Rumble account to accept a new password hash without knowledge of the old one.  Comes in after 2FA codes.
+    /// </summary>
     [HttpPatch, Route("reset")]
     public ActionResult UsePasswordRecoveryCode()
     {
@@ -132,14 +150,9 @@ public class AccountController : PlatformController
         return Ok(_playerService.CompleteReset(username, code));
     }
 
-    [HttpPatch, Route("recover")]
-    public ActionResult RecoverAccount()
-    {
-        string email = Require<string>(RumbleAccount.FRIENDLY_KEY_EMAIL);
-
-        return Ok(_playerService.BeginReset(email));
-    }
-
+    /// <summary>
+    /// Changes a password hash.  The oldHash is optional iff /reset has been hit successfully.
+    /// </summary>
     [HttpPatch, Route("password")]
     public ActionResult ChangePassword()
     {
@@ -158,9 +171,17 @@ public class AccountController : PlatformController
         return Ok(output);
     }
 
+    /// <summary>
+    /// Take over all related accounts as children.  The provided token represents the parent-to-be account.
+    /// </summary>
     [HttpPatch, Route("adopt"), RequireAuth]
     public ActionResult Link() => Ok(_playerService.LinkAccounts(Token.AccountId));
 
+    /// <summary>
+    /// Uses device information and optional SSO information to find the appropriate player accounts.  If more than one
+    /// account is found, a 400-level response is returned with necessary data for the client / server to work with.
+    /// </summary>
+    /// <returns>Relevant player accounts with generated tokens.</returns>
     [HttpPost, Route("login"), NoAuth, HealthMonitor(weight: 1)]
     public ActionResult Login()
     {
@@ -178,7 +199,7 @@ public class AccountController : PlatformController
         ValidatePlayerScreenname(ref player);
         sso?.ValidatePlayers(others.Union(new []{ player }).ToArray());
 
-        player.Token = GenerateToken(player);
+        GenerateToken(player);
 
         Player[] conflicts = others
             .Where(other => other.Id != player.Id)
@@ -189,7 +210,7 @@ public class AccountController : PlatformController
             foreach (Player conflict in conflicts)
             {
                 conflict.Discriminator = _discriminatorService.Lookup(conflict);
-                conflict.Token = GenerateToken(conflict);
+                GenerateToken(conflict);
             }
 
             string[] ids = others
@@ -217,10 +238,7 @@ public class AccountController : PlatformController
 
         return Ok(new RumbleJson
         {
-            { "remoteAddr", GeoIPData?.IPAddress ?? IpAddress },
-            { "geoipAddr", GeoIPData?.IPAddress ?? IpAddress },
-            { "country", GeoIPData?.CountryCode },
-            // { "serverTime", Timestamp.UnixTime },
+            { "geoData", GeoIPData },
             { "requestId", HttpContext.Request.Headers["X-Request-ID"].ToString() ?? Guid.NewGuid().ToString() },
             { "player", player }
         });
@@ -230,7 +248,7 @@ public class AccountController : PlatformController
     private string GenerateToken(Player player)
     {
         int discriminator = _discriminatorService.Lookup(player);
-        return _apiService
+        player.Token = _apiService
             .GenerateToken(
                 player.AccountId,
                 player.Screenname,
@@ -238,6 +256,7 @@ public class AccountController : PlatformController
                 discriminator, 
                 audiences: TOKEN_AUDIENCE
             );
+        return player.Token;
     }
     
     // Will on 2022.07.15 | In rare situations an account can come through that does not have a screenname.

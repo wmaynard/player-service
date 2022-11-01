@@ -70,7 +70,7 @@ public class RumbleAccount : PlatformDataModel
             codes.Add(GenerateCodePart(ref digits));
         }
 
-        return string.Join('-', codes);
+        return string.Join("", codes);
     }
 
     private static string GenerateCodePart(ref List<int> digits)
