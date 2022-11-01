@@ -2,12 +2,14 @@ using System;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using MongoDB.Bson.Serialization.Attributes;
+using Newtonsoft.Json;
 using PlayerService.Models.Login;
 using Rumble.Platform.Common.Models;
 using Rumble.Platform.Common.Utilities;
 using Rumble.Platform.Common.Web;
 using Rumble.Platform.Data;
 using Rumble.Platform.Data.Serializers;
+using JsonIgnore = System.Text.Json.Serialization.JsonIgnoreAttribute;
 
 namespace PlayerService.Models;
 
@@ -16,105 +18,94 @@ namespace PlayerService.Models;
 [BsonIgnoreExtraElements]
 public class Player : PlatformCollectionDocument
 {
-	internal const string DB_KEY_ACCOUNT_ID_OVERRIDE = "oaid";
+	private const string DB_KEY_APPLE_ACCOUNT = "apple";
+	private const string DB_KEY_CREATED = "created";
+	private const string DB_KEY_DEVICE = "device";
+	private const string DB_KEY_GOOGLE_ACCOUNT = "google";
+	private const string DB_KEY_LAST_LOGIN = "login";
+	private const string DB_KEY_LINK_CODE = "linkCode";
+	private const string DB_KEY_LINK_CODE_EXPIRATION = "linkExp";
+	private const string DB_KEY_PARENT_ID = "parent";
+	private const string DB_KEY_RUMBLE_ACCOUNT = "rumble";
+	private const string DB_KEY_SCREENNAME = "sn";
+	
+	public const string FRIENDLY_KEY_APPLE_ACCOUNT = "appleAccount";
+	public const string FRIENDLY_KEY_CREATED = "createdOn";
+	public const string FRIENDLY_KEY_DEVICE = "deviceInfo";
+	public const string FRIENDLY_KEY_DISCRIMINATOR = "discriminator";
+	public const string FRIENDLY_KEY_GOOGLE_ACCOUNT = "googleAccount";
+	public const string FRIENDLY_KEY_LAST_LOGIN = "lastLogin";
+	public const string FRIENDLY_KEY_PARENT_ID = "parentId";
+	public const string FRIENDLY_KEY_RUMBLE_ACCOUNT = "rumbleAccount";
+	public const string FRIENDLY_KEY_SCREENNAME = "screenname";
+	public const string FRIENDLY_KEY_SEARCH_WEIGHT = "weight";
+	public const string FRIENDLY_KEY_TOKEN = "token";
+
 	internal const string FRIENDLY_KEY_ACCOUNT_ID = "accountId";
 	internal const string FRIENDLY_KEY_ACCOUNT_ID_OVERRIDE = "accountIdOverride";
-	internal const string FRIENDLY_KEY_DISCRIMINATOR = "discriminator";
-
-	[BsonElement("created"), JsonPropertyName("created"), BsonIgnoreIfDefault, JsonInclude, JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
-	public long CreatedTimestamp { get; set; }
 	
-	[BsonElement("login"), JsonPropertyName("lastLogin"), JsonInclude]
-	public long LastLogin { get; set; }
-	
-	[BsonElement("linkCode"), JsonPropertyName("linkCode"), BsonIgnoreIfNull, JsonInclude, JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-	public string LinkCode { get; set; }
-	
-	[BsonElement("linkExpiration"), BsonIgnoreIfDefault, JsonIgnore]
-	public long LinkExpiration { get; set; }
-
-	[BsonElement("sn"), JsonPropertyName("screenname"), BsonIgnoreIfNull, JsonInclude, JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-	public string Screenname { get; set; }
-	
-	[BsonElement("device"), JsonPropertyName("device"), JsonInclude]
-	public DeviceInfo Device { get; set; }
-	
-	[BsonElement("google"), JsonPropertyName("googleAccount")]
-	public GoogleAccount GoogleAccount { get; set; }
-	
-	[BsonElement("apple"), JsonPropertyName("appleAccount")]
+	[BsonElement(DB_KEY_APPLE_ACCOUNT)]
+	[JsonPropertyName(FRIENDLY_KEY_APPLE_ACCOUNT)]
 	public AppleAccount AppleAccount { get; set; }
 	
-	[BsonElement("rumble"), JsonPropertyName("rumbleAccount")]
-	public RumbleAccount RumbleAccount { get; set; }
+	[BsonElement(DB_KEY_CREATED)]
+	[JsonPropertyName(FRIENDLY_KEY_CREATED)]
+	public long CreatedTimestamp { get; set; }
 	
-	[BsonIgnore, JsonIgnore]
-	public Player Parent { get; set; }
-	
-	[BsonElement("link"), JsonPropertyName("linkedAccountId"), BsonIgnoreIfDefault, JsonInclude, JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-	public string AccountIdOverride { get; set; }
-	
-	[BsonIgnore]
-	[JsonPropertyName("token")]
-	public string Token { get; set; }
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
+	[BsonElement(DB_KEY_DEVICE)]
+	[JsonPropertyName(FRIENDLY_KEY_DEVICE)]
+	public DeviceInfo Device { get; set; }
 	
 	[BsonIgnore]
-	[JsonInclude, JsonPropertyName(FRIENDLY_KEY_DISCRIMINATOR), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+	[JsonInclude, JsonPropertyName(FRIENDLY_KEY_DISCRIMINATOR)]
 	public int? Discriminator { get; internal set; }
 	
-	[BsonIgnore]
-	[JsonInclude, JsonPropertyName("linkedAccounts"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-	public Player[] LinkedAccounts { get; internal set; }
+	[BsonElement(DB_KEY_GOOGLE_ACCOUNT)]
+	[JsonPropertyName(FRIENDLY_KEY_GOOGLE_ACCOUNT)]
+	public GoogleAccount GoogleAccount { get; set; }
+	
+	[BsonElement(DB_KEY_LAST_LOGIN)]
+	[JsonPropertyName(FRIENDLY_KEY_LAST_LOGIN)]
+	public long LastLogin { get; set; }
+	
+	[BsonElement(DB_KEY_LINK_CODE)]
+	[JsonIgnore]
+	public string LinkCode { get; set; }
+	
+	[BsonElement(DB_KEY_LINK_CODE_EXPIRATION), BsonIgnoreIfDefault]
+	[JsonIgnore]
+	public long LinkExpiration { get; set; }
 	
 	[BsonIgnore]
 	[JsonIgnore]
-	public bool IsLinkedAccount => !string.IsNullOrWhiteSpace(AccountIdOverride) && AccountIdOverride != Id;
+	public Player Parent { get; set; }
+	
+	[BsonElement(DB_KEY_PARENT_ID), BsonIgnoreIfNull]
+	[JsonPropertyName(FRIENDLY_KEY_PARENT_ID), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+	public string ParentId { get; set; }
+	
+	[BsonElement(DB_KEY_RUMBLE_ACCOUNT)]
+	[JsonPropertyName(FRIENDLY_KEY_RUMBLE_ACCOUNT)]
+	public RumbleAccount RumbleAccount { get; set; }
 
-	public Player(string screenname)
-	{
-		CreatedTimestamp = Timestamp.UnixTime;
-		Screenname = screenname;
-		// ModifiedTimestamp = CreatedTimestamp;
-		// UpdatedTimestamp = CreatedTimestamp;
-	}
+	[BsonElement(DB_KEY_SCREENNAME)]
+	[JsonPropertyName(FRIENDLY_KEY_SCREENNAME)]
+	public string Screenname { get; set; }
+	
+	[BsonIgnore]
+	[JsonPropertyName(FRIENDLY_KEY_SEARCH_WEIGHT), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
+	public float SearchWeight { get; private set; }
 
-	public void GenerateRecoveryToken() => LinkCode = Guid.NewGuid().ToString();
-
+	[BsonIgnore]
+	[JsonPropertyName(FRIENDLY_KEY_TOKEN)]
+	public string Token { get; set; }
+	
 	// This is a sanity check because using "install.Id" is confusing and hard to understand.
 	// This is a temporary kluge because this model should be called `Account`... it's unfortunate we have a component called `Account` as well, but no way around it.
 	[BsonIgnore]
 	[JsonIgnore]
-	public string AccountId => AccountIdOverride ?? Id;
+	public string AccountId => ParentId ?? Id;
 	
-
-	
-	
-	[BsonIgnore]
-	[JsonInclude, JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
-	public float SearchWeight { get; private set; }
-
-	/// <summary>
-	/// Sanitizes the output for /player/launch.  AccountIdOverride has caused confusion, so for clarity, the override
-	/// will just be provided as the ID for the game server.
-	/// </summary>
-	internal void PrepareIdForOutput()
-	{
-		if (string.IsNullOrWhiteSpace(AccountIdOverride))
-			return;
-		Id = AccountIdOverride;
-		AccountIdOverride = null;
-	}
-
 	/// <summary>
 	/// Uses arbitrary values to decide how relevant a search term is to this player.  Screennames are heavily favored over all other fields; consider a situation where we have 
 	/// a user with the screenname "Deadpool", and someone is searching with the term "dead".  Being all hex characters, we probably don't want Mongo IDs ranking before
@@ -148,29 +139,12 @@ public class Player : PlatformCollectionDocument
 			output += weigh(Screenname.ToLower(), baseWeight: WEIGHT_SCREENNAME);
 		if (Id.Contains(term))
 			output += weigh(Id, baseWeight: WEIGHT_ID);
-		if (AccountIdOverride != null && AccountIdOverride.Contains(term))
-			output += weigh(AccountIdOverride, baseWeight: WEIGHT_ID_OVERRIDE);
+		if (ParentId != null && ParentId.Contains(term))
+			output += weigh(ParentId, baseWeight: WEIGHT_ID_OVERRIDE);
 		if (Device.InstallId.Contains(term))
 			output += weigh(Device.InstallId, baseWeight: WEIGHT_ID_INSTALL);
 		output += termWeight;
 		
 		return SearchWeight = output;  // If we later evaluate search terms separately later, remove this assignment.
-	}
-
-	internal void UpdateSso(SsoData sso)
-	{
-		if (sso == null)
-			return;
-
-		if (GoogleAccount?.Id != sso.GoogleAccount?.Id)
-			GoogleAccount = sso.GoogleAccount;
-		if (AppleAccount?.Id != sso.AppleAccount?.Id)
-			AppleAccount = sso.AppleAccount;
-
-		if (RumbleAccount.Status != RumbleAccount.AccountStatus.None)
-			return;
-		
-		RumbleAccount = sso.RumbleAccount;
-		RumbleAccount.Status = RumbleAccount.AccountStatus.NeedsConfirmation;
 	}
 }

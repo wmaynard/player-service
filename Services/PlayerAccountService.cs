@@ -32,7 +32,7 @@ public class PlayerAccountService : PlatformMongoService<Player>
 	public int SyncScreenname(string screenname, string accountId)
 	{
 		int affected = (int)_collection.UpdateMany(
-			filter: player => player.Id == accountId || player.AccountIdOverride == accountId,
+			filter: player => player.Id == accountId || player.ParentId == accountId,
 			update: Builders<Player>.Update.Set(player => player.Screenname, screenname)
 		).ModifiedCount;
 		
@@ -59,9 +59,9 @@ public class PlayerAccountService : PlatformMongoService<Player>
 				.Find(player => player.Device.InstallId == device.InstallId)
 				.FirstOrDefault();
 
-		if (output?.AccountIdOverride != null)
+		if (output?.ParentId != null)
 			output.Parent = _collection
-				.Find(player => player.Id == output.AccountIdOverride)
+				.Find(player => player.Id == output.ParentId)
 				.FirstOrDefault();
 		return output?.Parent ?? output;
 	}
@@ -251,7 +251,7 @@ public class PlayerAccountService : PlatformMongoService<Player>
 	public string SetLinkCode(string[] ids)
 	{
 		string[] overrides = _collection
-			.Find(Builders<Player>.Filter.In(player => player.AccountIdOverride, ids.Where(id => !string.IsNullOrWhiteSpace(id))))
+			.Find(Builders<Player>.Filter.In(player => player.ParentId, ids.Where(id => !string.IsNullOrWhiteSpace(id))))
 			.Project(Builders<Player>.Projection.Expression(player => player.Id))
 			.ToList()
 			.ToArray();
@@ -283,7 +283,7 @@ public class PlayerAccountService : PlatformMongoService<Player>
 				Builders<Player>.Filter.Ne(account => account.Id, player.Id),
 				Builders<Player>.Filter.Or(
 					Builders<Player>.Filter.Eq(account => account.LinkCode, player.LinkCode),
-					Builders<Player>.Filter.Eq(account => account.AccountIdOverride, player.Id)
+					Builders<Player>.Filter.Eq(account => account.ParentId, player.Id)
 				)
 			))
 			.ToList();
@@ -325,7 +325,7 @@ public class PlayerAccountService : PlatformMongoService<Player>
 			.UpdateMany(
 				filter: Builders<Player>.Filter.In(player => player.Id, others.Select(other => other.Id)),
 				update: Builders<Player>.Update
-					.Set(other => other.AccountIdOverride, player.Id)
+					.Set(other => other.ParentId, player.Id)
 					.Unset(other => other.GoogleAccount)
 					.Unset(other => other.AppleAccount)
 					.Unset(other => other.RumbleAccount)

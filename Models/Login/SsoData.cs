@@ -16,7 +16,7 @@ public class SsoData : PlatformDataModel
     public const string FRIENDLY_KEY_APPLE_TOKEN = "appleToken";
     public const string FRIENDLY_KEY_GOOGLE_TOKEN = "googleToken";
     public const string FRIENDLY_KEY_RUMBLE_ACCOUNT = "rumble";
-
+    
     [BsonIgnore]
     [JsonPropertyName(FRIENDLY_KEY_APPLE_TOKEN)]
     public string AppleToken { get; set; }

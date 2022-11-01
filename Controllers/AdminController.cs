@@ -138,7 +138,7 @@ public class AdminController : PlatformController
 		Player[] PlayerIdMatches = term.Length == 24 && Regex.IsMatch(term, pattern: hex)
 			? _playerService.Find(player =>
 				player.Id.Equals(term)
-				|| player.AccountIdOverride.Equals(term)
+				|| player.ParentId.Equals(term)
 			).ToArray()
 			: Array.Empty<Player>();
 
@@ -156,7 +156,7 @@ public class AdminController : PlatformController
 		// 	player.Id.ToLower().Contains(term)
 		// 	|| player.Screenname.ToLower().Contains(term)
 		// 	|| player.Device.InstallId.ToLower().Contains(term)
-		// 	|| player.AccountIdOverride.ToLower().Contains(term)
+		// 	|| player.ParentId.ToLower().Contains(term)
 		// ).ToList();
 		// players.AddRange(PlayerIdMatches);
 		//
@@ -181,17 +181,17 @@ public class AdminController : PlatformController
 		// 	.ToArray();
 		// foreach (Player parent in parents)
 		// 	parent.LinkedAccounts = players
-		// 		.Where(player => player.AccountIdOverride == parent.AccountId && player.IsLinkedAccount)
+		// 		.Where(player => player.ParentId == parent.AccountId && player.IsLinkedAccount)
 		// 		.OrderByDescending(player => player.CreatedTimestamp)
 		// 		.ToArray();
 		// Player[] orphans = players
-		// 	.Where(player => player.IsLinkedAccount && !parents.Any(parent => parent.AccountId == player.AccountIdOverride))
+		// 	.Where(player => player.IsLinkedAccount && !parents.Any(parent => parent.AccountId == player.ParentId))
 		// 	.ToArray();
 		//
 		// if (orphans.Any())
 		// 	Log.Warn(Owner.Default, "Linked accounts were found in the player search, but the parent account was not.", data: new
 		// 	{
-		// 		Orphans = orphans.Select(orphan => orphan.AccountIdOverride)
+		// 		Orphans = orphans.Select(orphan => orphan.ParentId)
 		// 	});
 		//
 		// float? sum = null; // Assigning to a field in the middle of a LINQ query is a little janky, but this prevents sum re-evaluation / requiring another loop.
