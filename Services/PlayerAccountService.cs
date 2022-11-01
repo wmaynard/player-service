@@ -75,8 +75,8 @@ public class PlayerAccountService : PlatformMongoService<Player>
 
 		if (sso.GoogleAccount != null)
 			filters.Add(builder.Eq(player => player.GoogleAccount.Id, sso.GoogleAccount.Id));
-		if (sso.IosAccount != null)
-			filters.Add(builder.Eq(player => player.IosAccount.Id, sso.IosAccount.Id));
+		if (sso.AppleAccount != null)
+			filters.Add(builder.Eq(player => player.AppleAccount.Id, sso.AppleAccount.Id));
 		if (sso.RumbleAccount != null)
 			filters.Add(builder.And(
 				builder.Eq(player => player.RumbleAccount.Username, sso.RumbleAccount.Username),
@@ -303,9 +303,9 @@ public class PlayerAccountService : PlatformMongoService<Player>
 			.Union(new [] { player.GoogleAccount })
 			.Where(account => account != null)
 			.ToList();
-		List<IosAccount> apples = others
-			.Select(other => other.IosAccount)
-			.Union(new [] { player.IosAccount })
+		List<AppleAccount> apples = others
+			.Select(other => other.AppleAccount)
+			.Union(new [] { player.AppleAccount })
 			.Where(account => account != null)
 			.ToList();
 		List<RumbleAccount> rumbles = others
@@ -318,12 +318,12 @@ public class PlayerAccountService : PlatformMongoService<Player>
 		if (googles.Count > 1)
 			throw new PlatformException("Multiple Google accounts found.");
 		if (apples.Count > 1)
-			throw new PlatformException("Multiple iOS accounts found.");
+			throw new PlatformException("Multiple Apple accounts found.");
 		if (rumbles.Count > 1)
 			throw new PlatformException("Multiple Rumble accounts found.");
 		
 		player.GoogleAccount = googles.FirstOrDefault();
-		player.IosAccount = apples.FirstOrDefault();
+		player.AppleAccount = apples.FirstOrDefault();
 		player.RumbleAccount = rumbles.FirstOrDefault();
 
 		Update(player);
@@ -334,7 +334,7 @@ public class PlayerAccountService : PlatformMongoService<Player>
 				update: Builders<Player>.Update
 					.Set(other => other.AccountIdOverride, player.Id)
 					.Unset(other => other.GoogleAccount)
-					.Unset(other => other.IosAccount)
+					.Unset(other => other.AppleAccount)
 					.Unset(other => other.RumbleAccount)
 					.Unset(other => other.LinkCode)
 			);

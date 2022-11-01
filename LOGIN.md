@@ -55,7 +55,7 @@ POST /player/account/login
         "type": "Postman"
     },
     "sso": {
-        "iosToken": "eyJhb....ABSsQ",
+        "appleToken": "eyJhb....ABSsQ",
         "googleToken": "eyJhb....ABSsQ",
         "rumble": {
             "username": "atakechi",
@@ -155,7 +155,7 @@ PATCH /player/account/password
             "name": "Will Maynard",
             "picture": "https://lh3.googleusercontent.com/a/ALm5wu3Ry2eu_DYsjGEdvK4StRS6rz3VueNq2E6_KuPt=s96-c"
         },
-        "iosAccount": null,
+        "appleAccount": null,
         "rumbleAccount": {
             "email": "austin.takechi@rumbleentertainment.com",
             "username": "atakechi",
@@ -239,7 +239,7 @@ First, assume the following records exist on MongoDB:
         "name": "Austin Takechi",
         "picture": "https://lh3.googleusercontent.com/a/ALm5wu3Ry2eu_DYsjGEdvK4StRS6rz3VueNq2E6_KuPt=s96-c"
     }
-    "iosAccount": null,
+    "appleAccount": null,
     "rumbleAccount": null,
     "token": null,
     "id": "635c64af7dc2a4be0ee65a1c"
@@ -259,7 +259,7 @@ First, assume the following records exist on MongoDB:
         "type": "Mac Desktop"
     },
     "googleAccount": null,
-    "iosAccount": null,
+    "appleAccount": null,
     "rumbleAccount": {
         "email": "austin.takechi@rumblentertainment.com",
         "username": "atakechi",

@@ -42,8 +42,8 @@ public class DeviceInfo : PlatformDataModel
 public class SsoInput : PlatformDataModel
 {
     [BsonIgnore]
-    [JsonInclude, JsonPropertyName("iosToken")]
-    public string IosToken { get; set; }
+    [JsonInclude, JsonPropertyName("appleToken")]
+    public string AppleToken { get; set; }
     
     [BsonIgnore]
     [JsonInclude, JsonPropertyName("googleToken")]
@@ -54,11 +54,11 @@ public class SsoInput : PlatformDataModel
     public RumbleAccount RumbleAccount { get; set; }
     
     public GoogleAccount GoogleAccount { get; set; }
-    public IosAccount IosAccount { get; set; }
+    public AppleAccount AppleAccount { get; set; }
     
     [BsonIgnore]
     [JsonIgnore]
-    public bool AccountsProvided => RumbleAccount != null || GoogleAccount != null || IosAccount != null;
+    public bool AccountsProvided => RumbleAccount != null || GoogleAccount != null || AppleAccount != null;
 
     public SsoInput ValidateTokens()
     {
@@ -75,13 +75,13 @@ public class SsoInput : PlatformDataModel
     
         try
         {
-            IosAccount = IosAccount.ValidateToken(IosToken);
-            if (IosToken != null && IosAccount == null)
-                throw new PlatformException("Unable to validate iOS token.");
+            AppleAccount = AppleAccount.ValidateToken(AppleToken);
+            if (AppleToken != null && AppleAccount == null)
+                throw new PlatformException("Unable to validate Apple token.");
         }
         catch (Exception e)
         {
-            throw new SsoInvalidException(IosToken, "ios", inner: e);
+            throw new SsoInvalidException(AppleToken, "Apple", inner: e);
         }
     
         return this;
@@ -95,8 +95,8 @@ public class SsoInput : PlatformDataModel
             throw new PlatformException("No players found for SSO.");
         if (GoogleAccount != null && !players.Any(player => player.GoogleAccount != null))
             throw new PlatformException("Missing Google account.");
-        if (IosAccount != null && !players.Any(player => player.IosAccount != null))
-            throw new PlatformException("Missing iOS account.");
+        if (AppleAccount != null && !players.Any(player => player.AppleAccount != null))
+            throw new PlatformException("Missing Apple account.");
         if (RumbleAccount != null && !players.Any(player => player.RumbleAccount != null))
             throw new PlatformException("Missing Rumble account.");
     }
@@ -141,10 +141,10 @@ public class GoogleAccount : PlatformDataModel
     }
 }
 
-public class IosAccount : PlatformDataModel
+public class AppleAccount : PlatformDataModel
 {
     public string Id { get; set; }
-    public static IosAccount ValidateToken(string token)
+    public static AppleAccount ValidateToken(string token)
     {
         if (string.IsNullOrWhiteSpace(token))
             return null;

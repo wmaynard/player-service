@@ -41,8 +41,8 @@ public class Player : PlatformCollectionDocument
 	[BsonElement("google"), JsonPropertyName("googleAccount")]
 	public GoogleAccount GoogleAccount { get; set; }
 	
-	[BsonElement("ios"), JsonPropertyName("iosAccount")]
-	public IosAccount IosAccount { get; set; }
+	[BsonElement("apple"), JsonPropertyName("appleAccount")]
+	public AppleAccount AppleAccount { get; set; }
 	
 	[BsonElement("rumble"), JsonPropertyName("rumbleAccount")]
 	public RumbleAccount RumbleAccount { get; set; }
@@ -163,8 +163,8 @@ public class Player : PlatformCollectionDocument
 
 		if (GoogleAccount?.Id != sso.GoogleAccount?.Id)
 			GoogleAccount = sso.GoogleAccount;
-		if (IosAccount?.Id != sso.IosAccount?.Id)
-			IosAccount = sso.IosAccount;
+		if (AppleAccount?.Id != sso.AppleAccount?.Id)
+			AppleAccount = sso.AppleAccount;
 
 		if (RumbleAccount.Status != RumbleAccount.AccountStatus.None)
 			return;

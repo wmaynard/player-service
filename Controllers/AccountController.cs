@@ -209,7 +209,7 @@ public class AccountController : PlatformController
         }
 
         player.GoogleAccount ??= sso?.GoogleAccount;
-        player.IosAccount ??= sso?.IosAccount;
+        player.AppleAccount ??= sso?.AppleAccount;
 
         if (player.LinkExpiration > 0 && player.LinkExpiration <= Timestamp.UnixTime)
             _playerService.RemoveExpiredLinkCodes();
