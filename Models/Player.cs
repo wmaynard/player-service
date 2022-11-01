@@ -19,6 +19,7 @@ public class Player : PlatformCollectionDocument
 	internal const string DB_KEY_ACCOUNT_ID_OVERRIDE = "oaid";
 	internal const string FRIENDLY_KEY_ACCOUNT_ID = "accountId";
 	internal const string FRIENDLY_KEY_ACCOUNT_ID_OVERRIDE = "accountIdOverride";
+	internal const string FRIENDLY_KEY_DISCRIMINATOR = "discriminator";
 
 	[BsonElement("created"), JsonPropertyName("created"), BsonIgnoreIfDefault, JsonInclude, JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
 	public long CreatedTimestamp { get; set; }
@@ -68,7 +69,7 @@ public class Player : PlatformCollectionDocument
 	
 	
 	[BsonIgnore]
-	[JsonInclude, JsonPropertyName("discriminator"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+	[JsonInclude, JsonPropertyName(FRIENDLY_KEY_DISCRIMINATOR), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
 	public int? Discriminator { get; internal set; }
 	
 	[BsonIgnore]
@@ -156,7 +157,7 @@ public class Player : PlatformCollectionDocument
 		return SearchWeight = output;  // If we later evaluate search terms separately later, remove this assignment.
 	}
 
-	internal void UpdateSso(SsoInput sso)
+	internal void UpdateSso(SsoData sso)
 	{
 		if (sso == null)
 			return;

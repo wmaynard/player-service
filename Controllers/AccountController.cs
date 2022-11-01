@@ -165,7 +165,7 @@ public class AccountController : PlatformController
     public ActionResult Login()
     {
         DeviceInfo device = Require<DeviceInfo>("device");
-        SsoInput sso = Optional<SsoInput>("sso")?.ValidateTokens();
+        SsoData sso = Optional<SsoData>("sso")?.ValidateTokens();
 
         Player fromDevice = _playerService.FromDevice(device, isUpsert: true);
         Player player = fromDevice.Parent ?? fromDevice;

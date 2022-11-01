@@ -66,7 +66,7 @@ public class PlayerAccountService : PlatformMongoService<Player>
 		return output?.Parent ?? output;
 	}
 
-	public Player[] FromSso(SsoInput sso)
+	public Player[] FromSso(SsoData sso)
 	{
 		FilterDefinitionBuilder<Player> builder = Builders<Player>.Filter;
 
