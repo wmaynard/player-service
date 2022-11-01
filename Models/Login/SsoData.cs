@@ -6,7 +6,7 @@ using PlayerService.Exceptions;
 using Rumble.Platform.Common.Exceptions;
 using Rumble.Platform.Data;
 
-namespace PlayerService.Models.Sso;
+namespace PlayerService.Models.Login;
 
 public class SsoData : PlatformDataModel
 {

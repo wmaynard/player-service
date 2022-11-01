@@ -4,7 +4,7 @@ using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using Microsoft.AspNetCore.Mvc;
 using PlayerService.Models;
-using PlayerService.Models.Sso;
+using PlayerService.Models.Login;
 using PlayerService.Services;
 using PlayerService.Services.ComponentServices;
 using RCL.Logging;

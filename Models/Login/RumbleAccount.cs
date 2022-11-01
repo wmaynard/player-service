@@ -6,7 +6,7 @@ using MongoDB.Bson.Serialization;
 using MongoDB.Bson.Serialization.Attributes;
 using Rumble.Platform.Data;
 
-namespace PlayerService.Models.Sso;
+namespace PlayerService.Models.Login;
 
 public class RumbleAccount : PlatformDataModel
 {

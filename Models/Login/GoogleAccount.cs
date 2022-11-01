@@ -2,7 +2,7 @@ using System.Threading.Tasks;
 using Google.Apis.Auth;
 using Rumble.Platform.Data;
 
-namespace PlayerService.Models.Sso;
+namespace PlayerService.Models.Login;
 
 public class GoogleAccount : PlatformDataModel
 {

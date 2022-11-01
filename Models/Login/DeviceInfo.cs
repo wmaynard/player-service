@@ -6,11 +6,11 @@ using System.Threading.Tasks;
 using Google.Apis.Auth;
 using MongoDB.Bson.Serialization.Attributes;
 using PlayerService.Exceptions;
-using PlayerService.Models.Sso;
+using PlayerService.Models.Login;
 using Rumble.Platform.Common.Exceptions;
 using Rumble.Platform.Data;
 
-namespace PlayerService.DeviceInfo.Models;
+namespace PlayerService.Models.Login;
 
 public class DeviceInfo : PlatformDataModel
 {
