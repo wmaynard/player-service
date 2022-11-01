@@ -14,7 +14,7 @@ namespace PlayerService.Services;
 public class PlayerAccountService : PlatformMongoService<Player>
 {
 	private readonly NameGeneratorService _nameGenerator;
-	public PlayerAccountService(NameGeneratorService nameGenerator) : base("player") => _nameGenerator = nameGenerator; 
+	public PlayerAccountService(NameGeneratorService nameGenerator) : base("players") => _nameGenerator = nameGenerator; 
 
 	public Player Find(string accountId) => FindOne(player => player.Id == accountId);
 

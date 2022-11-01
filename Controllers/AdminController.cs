@@ -25,7 +25,6 @@ public class AdminController : PlatformController
 #pragma warning disable
 	private readonly PlayerAccountService _playerService;
 	private readonly DiscriminatorService _discriminatorService;
-	private readonly ProfileService _profileService;
 	private readonly NameGeneratorService _nameGeneratorService;
 	private readonly ItemService _itemService;
 
@@ -105,7 +104,6 @@ public class AdminController : PlatformController
 		player.Discriminator = _discriminatorService.Lookup(player);
 
 		output["player"] = player;
-		output["profiles"] = _profileService.Find(profile => profile.AccountId == accountId);
 		output["components"] = components;
 		output["items"] = _itemService.GetItemsFor(accountId);
 		
@@ -143,68 +141,70 @@ public class AdminController : PlatformController
 				|| player.AccountIdOverride.Equals(term)
 			).ToArray()
 			: Array.Empty<Player>();
-		
-		Profile[] ProfileIdMatches = term.Length == 24 && Regex.IsMatch(term, pattern: hex)
-			? _profileService.Find(profile => profile.AccountId.Equals(term)).ToArray()
-			: Array.Empty<Profile>();
 
-		Profile[] ProfileEmailMatches = _profileService.FindByEmail(term);
-
-		// Now we can search for partial matches.  Frustratingly, on ObjectId fields only, Contains() returns false on
-		// exact matches, hence the above query.
-		List<Player> players = _playerService.Find(player =>
-			player.Id.ToLower().Contains(term)
-			|| player.Screenname.ToLower().Contains(term)
-			|| player.Device.InstallId.ToLower().Contains(term)
-			|| player.AccountIdOverride.ToLower().Contains(term)
-		).ToList();
-		players.AddRange(PlayerIdMatches);
-
-		RumbleJson discs = _discriminatorService.Search(players.Select(player => player.AccountId).ToArray());
-		foreach (Player player in players)
-			player.Discriminator = discs.Optional<int?>(player.AccountId);
+		throw new NotImplementedException();
 		
-		List<Profile> profiles = _profileService.Find(profile =>
-			profile.AccountId.Contains(term)
-		).ToList();
-		profiles.AddRange(ProfileIdMatches);
-		profiles.AddRange(ProfileEmailMatches);
-		
-		// Grab any Players from found profiles that we don't already have.  Finding anything here should be
-		// extremely rare.
-		foreach (string accountId in profiles.Select(profile => profile.AccountId))
-			if (!players.Select(player => player.Id).Contains(accountId))
-				players.Add(_playerService.FindOne(player => player.Id == accountId));
-
-		Player[] parents = players
-			.Where(player => !player.IsLinkedAccount)
-			.ToArray();
-		foreach (Player parent in parents)
-			parent.LinkedAccounts = players
-				.Where(player => player.AccountIdOverride == parent.AccountId && player.IsLinkedAccount)
-				.OrderByDescending(player => player.CreatedTimestamp)
-				.ToArray();
-		Player[] orphans = players
-			.Where(player => player.IsLinkedAccount && !parents.Any(parent => parent.AccountId == player.AccountIdOverride))
-			.ToArray();
-		
-		if (orphans.Any())
-			Log.Warn(Owner.Default, "Linked accounts were found in the player search, but the parent account was not.", data: new
-			{
-				Orphans = orphans.Select(orphan => orphan.AccountIdOverride)
-			});
-		
-		float? sum = null; // Assigning to a field in the middle of a LINQ query is a little janky, but this prevents sum re-evaluation / requiring another loop.
-		RumbleJson[] results = parents
-			.OrderByDescending(player => player.WeighSearchTerm(term))
-			.Select(player => new RumbleJson()
-		{
-			{ "player", player },
-			{ "score", player.SearchWeight },
-			{ "confidence", 100 * player.SearchWeight / (sum ??= players.Sum(p => p.SearchWeight)) } // Percentage of the score this record has.
-		}).ToArray();
-		
-		return Ok(new { Results = results });
+		// Profile[] ProfileIdMatches = term.Length == 24 && Regex.IsMatch(term, pattern: hex)
+		// 	? _profileService.Find(profile => profile.AccountId.Equals(term)).ToArray()
+		// 	: Array.Empty<Profile>();
+		//
+		// Profile[] ProfileEmailMatches = _profileService.FindByEmail(term);
+		//
+		// // Now we can search for partial matches.  Frustratingly, on ObjectId fields only, Contains() returns false on
+		// // exact matches, hence the above query.
+		// List<Player> players = _playerService.Find(player =>
+		// 	player.Id.ToLower().Contains(term)
+		// 	|| player.Screenname.ToLower().Contains(term)
+		// 	|| player.Device.InstallId.ToLower().Contains(term)
+		// 	|| player.AccountIdOverride.ToLower().Contains(term)
+		// ).ToList();
+		// players.AddRange(PlayerIdMatches);
+		//
+		// RumbleJson discs = _discriminatorService.Search(players.Select(player => player.AccountId).ToArray());
+		// foreach (Player player in players)
+		// 	player.Discriminator = discs.Optional<int?>(player.AccountId);
+		//
+		// List<Profile> profiles = _profileService.Find(profile =>
+		// 	profile.AccountId.Contains(term)
+		// ).ToList();
+		// profiles.AddRange(ProfileIdMatches);
+		// profiles.AddRange(ProfileEmailMatches);
+		//
+		// // Grab any Players from found profiles that we don't already have.  Finding anything here should be
+		// // extremely rare.
+		// foreach (string accountId in profiles.Select(profile => profile.AccountId))
+		// 	if (!players.Select(player => player.Id).Contains(accountId))
+		// 		players.Add(_playerService.FindOne(player => player.Id == accountId));
+		//
+		// Player[] parents = players
+		// 	.Where(player => !player.IsLinkedAccount)
+		// 	.ToArray();
+		// foreach (Player parent in parents)
+		// 	parent.LinkedAccounts = players
+		// 		.Where(player => player.AccountIdOverride == parent.AccountId && player.IsLinkedAccount)
+		// 		.OrderByDescending(player => player.CreatedTimestamp)
+		// 		.ToArray();
+		// Player[] orphans = players
+		// 	.Where(player => player.IsLinkedAccount && !parents.Any(parent => parent.AccountId == player.AccountIdOverride))
+		// 	.ToArray();
+		//
+		// if (orphans.Any())
+		// 	Log.Warn(Owner.Default, "Linked accounts were found in the player search, but the parent account was not.", data: new
+		// 	{
+		// 		Orphans = orphans.Select(orphan => orphan.AccountIdOverride)
+		// 	});
+		//
+		// float? sum = null; // Assigning to a field in the middle of a LINQ query is a little janky, but this prevents sum re-evaluation / requiring another loop.
+		// RumbleJson[] results = parents
+		// 	.OrderByDescending(player => player.WeighSearchTerm(term))
+		// 	.Select(player => new RumbleJson()
+		// {
+		// 	{ "player", player },
+		// 	{ "score", player.SearchWeight },
+		// 	{ "confidence", 100 * player.SearchWeight / (sum ??= players.Sum(p => p.SearchWeight)) } // Percentage of the score this record has.
+		// }).ToArray();
+		//
+		// return Ok(new { Results = results });
 	}
 
 	[HttpPost, Route("clone")]
@@ -239,10 +239,7 @@ public class AdminController : PlatformController
 	{
 		string email = Require<string>("email");
 		
-		return Ok(new
-		{
-			DeletedProfiles = _profileService.DeleteByEmail(email)
-		});
+		return Ok();
 	}
 
 	[HttpPatch, Route("currency")]

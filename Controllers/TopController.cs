@@ -32,7 +32,6 @@ public class TopController : PlatformController
 	private readonly DC2Service _dc2Service;
 	private readonly DiscriminatorService _discriminatorService;
 	private readonly ItemService _itemService;
-	private readonly ProfileService _profileService;
 	private readonly NameGeneratorService _nameGeneratorService;
 	private readonly AuditService _auditService;
 	
@@ -224,29 +223,30 @@ public class TopController : PlatformController
 	[HttpPost, Route("login"), NoAuth]
 	public ActionResult Login()
 	{
-		RumbleJson sso = Optional<RumbleJson>("sso");
-
-		List<Profile> profiles = _profileService.Find(sso, out List<SsoData> ssoData);
-		string[] accountIds = profiles.Select(profile => profile.AccountId).Distinct().ToArray();
-
-		if (!accountIds.Any())
-			throw new PlatformException("Account does not yet exist, or SSO is invalid.", code: ErrorCode.MongoRecordNotFound);
-		if (accountIds.Length > 1)
-			throw new PlatformException("Profile was found on multiple accounts!");
-
-		Player player = _playerService.Find(accountIds.First());
-
-		int discriminator = _discriminatorService.Lookup(player);
-		string email = profiles.FirstOrDefault(profile => profile.Email != null)?.Email;
-
-		string token = _apiService.GenerateToken(player.AccountId, player.Screenname, email, discriminator, AccountController.TOKEN_AUDIENCE);
-
-		return Ok(new RumbleJson
-		{
-			{ "player", player },
-			{ "discriminator", discriminator },
-			{ "accessToken", token }
-		});
+		throw new NotImplementedException();
+		// RumbleJson sso = Optional<RumbleJson>("sso");
+		//
+		// List<Profile> profiles = _profileService.Find(sso, out List<SsoData> ssoData);
+		// string[] accountIds = profiles.Select(profile => profile.AccountId).Distinct().ToArray();
+		//
+		// if (!accountIds.Any())
+		// 	throw new PlatformException("Account does not yet exist, or SSO is invalid.", code: ErrorCode.MongoRecordNotFound);
+		// if (accountIds.Length > 1)
+		// 	throw new PlatformException("Profile was found on multiple accounts!");
+		//
+		// Player player = _playerService.Find(accountIds.First());
+		//
+		// int discriminator = _discriminatorService.Lookup(player);
+		// string email = profiles.FirstOrDefault(profile => profile.Email != null)?.Email;
+		//
+		// string token = _apiService.GenerateToken(player.AccountId, player.Screenname, email, discriminator, AccountController.TOKEN_AUDIENCE);
+		//
+		// return Ok(new RumbleJson
+		// {
+		// 	{ "player", player },
+		// 	{ "discriminator", discriminator },
+		// 	{ "accessToken", token }
+		// });
 	}
 
 
@@ -328,7 +328,7 @@ public class TopController : PlatformController
 				{
 					{ Player.FRIENDLY_KEY_ACCOUNT_ID, member.AccountId },
 					// { Player.FRIENDLY_KEY_SCREENNAME, member.ScreenName },
-					{ Profile.FRIENDLY_KEY_DISCRIMINATOR, group.Number.ToString().PadLeft(4, '0') },
+					{ Player.FRIENDLY_KEY_DISCRIMINATOR, group.Number.ToString().PadLeft(4, '0') },
 					{ "accountAvatar", avatars.ContainsKey(member.AccountId) ? avatars[member.AccountId] : null },
 					{ "accountLevel", accountLevels.ContainsKey(member.AccountId) ? accountLevels[member.AccountId] : null }
 				});
@@ -350,8 +350,6 @@ public class TopController : PlatformController
 		{
 			foreach (ComponentService componentService in ComponentServices.Values)
 				componentService.Delete(locust);
-			foreach (Profile profile in _profileService.Find(profile => profile.AccountId == locust.AccountId))
-				_profileService.Delete(profile.Id);
 			_itemService.Delete(locust);
 			_playerService.Delete(locust.Id);
 		}
@@ -361,25 +359,4 @@ public class TopController : PlatformController
 			LocustsKilled = locusts.Length
 		});
 	}
-
-	[HttpDelete, Route("gpg"), NoAuth]
-	public ActionResult KillGPGProfile()
-	{
-		if (PlatformEnvironment.IsProd)
-		{
-			Log.Error(Owner.Will, "The DELETE /gpg endpoint should not be called outside of Dev!");
-			throw new PlatformException("Not allowed on prod!");
-		}
-		
-		string email = Require<string>("email");
-		Profile[] profiles = _profileService.Find(filter: profile => profile.Email == email);
-		foreach (Profile p in profiles)
-			_profileService.Delete(p);
-		return Ok(new
-		{
-			DeletedProfiles = profiles.Length
-		});
-	}
-	
-
 }

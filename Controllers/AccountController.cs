@@ -38,7 +38,6 @@ public class AccountController : PlatformController
     private readonly DC2Service _dc2Service;
     private readonly DiscriminatorService _discriminatorService;
     private readonly ItemService _itemService;
-    private readonly ProfileService _profileService;
     private readonly NameGeneratorService _nameGeneratorService;
     private readonly AuditService _auditService;
 	
