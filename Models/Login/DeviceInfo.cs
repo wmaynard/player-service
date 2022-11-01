@@ -14,27 +14,41 @@ namespace PlayerService.Models.Login;
 
 public class DeviceInfo : PlatformDataModel
 {
-    [BsonElement("cv")]
-    [JsonInclude, JsonPropertyName("clientVersion")]
+    private const string DB_KEY_CLIENT_VERSION = "vClient";
+    private const string DB_KEY_DATA_VERSION = "vData";
+    private const string DB_KEY_INSTALL_ID = "install";
+    private const string DB_KEY_LANGUAGE = "lang";
+    private const string DB_KEY_OPERATING_SYSTEM_VERSION = "vOS";
+    private const string DB_KEY_TYPE = "t";
+
+    public const string FRIENDLY_KEY_CLIENT_VERSION = "clientVersion";
+    public const string FRIENDLY_KEY_DATA_VERSION = "dataVersion";
+    public const string FRIENDLY_KEY_INSTALL_ID = "installId";
+    public const string FRIENDLY_KEY_LANGUAGE = "language";
+    public const string FRIENDLY_KEY_OS_VERSION = "osVersion";
+    public const string FRIENDLY_KEY_TYPE = "type";
+    
+    [BsonElement(DB_KEY_CLIENT_VERSION)]
+    [JsonInclude, JsonPropertyName(FRIENDLY_KEY_CLIENT_VERSION)]
     public string ClientVersion { get; set; }
     
-    [BsonElement("dv")]
-    [JsonInclude, JsonPropertyName("dataVersion")]
+    [BsonElement(DB_KEY_DATA_VERSION)]
+    [JsonInclude, JsonPropertyName(FRIENDLY_KEY_DATA_VERSION)]
     public string DataVersion { get; set; }
     
-    [BsonElement("lsi")]
-    [JsonInclude, JsonPropertyName("installId")]
+    [BsonElement(DB_KEY_INSTALL_ID)]
+    [JsonInclude, JsonPropertyName(FRIENDLY_KEY_INSTALL_ID)]
     public string InstallId { get; set; }
     
-    [BsonElement("lang")]
-    [JsonInclude, JsonPropertyName("language")]
+    [BsonElement(DB_KEY_LANGUAGE)]
+    [JsonInclude, JsonPropertyName(FRIENDLY_KEY_LANGUAGE)]
     public string Language { get; set; }
     
-    [BsonElement("os")]
-    [JsonInclude, JsonPropertyName("osVersion")]
+    [BsonElement(DB_KEY_OPERATING_SYSTEM_VERSION)]
+    [JsonInclude, JsonPropertyName(FRIENDLY_KEY_OS_VERSION)]
     public string OperatingSystem { get; set; }
     
-    [BsonElement("t")]
-    [JsonInclude, JsonPropertyName("type")]
+    [BsonElement(DB_KEY_TYPE)]
+    [JsonInclude, JsonPropertyName(FRIENDLY_KEY_TYPE)]
     public string Type { get; set; }
 }

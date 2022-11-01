@@ -209,13 +209,6 @@ public class PlayerAccountService : PlatformMongoService<Player>
 					ReturnDocument = ReturnDocument.After
 				}
 			);
-
-		if (output.RumbleAccount.PendingHash == null)
-			return output;
-		
-		output.RumbleAccount.Hash = output.RumbleAccount.PendingHash;
-		output.RumbleAccount.PendingHash = null;
-		Update(output);
 		
 		return output;
 	}

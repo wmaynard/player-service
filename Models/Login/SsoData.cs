@@ -8,21 +8,33 @@ using Rumble.Platform.Data;
 
 namespace PlayerService.Models.Login;
 
+/// <summary>
+/// This class is just used as a transport layer from request -> databases.  It is not intended for storage.
+/// </summary>
 public class SsoData : PlatformDataModel
 {
+    public const string FRIENDLY_KEY_APPLE_TOKEN = "appleToken";
+    public const string FRIENDLY_KEY_GOOGLE_TOKEN = "googleToken";
+    public const string FRIENDLY_KEY_RUMBLE_ACCOUNT = "rumble";
+
     [BsonIgnore]
-    [JsonInclude, JsonPropertyName("appleToken")]
+    [JsonPropertyName(FRIENDLY_KEY_APPLE_TOKEN)]
     public string AppleToken { get; set; }
     
     [BsonIgnore]
-    [JsonInclude, JsonPropertyName("googleToken")]
+    [JsonPropertyName(FRIENDLY_KEY_GOOGLE_TOKEN)]
     public string GoogleToken { get; set; }
 
     [BsonIgnore]
-    [JsonInclude, JsonPropertyName("rumble")]
+    [JsonPropertyName(FRIENDLY_KEY_RUMBLE_ACCOUNT)]
     public RumbleAccount RumbleAccount { get; set; }
     
+    [BsonIgnore]
+    [JsonIgnore]
     public GoogleAccount GoogleAccount { get; set; }
+    
+    [BsonIgnore]
+    [JsonIgnore]
     public AppleAccount AppleAccount { get; set; }
     
     [BsonIgnore]

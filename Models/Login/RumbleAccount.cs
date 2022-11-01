@@ -10,19 +10,43 @@ namespace PlayerService.Models.Login;
 
 public class RumbleAccount : PlatformDataModel
 {
-    public string Email { get; set; }
+    private const string DB_KEY_CODE = "code";
+    private const string DB_KEY_CODE_EXPIRATION = "exp";
+    private const string DB_KEY_EMAIL = "email";
+    private const string DB_KEY_HASH = "hash";
+    private const string DB_KEY_STATUS = "status";
+    private const string DB_KEY_USERNAME = "username";
     
-    [BsonElement]
-    [JsonInclude, JsonPropertyName("username")]
-    public string Username { get; set; }    
-    
-    [BsonElement]
-    [JsonInclude, JsonPropertyName("hash")]
-    public string Hash { get; set; }
-    public string PendingHash { get; set; }
-    public long CodeExpiration { get; set; }
+    private const string FRIENDLY_KEY_CODE = "code";
+    private const string FRIENDLY_KEY_CODE_EXPIRATION = "expiration";
+    private const string FRIENDLY_KEY_EMAIL = "email";
+    private const string FRIENDLY_KEY_STATUS = "status";
+    private const string FRIENDLY_KEY_USERNAME = "username";
+
+    [BsonElement(DB_KEY_CODE)]
+    [JsonPropertyName(FRIENDLY_KEY_CODE)]
     public string ConfirmationCode { get; set; }
+    
+    [BsonElement(DB_KEY_CODE_EXPIRATION)]
+    [JsonPropertyName(FRIENDLY_KEY_CODE_EXPIRATION)]
+    public long CodeExpiration { get; set; }
+    
+    [BsonElement(DB_KEY_EMAIL)]
+    [JsonPropertyName(FRIENDLY_KEY_EMAIL)]
+    public string Email { get; set; }
+     
+    
+    [BsonElement(DB_KEY_HASH)]
+    [JsonIgnore]
+    public string Hash { get; set; }
+    
+    [BsonElement(DB_KEY_STATUS)]
+    [JsonPropertyName(FRIENDLY_KEY_STATUS)]
     public AccountStatus Status { get; set; }
+    
+    [BsonElement(DB_KEY_USERNAME)]
+    [JsonPropertyName(FRIENDLY_KEY_USERNAME)]
+    public string Username { get; set; }   
 
     [Flags]
     public enum AccountStatus
