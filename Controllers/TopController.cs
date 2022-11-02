@@ -367,6 +367,8 @@ public class TopController : PlatformController
 				}
 			})
 			.Post(out RumbleJson json, out int code);
+		if (json != null)
+			json["warning"] = "This endpoint is deprecated!  It will be leaving player-service once the new login flows have been adopted.";
 		return Ok(json);
 	}
 
