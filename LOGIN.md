@@ -47,7 +47,7 @@ First, let's look at what a sample login request looks like.  Every request **mu
 ```
 POST /player/account/login
 {
-    "device": {
+    "deviceInfo": {
         "installId": "locust-postman",            // Device GUID
         "clientVersion": "0.1.432",
         "language": "English",
@@ -78,12 +78,12 @@ To add SSO capabilities to any account, each SSO type requires a separate call. 
 ```
 PATCH /account/apple
 {
-    "device": { ... },
+    "deviceInfo": { ... },
     "appleToken": "eyJhb....ABSsQ"
 }
 PATCH /account/google
 {
-    "device": { ... },
+    "deviceInfo": { ... },
     "googleToken": "eyJhb....ABSsQ"
 }
 PATCH /account/rumble
@@ -139,7 +139,7 @@ PATCH /player/account/password
     "player": {
         "lastLogin": 1667324181,
         "screenname": "Player14b1cf8",
-        "device": {
+        "deviceInfo": {
             "clientVersion": "0.1.432",
             "dataVersion": null,
             "installId": "locust-postman5",
@@ -223,7 +223,7 @@ First, assume the following records exist on MongoDB:
     "lastLogin": 1667250037,
     "linkCode": "09c0da60-9a22-491a-bdc7-1dd729a5ce6f",
     "screenname": "Player71855ab",
-    "device": {
+    "deviceInfo": {
         "clientVersion": "0.1.432",
         "dataVersion": null,
         "installId": "locust-postman",
@@ -250,7 +250,7 @@ First, assume the following records exist on MongoDB:
     "lastLogin": 1667250037,
     "linkCode": "09c0da60-9a22-491a-bdc7-1dd729a5ce6f",
     "screenname": "Player71855ab",
-    "device": {
+    "deviceInfo": {
         "clientVersion": "0.1.432",
         "dataVersion": null,
         "installId": "locust-postman2",
@@ -279,7 +279,7 @@ Then we have a login request on the mobile phone:
 ```
 POST /player/v2/account/login
 {
-     "device": {
+     "deviceInfo": {
         "clientVersion": "0.1.432",
         "dataVersion": null,
         "installId": "locust-postman",
@@ -302,7 +302,7 @@ Sample response:
         "lastLogin": 1667327415,
         "linkCode": "b7d309a5-e526-4cf0-b2af-5ec04708230b",
         "screenname": "Player71855ab",
-        "device": {
+        "deviceInfo": {
             "clientVersion": "0.1.432",
             "dataVersion": null,
             "installId": "locust-postman",
@@ -327,7 +327,7 @@ Sample response:
             "lastLogin": 1667324181,
             "linkCode": "b7d309a5-e526-4cf0-b2af-5ec04708230b",
             "screenname": "Player71855ab",
-            "device": {
+            "deviceInfo": {
                 "clientVersion": "0.1.432",
                 "dataVersion": null,
                 "installId": "locust-postman2",

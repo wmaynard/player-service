@@ -349,7 +349,7 @@ public class TopController : PlatformController
 			.SetPayload(new RumbleJson
 			{
 				{
-					"deviceInfo", new RumbleJson
+					Player.FRIENDLY_KEY_DEVICE, new RumbleJson
 					{
 						{ DeviceInfo.FRIENDLY_KEY_INSTALL_ID, Require<string>("installId") },
 						{ DeviceInfo.FRIENDLY_KEY_CLIENT_VERSION, Optional<string>("clientVersion") },
