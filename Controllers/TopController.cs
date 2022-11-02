@@ -8,6 +8,7 @@ using Microsoft.Extensions.Configuration;
 using MongoDB.Driver;
 using PlayerService.Exceptions;
 using PlayerService.Models;
+using PlayerService.Models.Login;
 using Rumble.Platform.Common.Web;
 using PlayerService.Services;
 using PlayerService.Services.ComponentServices;
@@ -337,6 +338,36 @@ public class TopController : PlatformController
 		{
 			Results = output
 		});
+	}
+
+	// TODO: Remove /launch permanently once we've switched over to it.
+	[HttpPost, Route("launch"), NoAuth]
+	public ActionResult Launch()
+	{
+		_apiService
+			.Request("/player/v2/account/login")
+			.SetPayload(new RumbleJson
+			{
+				{
+					"deviceInfo", new RumbleJson
+					{
+						{ DeviceInfo.FRIENDLY_KEY_INSTALL_ID, Require<string>("installId") },
+						{ DeviceInfo.FRIENDLY_KEY_CLIENT_VERSION, Optional<string>("clientVersion") },
+						{ DeviceInfo.FRIENDLY_KEY_DATA_VERSION, Optional<string>("dataVersion") },
+						{ DeviceInfo.FRIENDLY_KEY_LANGUAGE, Optional<string>("systemLanguage") },
+						{ DeviceInfo.FRIENDLY_KEY_OS_VERSION, Optional<string>("osVersion") },
+						{ DeviceInfo.FRIENDLY_KEY_TYPE, Optional<string>("deviceType") }
+					}
+				},
+				{
+					"sso", new RumbleJson
+					{
+						{ SsoData.FRIENDLY_KEY_GOOGLE_TOKEN, Optional<RumbleJson>("sso")?.Optional<string>("googleToken") }
+					}
+				}
+			})
+			.Post(out RumbleJson json, out int code);
+		return Ok(json);
 	}
 
 	[HttpDelete, Route("pesticide"), NoAuth]
