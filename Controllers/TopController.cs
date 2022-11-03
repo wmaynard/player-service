@@ -16,6 +16,7 @@ using RCL.Logging;
 using Rumble.Platform.Common.Attributes;
 using Rumble.Platform.Common.Enums;
 using Rumble.Platform.Common.Exceptions;
+using Rumble.Platform.Common.Models;
 using Rumble.Platform.Common.Utilities;
 using Rumble.Platform.Common.Services;
 using Rumble.Platform.Data;
@@ -367,10 +368,51 @@ public class TopController : PlatformController
 				}
 			})
 			.Post(out RumbleJson json, out int code);
-		if (json != null)
-			json["warning"] = "This endpoint is deprecated!  It will be leaving player-service once the new login flows have been adopted.";
-		return Ok(json);
+
+		RumbleJson output = new RumbleJson
+		{
+			{ "success", true },
+			{ "remoteAddr", GeoIPData?.IPAddress },
+			{ "geoipAddr", GeoIPData?.IPAddress },
+			{ "country", GeoIPData?.CountryCode },
+			{ "serverTime", Timestamp.UnixTime },
+			{ "requestId", json?.Optional<string>("requestId") },
+			{ "accessToken", json?.Optional<Player>("player")?.Token },
+			{ "player", new RumbleJson
+			{
+				{ "clientVersion", json?.Optional<Player>("player")?.Device?.ClientVersion },
+				{ "dateCreated", 0 },
+				{ "lastSavedInstallId", json?.Optional<Player>("player")?.Device?.InstallId },
+				{ "screenname", json?.Optional<Player>("player")?.Screenname },
+				{ "username", json?.Optional<Player>("player")?.Screenname },
+				{ "id", json?.Optional<Player>("player")?.Id }
+			}},
+			{ "discriminator", json?.Optional<Player>("player")?.Discriminator },
+			{ "ssoData", Array.Empty<string>() },
+			{ "warning", "This endpoint is deprecated!  It will be leaving player-service once the new login flows have been adopted." }
+		};
+		return Ok(output);
 	}
+	
+	// {
+	// 	"success": true,
+	// 	"remoteAddr": "73.162.30.116",
+	// 	"geoipAddr": "73.162.30.116",
+	// 	"country": "US",
+	// 	"serverTime": 1667435651,
+	// 	"requestId": "c005ee2cb35f165b134b09f128977037",
+	// 	"accessToken": "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJhaWQiOiI2MmU4NDE5MjUwMzAzNDNjNjA3OWU3OGQiLCJleHAiOjE2Njc4Njc2NTEsImlzcyI6IlJ1bWJsZSBUb2tlbiBTZXJ2aWNlIiwiaWF0IjoxNjY3NDM1NjUxLCJhdWQiOlsiY2hhdC1zZXJ2aWNlIiwiZG16LXNlcnZpY2UiLCJsZWFkZXJib2FyZC1zZXJ2aWNlIiwibWFpbC1zZXJ2aWNlIiwibWF0Y2htYWtpbmctc2VydmljZSIsIm11bHRpcGxheWVyLXNlcnZpY2UiLCJuZnQtc2VydmljZSIsInBsYXllci1zZXJ2aWNlIiwicHZwLXNlcnZpY2UiLCJyZWNlaXB0LXNlcnZpY2UiXSwic24iOiJQbGF5ZXI4YmMwYjYyIiwiZCI6NzMwNywiaXAiOiI3My4xNjIuMzAuMTE2IiwiY2MiOiJVUyIsInJlcSI6InBsYXllci1zZXJ2aWNlIiwiZ2tleSI6IjU3OTAxYzZkZjgyYTQ1NzA4MDE4YmE3M2I4ZDE2MDA0In0.vRElIAYUJpCuy4peekYo4kohV0r2-LvGz0mMROP4mkdaKMwX_egPesvZnoam64NGgOLnjCbSWaOeaqGGdXFo6g",
+	// 	"player": {
+	// 		"clientVersion": "0.1.432",
+	// 		"dateCreated": 1659388306,
+	// 		"lastSavedInstallId": "locust-postman",
+	// 		"screenname": "Player8bc0b62",
+	// 		"username": "Player8bc0b62",
+	// 		"id": "62e841925030343c6079e78d"
+	// 	},
+	// 	"discriminator": 7307,
+	// 	"ssoData": []
+	// }
 
 	[HttpDelete, Route("pesticide"), NoAuth]
 	public ActionResult KillAllLocusts()
