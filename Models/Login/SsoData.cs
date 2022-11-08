@@ -46,7 +46,7 @@ public class SsoData : PlatformDataModel
         try
         {
             GoogleAccount = GoogleAccount.ValidateToken(GoogleToken);
-            if (GoogleToken != null && GoogleAccount == null)
+            if (!string.IsNullOrWhiteSpace(GoogleToken) && GoogleAccount == null)
                 throw new PlatformException("Unable to validate Google token.");
         }
         catch (Exception e)
@@ -57,13 +57,16 @@ public class SsoData : PlatformDataModel
         try
         {
             AppleAccount = AppleAccount.ValidateToken(AppleToken);
-            if (AppleToken != null && AppleAccount == null)
+            if (!string.IsNullOrWhiteSpace(AppleToken) && AppleAccount == null)
                 throw new PlatformException("Unable to validate Apple token.");
         }
         catch (Exception e)
         {
             throw new SsoInvalidException(AppleToken, "Apple", inner: e);
         }
+
+        if (string.IsNullOrWhiteSpace(RumbleAccount?.Email) && string.IsNullOrWhiteSpace(RumbleAccount?.Hash))
+            RumbleAccount = null;
     
         return this;
     }
@@ -81,5 +84,4 @@ public class SsoData : PlatformDataModel
         if (RumbleAccount != null && !players.Any(player => player.RumbleAccount != null))
             throw new PlatformException("Missing Rumble account.");
     }
-    
 }

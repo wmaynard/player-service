@@ -4,6 +4,7 @@ using System.Text.Json.Serialization;
 using MongoDB.Bson.Serialization.Attributes;
 using Newtonsoft.Json;
 using PlayerService.Models.Login;
+using Rumble.Platform.Common.Attributes;
 using Rumble.Platform.Common.Models;
 using Rumble.Platform.Common.Utilities;
 using Rumble.Platform.Common.Web;
@@ -82,6 +83,8 @@ public class Player : PlatformCollectionDocument
 	
 	[BsonElement(DB_KEY_PARENT_ID), BsonIgnoreIfNull]
 	[JsonPropertyName(FRIENDLY_KEY_PARENT_ID), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+	// [TextIndex(DB_KEY_PARENT_ID, "parentIdText")]
+	[TextIndex]
 	public string ParentId { get; set; }
 	
 	[BsonElement(DB_KEY_RUMBLE_ACCOUNT)]
@@ -90,6 +93,8 @@ public class Player : PlatformCollectionDocument
 
 	[BsonElement(DB_KEY_SCREENNAME)]
 	[JsonPropertyName(FRIENDLY_KEY_SCREENNAME)]
+	[SimpleIndex]
+	[TextIndex]
 	public string Screenname { get; set; }
 	
 	[BsonIgnore]

@@ -232,7 +232,7 @@ public class CollectionTestService : PlatformMongoService<MongoTestModelItemColl
 
 public class MongoTestModelItemCollection : PlatformCollectionDocument
 {
-	[SimpleIndex(dbKey: "aid", name: "AccountId")]
+	[SimpleIndex]
 	[BsonElement("aid")]
 	[JsonPropertyName("accountId")]
 	public string AccountId { get; set; }

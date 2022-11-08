@@ -102,7 +102,7 @@ public class AccountController : PlatformController
     public ActionResult LinkRumble()
     {
         DeviceInfo device = Require<DeviceInfo>(Player.FRIENDLY_KEY_DEVICE);
-        RumbleAccount rumble = Require<RumbleAccount>(Player.FRIENDLY_KEY_RUMBLE_ACCOUNT);
+        RumbleAccount rumble = Require<RumbleAccount>(SsoData.FRIENDLY_KEY_RUMBLE_ACCOUNT);
 
         Player fromDevice = _playerService.FromDevice(device, isUpsert: true);
         Player fromRumble = _playerService.FromRumble(rumble);

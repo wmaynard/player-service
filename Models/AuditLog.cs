@@ -18,12 +18,12 @@ public class AuditLog : PlatformCollectionDocument
 	public const string FRIENDLY_KEY_COMPONENT_NAME = "component";
 	public const string FRIENDLY_KEY_ENTRIES = "entries";
 	
-	[SimpleIndex(dbKey: DB_KEY_ACCOUNT_ID, name: FRIENDLY_KEY_ACCOUNT_ID)]
+	[SimpleIndex]
 	[BsonElement(DB_KEY_ACCOUNT_ID), BsonIgnoreIfNull]
 	[JsonInclude, JsonPropertyName(FRIENDLY_KEY_ACCOUNT_ID), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
 	public string AccountId { get; set; }
 	
-	[SimpleIndex(dbKey: DB_KEY_COMPONENT_NAME, name: FRIENDLY_KEY_COMPONENT_NAME)]
+	[SimpleIndex]
 	[BsonElement(DB_KEY_COMPONENT_NAME), BsonIgnoreIfNull]
 	[JsonInclude, JsonPropertyName(FRIENDLY_KEY_COMPONENT_NAME), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
 	public string ComponentName { get; set; }

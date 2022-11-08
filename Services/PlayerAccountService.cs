@@ -1,11 +1,13 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text.RegularExpressions;
 using MongoDB.Driver;
 using PlayerService.Models;
 using PlayerService.Models.Login;
 using RCL.Logging;
 using Rumble.Platform.Common.Exceptions;
+using Rumble.Platform.Common.Extensions;
 using Rumble.Platform.Common.Services;
 using Rumble.Platform.Common.Utilities;
 
@@ -344,4 +346,73 @@ public class PlayerAccountService : PlatformMongoService<Player>
 				.Unset(player => player.LinkCode)
 				.Unset(player => player.LinkExpiration)
 		).ModifiedCount;
+
+	public Player[] Search(string term)
+	{
+		Player[] output;
+
+		if (term.CanBeMongoId())
+		{
+			output = _collection
+				.Find(Builders<Player>.Filter.Eq(player => player.Id, term))
+				.ToList()
+				.ToArray();
+			if (output.Any())
+				return output;
+		}
+
+		List<FilterDefinition<Player>> filters = new List<FilterDefinition<Player>>()
+		{
+			Builders<Player>.Filter.Text("8fbb", new TextSearchOptions
+			{
+				CaseSensitive = false,
+				DiacriticSensitive = false
+			})
+		};
+
+		output = _collection
+			.Find(Builders<Player>.Filter.And(filters))
+			.ToList()
+			.ToArray();
+		
+		return output;
+	}
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

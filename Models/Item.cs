@@ -21,14 +21,14 @@ public class Item : PlatformCollectionDocument
 	public const string FRIENDLY_KEY_TYPE = "type";
 	public const string FRIENDLY_KEY_DELETE = "delete";
 
-	[SimpleIndex(DB_KEY_ACCOUNT_ID, "accountId")]
+	[SimpleIndex]
 	[BsonElement(DB_KEY_ACCOUNT_ID), BsonRepresentation(BsonType.ObjectId)]
 	[JsonInclude, JsonPropertyName(FRIENDLY_KEY_ACCOUNT_ID)]
 	public string AccountId { get; set; }
 	
 	[BsonElement(DB_KEY_ITEM_ID)]
 	[JsonInclude, JsonPropertyName(FRIENDLY_KEY_ITEM_ID)]
-	[SimpleIndex(DB_KEY_ITEM_ID, FRIENDLY_KEY_ITEM_ID)]
+	[SimpleIndex]
 	public string ItemId { get; set; }
 	
 	[BsonElement(DB_KEY_DATA)]

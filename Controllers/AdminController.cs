@@ -12,6 +12,7 @@ using RCL.Logging;
 using Rumble.Platform.Common.Attributes;
 using Rumble.Platform.Common.Enums;
 using Rumble.Platform.Common.Exceptions;
+using Rumble.Platform.Common.Models;
 using Rumble.Platform.Common.Utilities;
 using Rumble.Platform.Common.Web;
 using Rumble.Platform.Common.Services;
@@ -126,9 +127,15 @@ public class AdminController : PlatformController
 		return Ok(new { AffectedAccounts = affected });
 	}
 
-	[HttpGet, Route("search")]
+	[HttpPost, Route("search")]
 	public ActionResult Search()
 	{
+		MongoIndexModel[] indexes = Require<MongoIndexModel[]>("indexes");
+		MongoIndexModel index = indexes.First();
+
+		RumbleJson json = Require<RumbleJson[]>("indexes").First(); 
+		
+		
 		string term = Require<string>("term").ToLower();
 		const string hex = @"\A\b[0-9a-fA-F]+\b\Z";
 
@@ -142,69 +149,23 @@ public class AdminController : PlatformController
 			).ToArray()
 			: Array.Empty<Player>();
 
-		throw new NotImplementedException();
+		// Now we can search for partial matches.  Frustratingly, on ObjectId fields only, Contains() returns false on
+		// exact matches, hence the above query.
+		List<Player> players = _playerService.Find(player =>
+			player.Id.ToLower().Contains(term)
+			|| player.Screenname.ToLower().Contains(term)
+			|| player.Device.InstallId.ToLower().Contains(term)
+			|| player.ParentId.ToLower().Contains(term)
+		).ToList();
+		players.AddRange(PlayerIdMatches);
 		
-		// Profile[] ProfileIdMatches = term.Length == 24 && Regex.IsMatch(term, pattern: hex)
-		// 	? _profileService.Find(profile => profile.AccountId.Equals(term)).ToArray()
-		// 	: Array.Empty<Profile>();
-		//
-		// Profile[] ProfileEmailMatches = _profileService.FindByEmail(term);
-		//
-		// // Now we can search for partial matches.  Frustratingly, on ObjectId fields only, Contains() returns false on
-		// // exact matches, hence the above query.
-		// List<Player> players = _playerService.Find(player =>
-		// 	player.Id.ToLower().Contains(term)
-		// 	|| player.Screenname.ToLower().Contains(term)
-		// 	|| player.Device.InstallId.ToLower().Contains(term)
-		// 	|| player.ParentId.ToLower().Contains(term)
-		// ).ToList();
-		// players.AddRange(PlayerIdMatches);
-		//
-		// RumbleJson discs = _discriminatorService.Search(players.Select(player => player.AccountId).ToArray());
-		// foreach (Player player in players)
-		// 	player.Discriminator = discs.Optional<int?>(player.AccountId);
-		//
-		// List<Profile> profiles = _profileService.Find(profile =>
-		// 	profile.AccountId.Contains(term)
-		// ).ToList();
-		// profiles.AddRange(ProfileIdMatches);
-		// profiles.AddRange(ProfileEmailMatches);
-		//
-		// // Grab any Players from found profiles that we don't already have.  Finding anything here should be
-		// // extremely rare.
-		// foreach (string accountId in profiles.Select(profile => profile.AccountId))
-		// 	if (!players.Select(player => player.Id).Contains(accountId))
-		// 		players.Add(_playerService.FindOne(player => player.Id == accountId));
-		//
-		// Player[] parents = players
-		// 	.Where(player => !player.IsLinkedAccount)
-		// 	.ToArray();
-		// foreach (Player parent in parents)
-		// 	parent.LinkedAccounts = players
-		// 		.Where(player => player.ParentId == parent.AccountId && player.IsLinkedAccount)
-		// 		.OrderByDescending(player => player.CreatedTimestamp)
-		// 		.ToArray();
-		// Player[] orphans = players
-		// 	.Where(player => player.IsLinkedAccount && !parents.Any(parent => parent.AccountId == player.ParentId))
-		// 	.ToArray();
-		//
-		// if (orphans.Any())
-		// 	Log.Warn(Owner.Default, "Linked accounts were found in the player search, but the parent account was not.", data: new
-		// 	{
-		// 		Orphans = orphans.Select(orphan => orphan.ParentId)
-		// 	});
-		//
-		// float? sum = null; // Assigning to a field in the middle of a LINQ query is a little janky, but this prevents sum re-evaluation / requiring another loop.
-		// RumbleJson[] results = parents
-		// 	.OrderByDescending(player => player.WeighSearchTerm(term))
-		// 	.Select(player => new RumbleJson()
-		// {
-		// 	{ "player", player },
-		// 	{ "score", player.SearchWeight },
-		// 	{ "confidence", 100 * player.SearchWeight / (sum ??= players.Sum(p => p.SearchWeight)) } // Percentage of the score this record has.
-		// }).ToArray();
-		//
-		// return Ok(new { Results = results });
+		RumbleJson discs = _discriminatorService.Search(players.Select(player => player.AccountId).ToArray());
+		foreach (Player player in players)
+			player.Discriminator = discs.Optional<int?>(player.AccountId);
+
+		Player[] output = _playerService.Search(term);
+
+		return Ok(players);
 	}
 
 	[HttpPost, Route("clone")]
