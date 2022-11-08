@@ -65,7 +65,7 @@ public class SsoData : PlatformDataModel
             throw new SsoInvalidException(AppleToken, "Apple", inner: e);
         }
 
-        if (string.IsNullOrWhiteSpace(RumbleAccount?.Email) && string.IsNullOrWhiteSpace(RumbleAccount?.Hash))
+        if (string.IsNullOrWhiteSpace(RumbleAccount?.Hash))
             RumbleAccount = null;
     
         return this;

@@ -40,12 +40,10 @@ public class DeviceInfo : PlatformDataModel
     [BsonElement(DB_KEY_INSTALL_ID)]
     [JsonInclude, JsonPropertyName(FRIENDLY_KEY_INSTALL_ID)]
     [SimpleIndex]
-    [CompoundIndex(group: "Ponzu", priority: 10)]
     public string InstallId { get; set; }
     
     [BsonElement(DB_KEY_LANGUAGE)]
     [JsonInclude, JsonPropertyName(FRIENDLY_KEY_LANGUAGE)]
-    [CompoundIndex(group: "Ponzu", priority: 5)]
     public string Language { get; set; }
     
     [BsonElement(DB_KEY_OPERATING_SYSTEM_VERSION)]

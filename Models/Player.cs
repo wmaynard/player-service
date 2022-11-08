@@ -43,7 +43,6 @@ public class Player : PlatformCollectionDocument
 	public const string FRIENDLY_KEY_TOKEN = "token";
 
 	internal const string FRIENDLY_KEY_ACCOUNT_ID = "accountId";
-	internal const string FRIENDLY_KEY_ACCOUNT_ID_OVERRIDE = "accountIdOverride";
 	
 	[BsonElement(DB_KEY_APPLE_ACCOUNT)]
 	[JsonPropertyName(FRIENDLY_KEY_APPLE_ACCOUNT)]
@@ -83,7 +82,6 @@ public class Player : PlatformCollectionDocument
 	
 	[BsonElement(DB_KEY_PARENT_ID), BsonIgnoreIfNull]
 	[JsonPropertyName(FRIENDLY_KEY_PARENT_ID), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-	// [TextIndex(DB_KEY_PARENT_ID, "parentIdText")]
 	[TextIndex]
 	public string ParentId { get; set; }
 	

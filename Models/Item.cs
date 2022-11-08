@@ -21,14 +21,18 @@ public class Item : PlatformCollectionDocument
 	public const string FRIENDLY_KEY_TYPE = "type";
 	public const string FRIENDLY_KEY_DELETE = "delete";
 
+	private const string GROUP_ACCOUNT_LINK = "AccountLink";
+
 	[SimpleIndex]
 	[BsonElement(DB_KEY_ACCOUNT_ID), BsonRepresentation(BsonType.ObjectId)]
 	[JsonInclude, JsonPropertyName(FRIENDLY_KEY_ACCOUNT_ID)]
+	[CompoundIndex(group: GROUP_ACCOUNT_LINK, priority: 1)]
 	public string AccountId { get; set; }
 	
 	[BsonElement(DB_KEY_ITEM_ID)]
 	[JsonInclude, JsonPropertyName(FRIENDLY_KEY_ITEM_ID)]
 	[SimpleIndex]
+	[CompoundIndex(group: GROUP_ACCOUNT_LINK, priority: 2)]
 	public string ItemId { get; set; }
 	
 	[BsonElement(DB_KEY_DATA)]
