@@ -1,4 +1,6 @@
 using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using MongoDB.Bson.Serialization.Attributes;
@@ -123,9 +125,12 @@ public class Player : PlatformCollectionDocument
 			return 0;
 
 		const float WEIGHT_SCREENNAME = 1_000;
+		const float WEIGHT_LOGIN_NAME = 100;
 		const float WEIGHT_ID = 50;
 		const float WEIGHT_ID_OVERRIDE = 25;
 		const float WEIGHT_ID_INSTALL = 10;
+		const float WEIGHT_EMAIL = 100;
+		const float WEIGHT_REAL_NAME = 200;
 
 		term = term.ToLower();
 		
@@ -134,20 +139,43 @@ public class Player : PlatformCollectionDocument
 		
 		float scoreLength(string field, string t) => t.Length / (float)field.Length;  // Modify the base score based on the term's position in the field and the field length.
 		float scorePosition(string field, string t) => 1 - field.IndexOf(t, StringComparison.Ordinal) * (1 / (float)field.Length); // Reduce score based on its index in the field to favor earlier matches.
-		float weigh(string field, float baseWeight) => field != null
-			? baseWeight * termWeight * scoreLength(field, term) * scorePosition(field, term)
-			: 0;
+		float weigh(string field, float baseWeight) => output += 
+			field != null && field.ToLower().Contains(term)
+				? baseWeight * termWeight * scoreLength(field, term) * scorePosition(field, term)
+				: 0;
+		
+		// TODO: Exact matches?
 
-		if (Screenname != null && Screenname.ToLower().Contains(term))
-			output += weigh(Screenname.ToLower(), baseWeight: WEIGHT_SCREENNAME);
-		if (Id.Contains(term))
-			output += weigh(Id, baseWeight: WEIGHT_ID);
-		if (ParentId != null && ParentId.Contains(term))
-			output += weigh(ParentId, baseWeight: WEIGHT_ID_OVERRIDE);
-		if (Device.InstallId.Contains(term))
-			output += weigh(Device.InstallId, baseWeight: WEIGHT_ID_INSTALL);
+		weigh(Screenname, WEIGHT_SCREENNAME);
+		weigh(Id, WEIGHT_ID);
+		weigh(ParentId, WEIGHT_ID_OVERRIDE);
+		weigh(Device?.InstallId, WEIGHT_ID_INSTALL);
+		weigh(RumbleAccount?.Email, WEIGHT_EMAIL);
+		weigh(RumbleAccount?.Username, WEIGHT_LOGIN_NAME);
+		weigh(GoogleAccount?.Email, WEIGHT_EMAIL);
+		weigh(GoogleAccount?.Name, WEIGHT_REAL_NAME);
+
 		output += termWeight;
 		
 		return SearchWeight = output;  // If we later evaluate search terms separately later, remove this assignment.
 	}
+
+	internal static void WeighSearchResults(string[] terms, ref List<Player> players)
+	{
+		foreach (Player player in players)
+			foreach (string term in terms)
+				player.WeighSearchTerm(term);
+
+		players = players
+			.OrderByDescending(player => player.SearchWeight)
+			.ToList();
+
+		double TotalWeight = players.Sum(player => player.SearchWeight);
+		foreach (Player player in players)
+			player.SearchConfidence = 100f * (float)(player.SearchWeight / TotalWeight);
+	}
+	
+	[BsonIgnore]
+	[JsonInclude, JsonPropertyName("confidence"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
+	public float SearchConfidence { get; set; }
 }

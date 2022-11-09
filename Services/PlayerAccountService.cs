@@ -347,35 +347,41 @@ public class PlayerAccountService : PlatformMongoService<Player>
 				.Unset(player => player.LinkExpiration)
 		).ModifiedCount;
 
-	public Player[] Search(string term)
+	public Player[] Search(params string[] terms)
 	{
-		Player[] output;
+		List<Player> output = new List<Player>();
 
-		if (term.CanBeMongoId())
+		foreach (string term in terms)
 		{
-			output = _collection
-				.Find(Builders<Player>.Filter.Eq(player => player.Id, term))
-				.ToList()
-				.ToArray();
-			if (output.Any())
-				return output;
-		}
-
-		List<FilterDefinition<Player>> filters = new List<FilterDefinition<Player>>()
-		{
-			Builders<Player>.Filter.Text("8fbb", new TextSearchOptions
+			if (term.CanBeMongoId())
 			{
-				CaseSensitive = false,
-				DiacriticSensitive = false
-			})
-		};
+				output = _collection
+					.Find(Builders<Player>.Filter.Eq(player => player.Id, term))
+					.ToList();
+				if (output.Any())
+					return output.ToArray();
+			}
 
-		output = _collection
-			.Find(Builders<Player>.Filter.And(filters))
-			.ToList()
-			.ToArray();
+			output.AddRange(_collection.Find(
+					filter: player =>
+						player.Id.ToLower().Contains(term)
+						|| player.Screenname.ToLower().Contains(term)
+						|| player.Device.InstallId.ToLower().Contains(term)
+						|| player.ParentId.ToLower().Contains(term)
+						|| player.RumbleAccount.Email.Contains(term)
+						|| player.RumbleAccount.Username.Contains(term)
+						|| player.GoogleAccount.Email.Contains(term)
+						|| player.GoogleAccount.Name.Contains(term)
+				)
+				.Limit(100)
+				.ToList()
+			);
+		}
 		
-		return output;
+		
+		Player.WeighSearchResults(terms, ref output);
+		
+		return output.ToArray();
 	}
 }
 

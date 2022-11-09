@@ -127,45 +127,23 @@ public class AdminController : PlatformController
 		return Ok(new { AffectedAccounts = affected });
 	}
 
-	[HttpPost, Route("search")]
+	[HttpGet, Route("search")]
 	public ActionResult Search()
 	{
-		MongoIndexModel[] indexes = Require<MongoIndexModel[]>("indexes");
-		MongoIndexModel index = indexes.First();
+		string[] terms = Require<string>("terms").ToLower().Split(',');
 
-		RumbleJson json = Require<RumbleJson[]>("indexes").First(); 
-		
-		
-		string term = Require<string>("term").ToLower();
-		const string hex = @"\A\b[0-9a-fA-F]+\b\Z";
+		if (terms.Any(term => term.Length < 3))
+			throw new PlatformException("Search terms must contain at least 3 characters.");
 
-		// Because _id is a special field in Mongo (an ObjectId), we can't use normal string evaluations in our filter.
-		// Anything that's not a hex value will cause the driver to throw a FormatException when translating to a query.
-		// Consequently, we need to run a separate search for exact Id matches.
-		Player[] PlayerIdMatches = term.Length == 24 && Regex.IsMatch(term, pattern: hex)
-			? _playerService.Find(player =>
-				player.Id.Equals(term)
-				|| player.ParentId.Equals(term)
-			).ToArray()
-			: Array.Empty<Player>();
-
-		// Now we can search for partial matches.  Frustratingly, on ObjectId fields only, Contains() returns false on
-		// exact matches, hence the above query.
-		List<Player> players = _playerService.Find(player =>
-			player.Id.ToLower().Contains(term)
-			|| player.Screenname.ToLower().Contains(term)
-			|| player.Device.InstallId.ToLower().Contains(term)
-			|| player.ParentId.ToLower().Contains(term)
-		).ToList();
-		players.AddRange(PlayerIdMatches);
-		
-		RumbleJson discs = _discriminatorService.Search(players.Select(player => player.AccountId).ToArray());
-		foreach (Player player in players)
+		Player[] results = _playerService.Search(terms);
+		RumbleJson discs = _discriminatorService.Search(results.Select(player => player.AccountId).ToArray());
+		foreach (Player player in results)
 			player.Discriminator = discs.Optional<int?>(player.AccountId);
 
-		Player[] output = _playerService.Search(term);
-
-		return Ok(players);
+		return Ok(new RumbleJson
+		{
+			{ "players", results }
+		});
 	}
 
 	[HttpPost, Route("clone")]
