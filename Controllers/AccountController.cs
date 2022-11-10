@@ -40,6 +40,7 @@ public class AccountController : PlatformController
     private readonly ItemService _itemService;
     private readonly NameGeneratorService _nameGeneratorService;
     private readonly AuditService _auditService;
+    private readonly SaltService _saltService;
 	
     // Component Services
     private readonly AbTestService _abTestService;
@@ -176,6 +177,12 @@ public class AccountController : PlatformController
     /// </summary>
     [HttpPatch, Route("adopt"), RequireAuth]
     public ActionResult Link() => Ok(_playerService.LinkAccounts(Token.AccountId));
+
+    [HttpGet, Route("salt"), RequireAuth]
+    public ActionResult GetSalt() => Ok(new RumbleJson
+    {
+        { Salt.FRIENDLY_KEY_SALT, _saltService.Fetch(username: Require<string>(RumbleAccount.FRIENDLY_KEY_USERNAME))?.Value }
+    });
 
     /// <summary>
     /// Uses device information and optional SSO information to find the appropriate player accounts.  If more than one
