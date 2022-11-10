@@ -18,7 +18,7 @@ using Rumble.Platform.Data;
 
 namespace PlayerService.Controllers;
 
-[ApiController, Route("player/v2/account"), UseMongoTransaction]
+[ApiController, Route("player/v2/account")]
 public class AccountController : PlatformController
 {
     public const Audience TOKEN_AUDIENCE = 
@@ -105,7 +105,7 @@ public class AccountController : PlatformController
         RumbleAccount rumble = Require<RumbleAccount>(SsoData.FRIENDLY_KEY_RUMBLE_ACCOUNT);
 
         Player fromDevice = _playerService.FromDevice(device, isUpsert: true);
-        Player fromRumble = _playerService.FromRumble(rumble);
+        Player fromRumble = _playerService.FromRumble(rumble, mustExist: false);
         
         if (fromRumble != null && fromDevice.Id != fromRumble.Id)
             throw new PlatformException("Account conflict.");
@@ -217,14 +217,13 @@ public class AccountController : PlatformController
                 .Select(other => other.Id)
                 .Union(new[] { player.Id })
                 .ToArray();
-            string code = _playerService.SetLinkCode(ids);
+            _playerService.SetLinkCode(ids);
 
             return Problem(new RumbleJson
             {
                 { "errorCode", "accountConflict" },
                 { "player", player },
-                { "conflicts", others.Where(other => other.Id != player.Id) },
-                { "transferToken", code }
+                { "conflicts", others.Where(other => other.Id != player.Id) }
             });
         }
 

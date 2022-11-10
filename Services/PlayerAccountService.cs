@@ -72,17 +72,21 @@ public class PlayerAccountService : PlatformMongoService<Player>
 	{
 		if (sso == null)
 			return Array.Empty<Player>();
+
+		bool useGoogle = sso.GoogleAccount != null;
+		bool useApple = sso.AppleAccount != null;
+		bool useRumble = sso.RumbleAccount != null;
 		
 		FilterDefinitionBuilder<Player> builder = Builders<Player>.Filter;
 
 		List<FilterDefinition<Player>> filters = new List<FilterDefinition<Player>>();
-		// builder.ElemMatch(field: player => player.GoogleAccount, filter: )
+		
 
-		if (sso.GoogleAccount != null)
+		if (useGoogle)
 			filters.Add(builder.Eq(player => player.GoogleAccount.Id, sso.GoogleAccount.Id));
-		if (sso.AppleAccount != null)
+		if (useApple)
 			filters.Add(builder.Eq(player => player.AppleAccount.Id, sso.AppleAccount.Id));
-		if (sso.RumbleAccount != null)
+		if (useRumble)
 			filters.Add(builder.And(
 				builder.Eq(player => player.RumbleAccount.Username, sso.RumbleAccount.Username),
 				builder.Eq(player => player.RumbleAccount.Hash, sso.RumbleAccount.Hash),
@@ -91,10 +95,20 @@ public class PlayerAccountService : PlatformMongoService<Player>
 		
 		if (!filters.Any())
 			return Array.Empty<Player>();
-		return _collection
+		
+		Player[] output = _collection
 			.Find(builder.Or(filters))
 			.ToList()
 			.ToArray();
+
+		if (useGoogle && !output.Any(player => player.GoogleAccount != null))
+			throw new PlatformException("Google account not found.");
+		if (useApple && !output.Any(player => player.AppleAccount != null))
+			throw new PlatformException("Apple account not found.");
+		if (useRumble && !output.Any(player => player.RumbleAccount != null))
+			throw new PlatformException("Rumble account not found.");
+		
+		return output;
 	}
 
 	public Player FromGoogle(GoogleAccount google)
@@ -108,7 +122,7 @@ public class PlayerAccountService : PlatformMongoService<Player>
 		return accounts.FirstOrDefault();
 	}
 
-	public Player FromRumble(RumbleAccount rumble)
+	public Player FromRumble(RumbleAccount rumble, bool mustExist = true)
 	{
 		long deleted = DeleteUnconfirmedAccounts();
 		if (deleted > 0)
@@ -134,7 +148,7 @@ public class PlayerAccountService : PlatformMongoService<Player>
 
 		return accounts.Count switch
 		{
-			0 when usernameCount > 0 => throw new PlatformException("Invalid password"),
+			0 when usernameCount > 0 && mustExist => throw new PlatformException("Invalid password"),
 			> 1 => throw new PlatformException("Found more than one Rumble account."),
 			_ => accounts.FirstOrDefault()
 		};

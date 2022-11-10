@@ -84,7 +84,7 @@ public class Player : PlatformCollectionDocument
 	
 	[BsonElement(DB_KEY_PARENT_ID), BsonIgnoreIfNull]
 	[JsonPropertyName(FRIENDLY_KEY_PARENT_ID), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-	[TextIndex]
+	// [TextIndex]
 	public string ParentId { get; set; }
 	
 	[BsonElement(DB_KEY_RUMBLE_ACCOUNT)]
@@ -94,7 +94,7 @@ public class Player : PlatformCollectionDocument
 	[BsonElement(DB_KEY_SCREENNAME)]
 	[JsonPropertyName(FRIENDLY_KEY_SCREENNAME)]
 	[SimpleIndex]
-	[TextIndex]
+	// [TextIndex]
 	public string Screenname { get; set; }
 	
 	[BsonIgnore]

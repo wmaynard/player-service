@@ -37,7 +37,7 @@ public class RumbleAccount : PlatformDataModel
      
     
     [BsonElement(DB_KEY_HASH)]
-    [JsonIgnore]
+    // [JsonIgnore]
     public string Hash { get; set; }
     
     [BsonElement(DB_KEY_STATUS)]

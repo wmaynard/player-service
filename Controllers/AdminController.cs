@@ -59,7 +59,7 @@ public class AdminController : PlatformController
 			{ Component.WALLET, _walletService },
 			{ Component.WORLD, _worldService }
 		};
-
+	
 	[HttpPatch, Route("component")]
 	public ActionResult UpdateComponent()
 	{
