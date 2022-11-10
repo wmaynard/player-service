@@ -184,6 +184,15 @@ public class AccountController : PlatformController
         { Salt.FRIENDLY_KEY_SALT, _saltService.Fetch(username: Require<string>(RumbleAccount.FRIENDLY_KEY_USERNAME))?.Value }
     });
 
+    [HttpGet, Route("refresh"), RequireAuth]
+    public ActionResult RefreshToken()
+    {
+        Player player = _playerService.Find(Token.AccountId);
+        GenerateToken(player);
+
+        return Ok(player);
+    }
+
     /// <summary>
     /// Uses device information and optional SSO information to find the appropriate player accounts.  If more than one
     /// account is found, a 400-level response is returned with necessary data for the client / server to work with.
