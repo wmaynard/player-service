@@ -20,7 +20,7 @@ public class SaltService : PlatformMongoService<Salt>
         Salt upsert = new Salt
         {
             Username = username,
-            Value = Guid.NewGuid().ToString()
+            Value = BCrypt.Net.BCrypt.GenerateSalt(workFactor: 20)
         };
         
         return _collection
