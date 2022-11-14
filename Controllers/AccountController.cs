@@ -113,7 +113,7 @@ public class AccountController : PlatformController
 
         if (fromRumble != null)
             throw new PlatformException("Account already linked.");
-        
+
         _playerService.AttachRumble(fromDevice, rumble);
         return Ok(fromDevice);
     }
@@ -229,11 +229,15 @@ public class AccountController : PlatformController
                 GenerateToken(conflict);
             }
 
+            string[] emails = GetEmailAddresses(conflicts.Union(new[] { player }));
             string[] ids = others
                 .Select(other => other.Id)
                 .Union(new[] { player.Id })
                 .ToArray();
+
             _playerService.SetLinkCode(ids);
+            foreach (string email in emails)
+                _playerService.SendLoginNotification(player, email);
 
             return Problem(new RumbleJson
             {
@@ -306,5 +310,19 @@ public class AccountController : PlatformController
         });
         return player.Screenname;
     }
-#endregion Utilities
+
+    private string[] GetEmailAddresses(IEnumerable<Player> players)
+    {
+        return players
+            .Where(player => player != null)
+            .SelectMany(player => new[]
+            {
+                player.GoogleAccount?.Email,
+                player.RumbleAccount?.Email
+            })
+            .Where(email => email != null)
+            .ToArray();
+    }
+
+    #endregion Utilities
 }

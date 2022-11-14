@@ -10,13 +10,24 @@ using Rumble.Platform.Common.Exceptions;
 using Rumble.Platform.Common.Extensions;
 using Rumble.Platform.Common.Services;
 using Rumble.Platform.Common.Utilities;
+using Rumble.Platform.Data;
 
 namespace PlayerService.Services;
 
 public class PlayerAccountService : PlatformMongoService<Player>
 {
+	public const long CODE_EXPIRATION = 15 * 60; // 15 minutes
+	
+	private readonly ApiService _apiService;
+	private readonly DC2Service _config;
 	private readonly NameGeneratorService _nameGenerator;
-	public PlayerAccountService(NameGeneratorService nameGenerator) : base("players") => _nameGenerator = nameGenerator; 
+
+	public PlayerAccountService(ApiService api, DC2Service config, NameGeneratorService nameGenerator) : base("players")
+	{
+		_apiService = api;
+		_config = config;
+		_nameGenerator = nameGenerator;
+	}  
 
 	public Player Find(string accountId) => FindOne(player => player.Id == accountId);
 
@@ -185,13 +196,43 @@ public class PlayerAccountService : PlatformMongoService<Player>
 	public Player AttachRumble(Player player, RumbleAccount rumble)
 	{
 		rumble.Status = RumbleAccount.AccountStatus.NeedsConfirmation;
-		rumble.CodeExpiration = Timestamp.UnixTime + 15 * 60;
+		rumble.CodeExpiration = Timestamp.UnixTime + CODE_EXPIRATION;
 		rumble.ConfirmationCode = RumbleAccount.GenerateCode(segments: 10);
 		player.RumbleAccount = rumble;
 		Update(player);
 
+		_apiService
+			.Request("/dmz/player/account/confirmation")
+			.AddAuthorization(_config.AdminToken)
+			.SetPayload(new RumbleJson
+			{
+				{ "email", rumble.Email },
+				{ "accountId", player.Id },
+				{ "code", rumble.ConfirmationCode },
+				{ "expiration", rumble.CodeExpiration }
+			})
+			.OnFailure(response => Log.Error(Owner.Will, "Unable to send Rumble account confirmation email.", new
+			{
+				Response = response
+			}))
+			.Post();
+
 		return player;
 	}
+
+	public void SendLoginNotification(Player player, string email) => _apiService
+		.Request("/dmz/player/account/notification")
+		.AddAuthorization(_config.AdminToken)
+		.SetPayload(new RumbleJson
+		{
+			{ "email", email },
+			{ "device", player.Device.Type }
+		})
+		.OnFailure(response => Log.Error(Owner.Will, "Unable to send Rumble login account notification.", new
+		{
+			Response = response
+		}))
+		.Post();
 
 	public Player AttachGoogle(Player player, GoogleAccount google)
 	{
@@ -232,21 +273,43 @@ public class PlayerAccountService : PlatformMongoService<Player>
 		return output;
 	}
 
-	public Player BeginReset(string email) =>_collection
-		.FindOneAndUpdate(
-			filter: Builders<Player>.Filter.And(
-				Builders<Player>.Filter.Eq(player => player.RumbleAccount.Email, email)
-			),
-			update: Builders<Player>.Update
-				.Set(player => player.RumbleAccount.CodeExpiration, Timestamp.UnixTime * 15 * 60)
-				.Set(player => player.RumbleAccount.ConfirmationCode, RumbleAccount.GenerateCode(segments: 2))
-				.Set(player => player.RumbleAccount.Status, RumbleAccount.AccountStatus.ResetRequested),
-			options: new FindOneAndUpdateOptions<Player>
+	public Player BeginReset(string email)
+	{
+		Player output = _collection
+			.FindOneAndUpdate(
+				filter: Builders<Player>.Filter.And(
+					Builders<Player>.Filter.Eq(player => player.RumbleAccount.Email, email)
+				),
+				update: Builders<Player>.Update
+					.Set(player => player.RumbleAccount.CodeExpiration, Timestamp.UnixTime + CODE_EXPIRATION)
+					.Set(player => player.RumbleAccount.ConfirmationCode, RumbleAccount.GenerateCode(segments: 2))
+					.Set(player => player.RumbleAccount.Status, RumbleAccount.AccountStatus.ResetRequested),
+				options: new FindOneAndUpdateOptions<Player>
+				{
+					IsUpsert = false,
+					ReturnDocument = ReturnDocument.After
+				}
+			) ?? throw new PlatformException("Account not found.");
+
+		_apiService
+			.Request("/dmz/player/account/reset")
+			.AddAuthorization(_config.AdminToken)
+			.SetPayload(new RumbleJson
 			{
-				IsUpsert = false,
-				ReturnDocument = ReturnDocument.After
-			}
-		) ?? throw new PlatformException("Account not found.");
+				{ "email", email },
+				{ "accountId", output.Id },
+				{ "code", output.RumbleAccount?.ConfirmationCode },
+				{ "expiration", output.RumbleAccount?.CodeExpiration }
+			})
+			.OnFailure(response => Log.Error(Owner.Will, "Unable to send password reset email.", data: new
+			{
+				Player = output,
+				Response = response
+			}))
+			.Post();
+
+		return output;
+	}
 	
 	public Player CompleteReset(string username, string code)
 	{
@@ -281,7 +344,7 @@ public class PlayerAccountService : PlatformMongoService<Player>
 				filter: Builders<Player>.Filter.In(player => player.Id, ids.Union(overrides)),
 				update: Builders<Player>.Update
 					.Set(player => player.LinkCode, code)
-					.Set(player => player.LinkExpiration, Timestamp.UnixTime + 15 * 60)
+					.Set(player => player.LinkExpiration, Timestamp.UnixTime + CODE_EXPIRATION)
 			);
 		return code;
 	}
