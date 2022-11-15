@@ -8,6 +8,7 @@ using PlayerService.Models.Login;
 using RCL.Logging;
 using Rumble.Platform.Common.Exceptions;
 using Rumble.Platform.Common.Extensions;
+using Rumble.Platform.Common.Models;
 using Rumble.Platform.Common.Services;
 using Rumble.Platform.Common.Utilities;
 using Rumble.Platform.Data;
@@ -460,6 +461,18 @@ public class PlayerAccountService : PlatformMongoService<Player>
 		
 		return output.ToArray();
 	}
+	
+	public Player FromToken(TokenInfo token) => _collection
+		.Find(Builders<Player>.Filter.Eq(player => player.Id, token?.AccountId))
+		.FirstOrDefault()
+		?? throw new PlatformException("Account not found."); 
+
+	public long DeleteRumbleAccount(string email) => _collection
+		.UpdateMany(
+			filter: Builders<Player>.Filter.Eq(player => player.RumbleAccount.Email, email),
+			update: Builders<Player>.Update.Unset(player => player.RumbleAccount)
+		)
+		.ModifiedCount;
 }
 
 

@@ -196,4 +196,17 @@ public class AdminController : PlatformController
 			{ "success", success }
 		});
 	}
+
+	[HttpDelete, Route("rumbleAccount")]
+	public ActionResult DeleteRumbleAccount()
+	{
+		if (PlatformEnvironment.IsProd)
+			throw new PlatformException("Not allowed on prod.");
+
+		string email = Require<string>("email");
+
+		_playerService.DeleteRumbleAccount(email);
+		
+		return Ok();
+	}
 }

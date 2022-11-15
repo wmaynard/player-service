@@ -263,6 +263,9 @@ public class AccountController : PlatformController
         });
     }
 
+    [HttpGet, Route("status")]
+    public ActionResult GetAccountStatus() => Ok(_playerService.FromToken(Token));
+
 #region Utilities
     private string GenerateToken(Player player)
     {
