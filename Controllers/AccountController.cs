@@ -328,7 +328,7 @@ public class AccountController : PlatformController
         RumbleAccount[] rumbles = others
             .Union(new[] { player })
             .Select(account => account.RumbleAccount)
-            .Where(rumble => rumble != null)
+            .Where(rumble => rumble != null && rumble.Status.HasFlag(RumbleAccount.AccountStatus.Confirmed))
             .ToArray();
 
         if (!rumbles.Any())

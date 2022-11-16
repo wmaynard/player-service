@@ -102,4 +102,16 @@ public class RumbleAccount : PlatformDataModel
             _ => $"{digit1}{digit2}{repeater}"
         };
     }
+
+    protected override void Validate(out List<string> errors)
+    {
+        errors = new List<string>();
+        
+        if (string.IsNullOrWhiteSpace(Email))
+            errors.Add($"{FRIENDLY_KEY_EMAIL} is a required field.");
+        if (string.IsNullOrWhiteSpace(Username))
+            errors.Add($"{FRIENDLY_KEY_USERNAME} is a required field.");
+        if (string.IsNullOrWhiteSpace(Hash))
+            errors.Add($"Hash is missing or empty.");
+    }
 }
