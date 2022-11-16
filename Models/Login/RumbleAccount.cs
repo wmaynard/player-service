@@ -10,19 +10,25 @@ namespace PlayerService.Models.Login;
 
 public class RumbleAccount : PlatformDataModel
 {
+    private const string DB_KEY_ASSOCIATIONS = "verified";
     private const string DB_KEY_CODE = "code";
     private const string DB_KEY_CODE_EXPIRATION = "exp";
     private const string DB_KEY_EMAIL = "email";
     private const string DB_KEY_HASH = "hash";
     private const string DB_KEY_STATUS = "status";
     private const string DB_KEY_USERNAME = "username";
-    
+
+    public const string FRIENDLY_KEY_ASSOCIATIONS = "associatedAccounts";
     public const string FRIENDLY_KEY_CODE = "code";
     public const string FRIENDLY_KEY_CODE_EXPIRATION = "expiration";
     public const string FRIENDLY_KEY_EMAIL = "email";
     public const string FRIENDLY_KEY_STATUS = "status";
     public const string FRIENDLY_KEY_USERNAME = "username";
 
+    [BsonElement(DB_KEY_ASSOCIATIONS)]
+    [JsonPropertyName(FRIENDLY_KEY_ASSOCIATIONS)]
+    public List<string> ConfirmedIds { get; set; }
+    
     [BsonElement(DB_KEY_CODE)]
     [JsonPropertyName(FRIENDLY_KEY_CODE)]
     public string ConfirmationCode { get; set; }
@@ -34,8 +40,7 @@ public class RumbleAccount : PlatformDataModel
     [BsonElement(DB_KEY_EMAIL)]
     [JsonPropertyName(FRIENDLY_KEY_EMAIL)]
     public string Email { get; set; }
-     
-    
+
     [BsonElement(DB_KEY_HASH)]
     // [JsonIgnore]
     public string Hash { get; set; }
@@ -51,12 +56,15 @@ public class RumbleAccount : PlatformDataModel
     [Flags]
     public enum AccountStatus
     {
-        None                = 0b0000,
-        NeedsConfirmation   = 0b0001, 
-        Confirmed           = 0b0010,
-        ResetRequested      = 0b0110,
-        ResetPrimed         = 0b1010,
+        None                = 0b0000_0000,
+        NeedsConfirmation   = 0b0000_0001, 
+        Confirmed           = 0b0000_0010,
+        ResetRequested      = 0b0000_0110,
+        ResetPrimed         = 0b0000_1010,
+        NeedsTwoFactor      = 0b0001_0010
     }
+
+    public RumbleAccount() => ConfirmedIds = new List<string>();
 
     public static string GenerateCode(int segments = 2)
     {

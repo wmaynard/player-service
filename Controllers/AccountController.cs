@@ -109,7 +109,7 @@ public class AccountController : PlatformController
         Player fromRumble = _playerService.FromRumble(rumble, mustExist: false);
         
         if (fromRumble != null && fromDevice.Id != fromRumble.Id)
-            throw new PlatformException("Account conflict.");
+            throw new PlatformException("Account conflict.  The account exists on a different account and can't be added to this one.");
 
         if (fromRumble != null)
             throw new PlatformException("Account already linked.");
@@ -130,8 +130,30 @@ public class AccountController : PlatformController
         Player player = _playerService.UseConfirmationCode(id, code)
             ?? throw new PlatformException("Incorrect or expired code.");
 
+        long affected = _playerService.ClearUnconfirmedAccounts(player.RumbleAccount);
+        if (affected > 0)
+            Log.Warn(Owner.Will, "Account confirmation cleared other unconfirmed accounts.", data: new
+            {
+                Affected = affected,
+                Detail = "The player likely had other attempts on other devices when trying to link their account.",
+                Player = player.RumbleAccount.Email
+            });
+
         return Ok(player);
     }
+
+
+    [HttpPatch, Route("twoFactor")]
+    public ActionResult VerifyTwoFactor()
+    {
+        string code = Require<string>("code");
+
+        Player output = _playerService.UseTwoFactorCode(Token.AccountId, code)
+            ?? throw new PlatformException("Invalid or expired code.");
+
+        return Ok(output);
+    }
+    
 
     /// <summary>
     /// Starts the password reset process.  Doing this sends an email to the player with a 2FA recovery code.
@@ -217,35 +239,8 @@ public class AccountController : PlatformController
 
         GenerateToken(player);
 
-        Player[] conflicts = others
-            .Where(other => other.Id != player.Id)
-            .ToArray();
-        if (conflicts.Any())  // We have an account conflict!
-        {
-            _playerService.Update(player);
-            foreach (Player conflict in conflicts)
-            {
-                conflict.Discriminator = _discriminatorService.Lookup(conflict);
-                GenerateToken(conflict);
-            }
-
-            string[] emails = GetEmailAddresses(conflicts.Union(new[] { player }));
-            string[] ids = others
-                .Select(other => other.Id)
-                .Union(new[] { player.Id })
-                .ToArray();
-
-            _playerService.SetLinkCode(ids);
-            foreach (string email in emails)
-                _playerService.SendLoginNotification(player, email);
-
-            return Problem(new RumbleJson
-            {
-                { "errorCode", "accountConflict" },
-                { "player", player },
-                { "conflicts", others.Where(other => other.Id != player.Id) }
-            });
-        }
+        if (AccountConflictExists(player, others, out ActionResult conflictResult))
+            return conflictResult;
 
         player.GoogleAccount ??= sso?.GoogleAccount;
         player.AppleAccount ??= sso?.AppleAccount;
@@ -325,6 +320,79 @@ public class AccountController : PlatformController
             })
             .Where(email => email != null)
             .ToArray();
+    }
+
+    private bool TwoFactorRequired(Player player, Player[] others, out ActionResult unverifiedResult)
+    {
+        unverifiedResult = null;
+        RumbleAccount[] rumbles = others
+            .Union(new[] { player })
+            .Select(account => account.RumbleAccount)
+            .Where(rumble => rumble != null)
+            .ToArray();
+
+        if (!rumbles.Any())
+            return false;
+        if (rumbles.Length > 1)
+            throw new PlatformException("More than one rumble account found.");
+
+        RumbleAccount rumble = rumbles.First();
+
+        if (rumble.ConfirmedIds.Contains(player.Id))
+            return false;
+
+        _playerService.SetLinkCode(ids: others
+            .Union(new []{ player })
+            .Select(account => account.Id)
+            .ToArray());
+        _playerService.SendTwoFactorNotification(rumble.Email);
+
+        unverifiedResult = Problem(new RumbleJson
+        {
+            { "errorCode", "verificationRequired" },
+            { "player", player },
+            { "rumble", rumble }
+        });
+        return true;
+    }
+
+    private bool AccountConflictExists(Player player, Player[] others, out ActionResult conflictResult)
+    {
+        conflictResult = null;
+        Player[] conflicts = others
+            .Where(other => other.Id != player.Id)
+            .ToArray();
+
+        if (!conflicts.Any())
+            return false;
+
+        if (TwoFactorRequired(player, others, out conflictResult))
+            return true;
+
+        _playerService.Update(player);
+        foreach (Player conflict in conflicts)
+        {
+            conflict.Discriminator = _discriminatorService.Lookup(conflict);
+            GenerateToken(conflict);
+        }
+
+        string[] emails = GetEmailAddresses(conflicts.Union(new[] { player }));
+        string[] ids = others
+            .Select(other => other.Id)
+            .Union(new[] { player.Id })
+            .ToArray();
+
+        _playerService.SetLinkCode(ids);
+        foreach (string email in emails)
+            _playerService.SendLoginNotification(player, email);
+
+        conflictResult = Problem(new RumbleJson
+        {
+            { "errorCode", "accountConflict" },
+            { "player", player },
+            { "conflicts", others.Where(other => other.Id != player.Id) }
+        });
+        return true;
     }
 
     #endregion Utilities

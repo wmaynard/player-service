@@ -153,8 +153,8 @@ public class PlayerAccountService : PlatformMongoService<Player>
 						Builders<Player>.Filter.Eq(player => player.RumbleAccount.Username, rumble.Username),
 						Builders<Player>.Filter.Eq(player => player.RumbleAccount.Email, rumble.Email)
 					),
-					Builders<Player>.Filter.Eq(player => player.RumbleAccount.Hash, rumble.Hash)
-				)
+					Builders<Player>.Filter.Eq(player => player.RumbleAccount.Hash, rumble.Hash),
+					Builders<Player>.Filter.Gte(player => player.RumbleAccount.Status, RumbleAccount.AccountStatus.Confirmed))
 			)
 			.ToList();
 
@@ -251,16 +251,41 @@ public class PlayerAccountService : PlatformMongoService<Player>
 			update: Builders<Player>.Update.Unset(player => player.RumbleAccount)
 		).ModifiedCount;
 
-	public Player UseConfirmationCode(string id, string code)
+	public Player UseConfirmationCode(string id, string code) => _collection
+		.FindOneAndUpdate(
+			filter: Builders<Player>.Filter.And(
+				Builders<Player>.Filter.Eq(player => player.Id, id),
+				Builders<Player>.Filter.Eq(player => player.RumbleAccount.ConfirmationCode, code),
+				Builders<Player>.Filter.Gt(player => player.RumbleAccount.CodeExpiration, Timestamp.UnixTime)
+			),
+			update: Builders<Player>.Update
+				.Set(player => player.RumbleAccount.CodeExpiration, default)
+				.Set(player => player.RumbleAccount.ConfirmationCode, null)
+				.Set(player => player.RumbleAccount.Status, RumbleAccount.AccountStatus.Confirmed),
+			options: new FindOneAndUpdateOptions<Player>
+			{
+				IsUpsert = false,
+				ReturnDocument = ReturnDocument.After
+			}
+		);
+
+	public Player UseTwoFactorCode(string id, string code)
 	{
+		string linkCode = _collection
+			.Find(Builders<Player>.Filter.Eq(player => player.Id, id))
+			.Project(Builders<Player>.Projection.Expression(player => player.LinkCode))
+			.FirstOrDefault();
+
 		Player output = _collection
 			.FindOneAndUpdate(
 				filter: Builders<Player>.Filter.And(
-					Builders<Player>.Filter.Eq(player => player.Id, id),
+					Builders<Player>.Filter.Eq(player => player.LinkCode, linkCode),
+					Builders<Player>.Filter.Ne(player => player.RumbleAccount, null),
 					Builders<Player>.Filter.Eq(player => player.RumbleAccount.ConfirmationCode, code),
 					Builders<Player>.Filter.Gt(player => player.RumbleAccount.CodeExpiration, Timestamp.UnixTime)
 				),
 				update: Builders<Player>.Update
+					.AddToSet(player => player.RumbleAccount.ConfirmedIds, id)
 					.Set(player => player.RumbleAccount.CodeExpiration, default)
 					.Set(player => player.RumbleAccount.ConfirmationCode, null)
 					.Set(player => player.RumbleAccount.Status, RumbleAccount.AccountStatus.Confirmed),
@@ -270,9 +295,57 @@ public class PlayerAccountService : PlatformMongoService<Player>
 					ReturnDocument = ReturnDocument.After
 				}
 			);
-		
 		return output;
 	}
+
+	public Player SendTwoFactorNotification(string email)
+	{
+		Player output = _collection
+			.FindOneAndUpdate(
+				filter: Builders<Player>.Filter.And(
+					Builders<Player>.Filter.Eq(player => player.RumbleAccount.Email, email),
+					Builders<Player>.Filter.Gte(player => player.RumbleAccount.Status, RumbleAccount.AccountStatus.Confirmed)
+				),
+				update: Builders<Player>.Update
+					.Set(player => player.RumbleAccount.CodeExpiration, Timestamp.UnixTime + CODE_EXPIRATION)
+					.Set(player => player.RumbleAccount.ConfirmationCode, RumbleAccount.GenerateCode(segments: 2))
+					.Set(player => player.RumbleAccount.Status, RumbleAccount.AccountStatus.NeedsTwoFactor),
+				options: new FindOneAndUpdateOptions<Player>
+				{
+					ReturnDocument = ReturnDocument.After
+				}
+			);
+
+		_apiService
+			.Request("/dmz/player/account/2fa")
+			.AddAuthorization(_config.AdminToken)
+			.SetPayload(new RumbleJson
+			{
+				{ "email", email },
+				{ "code", output.RumbleAccount?.ConfirmationCode },
+				{ "expiration", output.RumbleAccount?.CodeExpiration }
+			})
+			.OnFailure(response => Log.Error(Owner.Will, "Unable to send 2FA code.", data: new
+			{
+				Player = output,
+				Email = email
+			}))
+			.Post();
+
+		return output;
+	}
+
+	public long ClearUnconfirmedAccounts(RumbleAccount rumble) => _collection
+		.UpdateMany(
+			filter: Builders<Player>.Filter.And( 
+				Builders<Player>.Filter.Or(
+					Builders<Player>.Filter.Eq(player => player.RumbleAccount.Email, rumble.Email),
+					Builders<Player>.Filter.Eq(player => player.RumbleAccount.Username, rumble.Username)
+				),
+				Builders<Player>.Filter.Eq(player => player.RumbleAccount.Status, RumbleAccount.AccountStatus.NeedsConfirmation)
+			),
+			update: Builders<Player>.Update.Unset(player => player.RumbleAccount)
+		).ModifiedCount;
 
 	public Player BeginReset(string email)
 	{
