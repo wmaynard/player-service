@@ -261,7 +261,8 @@ public class PlayerAccountService : PlatformMongoService<Player>
 			update: Builders<Player>.Update
 				.Set(player => player.RumbleAccount.CodeExpiration, default)
 				.Set(player => player.RumbleAccount.ConfirmationCode, null)
-				.Set(player => player.RumbleAccount.Status, RumbleAccount.AccountStatus.Confirmed),
+				.Set(player => player.RumbleAccount.Status, RumbleAccount.AccountStatus.Confirmed)
+				.AddToSet(player => player.RumbleAccount.ConfirmedIds, id),
 			options: new FindOneAndUpdateOptions<Player>
 			{
 				IsUpsert = false,
