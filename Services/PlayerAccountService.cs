@@ -167,7 +167,7 @@ public class PlayerAccountService : PlatformMongoService<Player>
 	}
 
 	public Player UpdateHash(string username, string oldHash, string newHash) =>
-		(oldHash == null
+		(string.IsNullOrWhiteSpace(oldHash)
 			? _collection.FindOneAndUpdate(
 				filter: Builders<Player>.Filter.And(
 					Builders<Player>.Filter.Eq(player => player.RumbleAccount.Username, username),
