@@ -349,6 +349,7 @@ public class AccountController : PlatformController
 
         unverifiedResult = Problem(new RumbleJson
         {
+            { "geoData", GeoIPData },
             { "errorCode", "verificationRequired" },
             { "player", player },
             { "rumble", rumble }
@@ -388,6 +389,7 @@ public class AccountController : PlatformController
 
         conflictResult = Problem(new RumbleJson
         {
+            { "geoData", GeoIPData },
             { "errorCode", "accountConflict" },
             { "player", player },
             { "conflicts", others.Where(other => other.Id != player.Id) }
