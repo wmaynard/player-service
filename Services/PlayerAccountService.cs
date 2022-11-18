@@ -134,7 +134,7 @@ public class PlayerAccountService : PlatformMongoService<Player>
 		return accounts.FirstOrDefault();
 	}
 
-	public Player FromRumble(RumbleAccount rumble, bool mustExist = true)
+	public Player FromRumble(RumbleAccount rumble, bool mustExist = true, bool mustNotExist = false)
 	{
 		long deleted = DeleteUnconfirmedAccounts();
 		if (deleted > 0)
@@ -145,6 +145,9 @@ public class PlayerAccountService : PlatformMongoService<Player>
 				Builders<Player>.Filter.Eq(player => player.RumbleAccount.Username, rumble.Username),
 				Builders<Player>.Filter.Eq(player => player.RumbleAccount.Email, rumble.Email)
 			));
+
+		if (mustNotExist && usernameCount > 0)
+			throw new PlatformException("Account conflict.  The username or email is already in use.");
 
 		List<Player> accounts = _collection
 			.Find(

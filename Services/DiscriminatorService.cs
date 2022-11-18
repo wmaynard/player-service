@@ -20,10 +20,12 @@ public class DiscriminatorService : PlatformMongoService<DiscriminatorGroup>
 	private const int MAX_ASSIGNMENT_ATTEMPTS = 50;
 
 	private readonly AccountService _accountService;
+	private readonly NameGeneratorService _nameService;
 
-	public DiscriminatorService(AccountService accountService) : base("discriminators")
+	public DiscriminatorService(AccountService accountService, NameGeneratorService nameService) : base("discriminators")
 	{
 		_accountService = accountService;
+		_nameService = nameService;
 	}
 
 	private DiscriminatorGroup Find(Player player) => FindOne(group => group.Members.Any(member => member.AccountId == player.AccountId));
@@ -38,7 +40,12 @@ public class DiscriminatorService : PlatformMongoService<DiscriminatorGroup>
 				attempted.Add(output);
 		throw new DiscriminatorUnavailableException(player.AccountId, attempted);
 	}
-	public int Lookup(Player player) => Find(player)?.Number ?? Assign(player);
+
+	public int Lookup(Player player)
+	{
+		player.Screenname ??= _nameService.Next;
+		return Find(player)?.Number ?? Assign(player);
+	}
 
 	/// <summary>
 	/// Attempts to assign a discriminator to a player.  It the player's screenname is already taken by

@@ -329,7 +329,7 @@ public class TopController : PlatformController
 				output.Add(new RumbleJson
 				{
 					{ Player.FRIENDLY_KEY_ACCOUNT_ID, member.AccountId },
-					// { Player.FRIENDLY_KEY_SCREENNAME, member.ScreenName },
+					{ Player.FRIENDLY_KEY_SCREENNAME, member.ScreenName },
 					{ Player.FRIENDLY_KEY_DISCRIMINATOR, group.Number.ToString().PadLeft(4, '0') },
 					{ "accountAvatar", avatars.ContainsKey(member.AccountId) ? avatars[member.AccountId] : null },
 					{ "accountLevel", accountLevels.ContainsKey(member.AccountId) ? accountLevels[member.AccountId] : null }

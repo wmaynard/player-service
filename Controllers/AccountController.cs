@@ -106,7 +106,7 @@ public class AccountController : PlatformController
         RumbleAccount rumble = Require<RumbleAccount>(SsoData.FRIENDLY_KEY_RUMBLE_ACCOUNT);
 
         Player fromDevice = _playerService.FromDevice(device, isUpsert: true);
-        Player fromRumble = _playerService.FromRumble(rumble, mustExist: false);
+        Player fromRumble = _playerService.FromRumble(rumble, mustExist: false, mustNotExist: true);
         
         if (fromRumble != null && fromDevice.Id != fromRumble.Id)
             throw new PlatformException("Account conflict.  The account exists on a different account and can't be added to this one.");
@@ -231,7 +231,6 @@ public class AccountController : PlatformController
         Player[] others = _playerService.FromSso(sso);
         
         player.Discriminator = _discriminatorService.Lookup(player);
-        player.Screenname ??= _nameGeneratorService.Next;
         player.LastLogin = Timestamp.UnixTime;
         
         ValidatePlayerScreenname(ref player);
