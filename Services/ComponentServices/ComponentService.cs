@@ -42,7 +42,7 @@ public abstract class ComponentService : PlatformMongoService<Component>
 		.Find(Builders<Component>.Filter.In(component => component.AccountId, accountIds))
 		.ToList();
 
-	public async Task<bool> UpdateAsync(string accountId, RumbleJson data, IClientSessionHandle session, int? version, int retries = 5)
+	public async Task<bool> UpdateAsync(string accountId, RumbleJson data, IClientSessionHandle session, int? version, string origin = null, int retries = 5)
 	{
 		try
 		{
@@ -57,7 +57,7 @@ public abstract class ComponentService : PlatformMongoService<Component>
 			
 			UpdateDefinitionBuilder<Component> builder = Builders<Component>.Update;
 			UpdateDefinition<Component> update = builder.Set(component => component.Data, data);
-			if (VersionNumberProvided(accountId, version))
+			if (VersionNumberProvided(accountId, version, origin))
 				update = builder.Combine(update, builder.Set(component => component.Version, version));
 
 			await _collection
@@ -77,7 +77,7 @@ public abstract class ComponentService : PlatformMongoService<Component>
 		{
 			Log.Local(Owner.Will, e.Message);
 			if (retries > 0)
-				return await UpdateAsync(accountId, data, session, version, --retries);
+				return await UpdateAsync(accountId, data, session, version, retries: --retries);
 			Log.Error(Owner.Will, $"Could not update component {Name}.", data: new
 			{
 				Detail = $"Session state invalid, even after retrying {retries} times with exponential backoff."
@@ -86,7 +86,7 @@ public abstract class ComponentService : PlatformMongoService<Component>
 		}
 	}
 
-	public bool VersionNumberProvided(string accountId, int? version)
+	public bool VersionNumberProvided(string accountId, int? version, string origin)
 	{
 		// Log.Local(Owner.Will, $"{Name} | {version}");
 		// Getting the current version for any update might be useful, but until it's requested,
@@ -102,7 +102,7 @@ public abstract class ComponentService : PlatformMongoService<Component>
 				.First();
 		
 			if (current != version - 1 && !PlatformEnvironment.SwarmMode)
-				throw new ComponentVersionException(Name, currentVersion: current, updateVersion: (int)version);
+				throw new ComponentVersionException(Name, currentVersion: current, updateVersion: (int)version, origin);
 
 			return true;
 		}

@@ -14,10 +14,14 @@ public class ComponentVersionException : PlatformException
 	[JsonInclude]
 	public int UpdateVersion { get; set; }
 	
-	public ComponentVersionException(string name, int currentVersion, int updateVersion) : base("Component version mismatch", code: ErrorCode.InvalidRequestData)
+	[JsonInclude]
+	public string Origin { get; set; }
+	
+	public ComponentVersionException(string name, int currentVersion, int updateVersion, string origin) : base("Component version mismatch", code: ErrorCode.InvalidRequestData)
 	{
 		ComponentName = name;
 		CurrentVersion = currentVersion;
 		UpdateVersion = updateVersion;
+		Origin = origin;
 	}
 }

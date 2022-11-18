@@ -108,6 +108,7 @@ public class TopController : PlatformController
 		Item[] itemUpdates = Optional<Item[]>(key: "updatedItems") ?? Array.Empty<Item>();
 		Item[] itemCreations = Optional<Item[]>(key: "newItems") ?? Array.Empty<Item>();
 		Item[] itemDeletions = Optional<Item[]>(key: "deletedItems") ?? Array.Empty<Item>();
+		string origin = Optional<string>("origin") ?? "Unknown origin";
 		
 		// TODO: Remove this when "items" is removed.
 		if ((itemCreations.Any() || itemUpdates.Any() || itemDeletions.Any()) && items.Any())
@@ -132,7 +133,8 @@ public class TopController : PlatformController
 				accountId: Token.AccountId,
 				data: data.Data,
 				version: data.Version,
-				session: session
+				session: session,
+				origin: origin
 			)
 		).ToList();
 
