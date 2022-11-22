@@ -30,11 +30,11 @@ public class RumbleAccount : PlatformDataModel
     public List<string> ConfirmedIds { get; set; }
     
     [BsonElement(DB_KEY_CODE)]
-    [JsonPropertyName(FRIENDLY_KEY_CODE)]
+    [JsonIgnore]
     public string ConfirmationCode { get; set; }
     
     [BsonElement(DB_KEY_CODE_EXPIRATION)]
-    [JsonPropertyName(FRIENDLY_KEY_CODE_EXPIRATION)]
+    [JsonIgnore]
     public long CodeExpiration { get; set; }
     
     [BsonElement(DB_KEY_EMAIL)]
@@ -42,7 +42,7 @@ public class RumbleAccount : PlatformDataModel
     public string Email { get; set; }
 
     [BsonElement(DB_KEY_HASH)]
-    // [JsonIgnore]
+    [JsonIgnore]
     public string Hash { get; set; }
     
     [BsonElement(DB_KEY_STATUS)]

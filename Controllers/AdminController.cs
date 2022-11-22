@@ -205,7 +205,10 @@ public class AdminController : PlatformController
 
 		string email = Require<string>("email");
 
-		_playerService.DeleteRumbleAccount(email);
+		// When using postman, '+' comes through as a space because it's not URL-encoded.
+		// This is a quick kluge to enable debugging purposes without having to worry about URL-encoded params in Postman.
+		if (_playerService.DeleteRumbleAccount(email) == 0 && _playerService.DeleteRumbleAccount(email.Trim().Replace(" ", "+")) == 0)
+			throw new PlatformException("Rumble account not found.");
 		
 		return Ok();
 	}

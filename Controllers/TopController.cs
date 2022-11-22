@@ -12,6 +12,7 @@ using PlayerService.Models.Login;
 using Rumble.Platform.Common.Web;
 using PlayerService.Services;
 using PlayerService.Services.ComponentServices;
+using PlayerService.Utilities;
 using RCL.Logging;
 using Rumble.Platform.Common.Attributes;
 using Rumble.Platform.Common.Enums;
@@ -257,20 +258,76 @@ public class TopController : PlatformController
 	[HttpGet, Route("config"), NoAuth, HealthMonitor(weight: 5)]
 	public ActionResult GetConfig()
 	{
-		string clientVersion = Optional<string>("clientVersion") ?? "default";
-
-		RumbleJson clientVar = _dc2Service.GetValuesFor(Audience.GameClient);
-
-		RumbleJson output = new RumbleJson();
-		foreach (KeyValuePair<string, object> pair in clientVar.Where(pair => pair.Key.StartsWith("default") || pair.Key.StartsWith(clientVersion)))
-			output[pair.Key.Replace("default:", "").Replace($"{clientVersion}:", "")] = pair.Value;
-
-		return Ok(new
+		const string OVERRIDE = ":";
+		Version clientVersion = new Version(Optional<string>("clientVersion") ?? "0.0.0.0");
+		RumbleJson config = _dc2Service.GetValuesFor(Audience.GameClient);
+		RumbleJson variables = new RumbleJson();
+		
+		List<ConfigOverride> overrides = new List<ConfigOverride>();
+		foreach (KeyValuePair<string, object> pair in config)
 		{
-			ClientVersion = clientVersion,
-			ClientVars = output
+			int index = pair.Key.IndexOf(OVERRIDE, StringComparison.Ordinal);
+
+			string key = index switch
+			{
+				-1 => pair.Key,
+				>= 0 when pair.Key.StartsWith("default") => null,
+				_ => pair.Key[..index]
+			};
+			if (key == null)
+				continue;
+
+			string version = index > -1
+				? pair.Key[(index + 1)..]
+				: null;
+
+			if (string.IsNullOrWhiteSpace(version))
+			{
+				variables[key] = pair.Value;
+				continue;
+			}
+
+			try
+			{
+				Version configVersion = new Version(version);
+				
+				if (clientVersion.CompareTo(configVersion) >= 0)
+					overrides.Add(new ConfigOverride
+					{
+						Key = key,
+						Version = version,
+						Value = pair.Value
+					});
+			}
+			catch {}
+		}
+		
+		// Previous response before refactor
+		// {
+		// 	"success": true,
+		// 	"clientVersion": "1.3.1427",
+		// 	"clientVars": {
+		// 		"allow_pvp_preview": "true",
+		// 		"baseCdnUrl": "https://towereng-a.akamaized.net/dev/",
+		// 		"enable_screen_loading_telemetry": "true",
+		// 		"gameServerUrl": "https://dev.nonprod.tower.cdrentertainment.com/game/",
+		// 		"game_server_request_timeout_secs": "50",
+		// 		"purchaseTimeoutMs": "30000",
+		// 		"use_game_server_websockets": "false"
+		// 	}
+		// }
+
+		foreach (ConfigOverride o in overrides.OrderByDescending(o => o.Version).DistinctBy(o => o.Key))
+			variables[o.Key] = o.Value;
+		
+		return Ok(new RumbleJson
+		{
+			{ "clientVersion", clientVersion.ToString() },
+			{ "clientVars", variables.Sort() }
 		});
 	}
+	
+
 
 	[HttpGet, Route("items"), RequireAccountId]
 	public ActionResult GetItems()
