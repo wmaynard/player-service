@@ -11,6 +11,7 @@ using RCL.Logging;
 using Rumble.Platform.Common.Attributes;
 using Rumble.Platform.Common.Enums;
 using Rumble.Platform.Common.Exceptions;
+using Rumble.Platform.Common.Extensions;
 using Rumble.Platform.Common.Services;
 using Rumble.Platform.Common.Utilities;
 using Rumble.Platform.Common.Web;
@@ -169,6 +170,13 @@ public class AccountController : PlatformController
     {
         string username = Require<string>(RumbleAccount.FRIENDLY_KEY_USERNAME);
         string code = Require<string>(RumbleAccount.FRIENDLY_KEY_CODE);
+        string accountId = Optional<string>(Player.FRIENDLY_KEY_ACCOUNT_ID);
+
+        if (string.IsNullOrWhiteSpace(accountId))
+            accountId = null;
+
+        if (accountId != null && !accountId.CanBeMongoId())
+            throw new PlatformException("Invalid accountId.");
 
         return Ok(_playerService.CompleteReset(username, code));
     }

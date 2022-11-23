@@ -389,18 +389,23 @@ public class PlayerAccountService : PlatformMongoService<Player>
 		return output;
 	}
 	
-	public Player CompleteReset(string username, string code)
+	public Player CompleteReset(string username, string code, string accountId = null)
 	{
+		UpdateDefinition<Player> update = Builders<Player>.Update
+			.Unset(player => player.RumbleAccount.ConfirmationCode)
+			.Unset(player => player.RumbleAccount.CodeExpiration)
+			.Set(player => player.RumbleAccount.Status, RumbleAccount.AccountStatus.ResetPrimed);
+
+		if (accountId != null)
+			update = update.AddToSet(player => player.RumbleAccount.ConfirmedIds, accountId);
+		
 		return _collection.FindOneAndUpdate(
 			filter: Builders<Player>.Filter.And(
 				Builders<Player>.Filter.Eq(player => player.RumbleAccount.Username, username),
 				Builders<Player>.Filter.Eq(player => player.RumbleAccount.ConfirmationCode, code),
 				Builders<Player>.Filter.Gt(player => player.RumbleAccount.CodeExpiration, Timestamp.UnixTime)
 			),
-			update: Builders<Player>.Update
-				.Unset(player => player.RumbleAccount.ConfirmationCode)
-				.Unset(player => player.RumbleAccount.CodeExpiration)
-				.Set(player => player.RumbleAccount.Status, RumbleAccount.AccountStatus.ResetPrimed),
+			update: update,
 			options: new FindOneAndUpdateOptions<Player>
 			{
 				IsUpsert = false,
