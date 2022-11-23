@@ -94,7 +94,7 @@ public class AccountController : PlatformController
         if (fromGoogle != null)
             throw new PlatformException("Account already linked.");
 
-        return Ok(_playerService.AttachGoogle(fromDevice, google));
+        return Ok(_playerService.AttachGoogle(fromDevice, google)?.Prune());
     }
     
     /// <summary>
@@ -116,7 +116,7 @@ public class AccountController : PlatformController
             throw new PlatformException("Account already linked.");
 
         _playerService.AttachRumble(fromDevice, rumble);
-        return Ok(fromDevice);
+        return Ok(fromDevice.Prune());
     }
 
     /// <summary>
@@ -140,7 +140,7 @@ public class AccountController : PlatformController
                 Player = player.RumbleAccount.Email
             });
 
-        return Ok(player);
+        return Ok(player.Prune());
     }
 
 
@@ -152,7 +152,7 @@ public class AccountController : PlatformController
         Player output = _playerService.UseTwoFactorCode(Token.AccountId, code)
             ?? throw new PlatformException("Invalid or expired code.");
 
-        return Ok(output);
+        return Ok(output.Prune());
     }
     
 
@@ -178,7 +178,7 @@ public class AccountController : PlatformController
         if (accountId != null && !accountId.CanBeMongoId())
             throw new PlatformException("Invalid accountId.");
 
-        return Ok(_playerService.CompleteReset(username, code));
+        return Ok(_playerService.CompleteReset(username, code)?.Prune());
     }
 
     /// <summary>
@@ -199,7 +199,7 @@ public class AccountController : PlatformController
         Player output = _playerService.UpdateHash(username, oldHash, newHash);
         output.Token = GenerateToken(output);
 
-        return Ok(output);
+        return Ok(output.Prune());
     }
 
     /// <summary>
@@ -220,7 +220,7 @@ public class AccountController : PlatformController
         Player player = _playerService.Find(Token.AccountId);
         GenerateToken(player);
 
-        return Ok(player);
+        return Ok(player?.Prune());
     }
 
     /// <summary>
@@ -261,7 +261,7 @@ public class AccountController : PlatformController
         {
             { "geoData", GeoIPData },
             { "requestId", HttpContext.Request.Headers["X-Request-ID"].ToString() ?? Guid.NewGuid().ToString() },
-            { "player", player }
+            { "player", player.Prune() }
         });
     }
 
@@ -358,8 +358,8 @@ public class AccountController : PlatformController
         {
             { "geoData", GeoIPData },
             { "errorCode", "verificationRequired" },
-            { "player", player },
-            { "rumble", rumble }
+            { "player", player.Prune() },
+            { "rumble", rumble.Prune() }
         });
         return true;
     }
@@ -398,7 +398,7 @@ public class AccountController : PlatformController
         {
             { "geoData", GeoIPData },
             { "errorCode", "accountConflict" },
-            { "player", player },
+            { "player", player.Prune() },
             { "conflicts", others.Where(other => other.Id != player.Id) }
         });
         return true;

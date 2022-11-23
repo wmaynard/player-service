@@ -22,6 +22,7 @@ public class RumbleAccount : PlatformDataModel
     public const string FRIENDLY_KEY_CODE = "code";
     public const string FRIENDLY_KEY_CODE_EXPIRATION = "expiration";
     public const string FRIENDLY_KEY_EMAIL = "email";
+    public const string FRIENDLY_KEY_HASH = "hash";
     public const string FRIENDLY_KEY_STATUS = "status";
     public const string FRIENDLY_KEY_USERNAME = "username";
 
@@ -42,7 +43,7 @@ public class RumbleAccount : PlatformDataModel
     public string Email { get; set; }
 
     [BsonElement(DB_KEY_HASH)]
-    [JsonIgnore]
+    [JsonInclude, JsonPropertyName(FRIENDLY_KEY_HASH), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public string Hash { get; set; }
     
     [BsonElement(DB_KEY_STATUS)]
@@ -113,5 +114,14 @@ public class RumbleAccount : PlatformDataModel
             errors.Add($"{FRIENDLY_KEY_USERNAME} is a required field.");
         if (string.IsNullOrWhiteSpace(Hash))
             errors.Add($"Hash is missing or empty.");
+    }
+
+    /// <summary>
+    /// This MUST be called before returning it to the client to avoid spilling sensitive data.
+    /// </summary>
+    public RumbleAccount Prune()
+    {
+        Hash = null;
+        return this;
     }
 }

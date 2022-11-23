@@ -178,4 +178,13 @@ public class Player : PlatformCollectionDocument
 	[BsonIgnore]
 	[JsonInclude, JsonPropertyName("confidence"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
 	public float SearchConfidence { get; set; }
+
+	/// <summary>
+	/// This MUST be called before returning it to the client to avoid spilling sensitive data.
+	/// </summary>
+	public Player Prune()
+	{
+		RumbleAccount?.Prune();
+		return this;
+	}
 }
