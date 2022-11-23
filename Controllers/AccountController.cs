@@ -170,7 +170,7 @@ public class AccountController : PlatformController
     {
         string username = Require<string>(RumbleAccount.FRIENDLY_KEY_USERNAME);
         string code = Require<string>(RumbleAccount.FRIENDLY_KEY_CODE);
-        string accountId = Optional<string>(Player.FRIENDLY_KEY_ACCOUNT_ID);
+        string accountId = Token?.AccountId ?? Optional<string>(Player.FRIENDLY_KEY_ACCOUNT_ID);
 
         if (string.IsNullOrWhiteSpace(accountId))
             accountId = null;
