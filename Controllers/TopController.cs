@@ -322,6 +322,7 @@ public class TopController : PlatformController
 		
 		return Ok(new RumbleJson
 		{
+			{ "success", true }, // TODO: Remove this after the client is no longer dependent on it; hardcoded on 2022.11.22
 			{ "clientVersion", clientVersion.ToString() },
 			{ "clientVars", variables.Sort() }
 		});
