@@ -12,6 +12,7 @@ using RCL.Logging;
 using Rumble.Platform.Common.Attributes;
 using Rumble.Platform.Common.Enums;
 using Rumble.Platform.Common.Exceptions;
+using Rumble.Platform.Common.Interop;
 using Rumble.Platform.Common.Models;
 using Rumble.Platform.Common.Utilities;
 using Rumble.Platform.Common.Web;
@@ -206,10 +207,20 @@ public class AdminController : PlatformController
 		string email = Optional<string>("email");
 
 		if (email == null)
+		{
+			long affected = _playerService.DeleteAllRumbleAccounts();
+			
+			SlackDiagnostics
+				.Log($"({PlatformEnvironment.Deployment}) All Rumble accounts have been deleted.", $"{Token.ScreenName} is to blame.  {affected} accounts were affected.")
+				.AddChannel("C043FPR7U68")
+				.Send()
+				.Wait();
+
 			return Ok(new RumbleJson
 			{
-				{ "affected", _playerService.DeleteAllRumbleAccounts() }
+				{ "affected", affected }
 			});
+		}
 
 		// When using postman, '+' comes through as a space because it's not URL-encoded.
 		// This is a quick kluge to enable debugging purposes without having to worry about URL-encoded params in Postman.
