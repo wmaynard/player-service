@@ -210,11 +210,12 @@ public class AdminController : PlatformController
 		{
 			long affected = _playerService.DeleteAllRumbleAccounts();
 			
-			SlackDiagnostics
-				.Log($"({PlatformEnvironment.Deployment}) All Rumble accounts have been deleted.", $"{Token.ScreenName} is to blame.  {affected} accounts were affected.")
-				.AddChannel("C043FPR7U68")
-				.Send()
-				.Wait();
+			if (affected > 0)
+				SlackDiagnostics
+					.Log($"({PlatformEnvironment.Deployment}) All Rumble accounts have been deleted.", $"{Token.ScreenName} is to blame.  {affected} accounts were affected.")
+					.AddChannel("C043FPR7U68")
+					.Send()
+					.Wait();
 
 			return Ok(new RumbleJson
 			{
