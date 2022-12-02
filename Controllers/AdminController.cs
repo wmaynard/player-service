@@ -203,7 +203,13 @@ public class AdminController : PlatformController
 		if (PlatformEnvironment.IsProd)
 			throw new PlatformException("Not allowed on prod.");
 
-		string email = Require<string>("email");
+		string email = Optional<string>("email");
+
+		if (email == null)
+			return Ok(new RumbleJson
+			{
+				{ "affected", _playerService.DeleteAllRumbleAccounts() }
+			});
 
 		// When using postman, '+' comes through as a space because it's not URL-encoded.
 		// This is a quick kluge to enable debugging purposes without having to worry about URL-encoded params in Postman.

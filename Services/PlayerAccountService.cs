@@ -555,6 +555,12 @@ public class PlayerAccountService : PlatformMongoService<Player>
 			update: Builders<Player>.Update.Unset(player => player.RumbleAccount)
 		)
 		.ModifiedCount;
+
+	public long DeleteAllRumbleAccounts() => _collection
+		.UpdateMany(
+			filter: player => true,
+			update: Builders<Player>.Update.Unset(player => player.RumbleAccount)
+		).ModifiedCount;
 }
 
 
