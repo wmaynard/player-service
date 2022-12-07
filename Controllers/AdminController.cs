@@ -173,14 +173,6 @@ public class AdminController : PlatformController
 		}
 		return Ok();
 	}
-	
-	[HttpDelete, Route("profiles/unlink")]
-	public ActionResult KillGPGProfile()
-	{
-		string email = Require<string>("email");
-		
-		return Ok();
-	}
 
 	[HttpPatch, Route("currency")]
 	public ActionResult UpdateCurrency()
@@ -226,6 +218,39 @@ public class AdminController : PlatformController
 		// When using postman, '+' comes through as a space because it's not URL-encoded.
 		// This is a quick kluge to enable debugging purposes without having to worry about URL-encoded params in Postman.
 		if (_playerService.DeleteRumbleAccount(email) == 0 && _playerService.DeleteRumbleAccount(email.Trim().Replace(" ", "+")) == 0)
+			throw new PlatformException("Rumble account not found.");
+		
+		return Ok();
+	}
+
+	[HttpDelete, Route("googleAccount")]
+	public ActionResult DeleteGoogleAccount()
+	{
+		if (PlatformEnvironment.IsProd)
+			throw new PlatformException("Not allowed on prod.");
+
+		string email = Optional<string>("email");
+		
+		if (email == null)
+		{
+			long affected = _playerService.DeleteAllGoogleAccounts();
+			
+			if (affected > 0)
+				SlackDiagnostics
+					.Log($"({PlatformEnvironment.Deployment}) All Google accounts have been deleted.", $"{Token.ScreenName} is to blame.  {affected} accounts were affected.")
+					.AddChannel("C043FPR7U68")
+					.Send()
+					.Wait();
+
+			return Ok(new RumbleJson
+			{
+				{ "affected", affected }
+			});
+		}
+
+		// When using postman, '+' comes through as a space because it's not URL-encoded.
+		// This is a quick kluge to enable debugging purposes without having to worry about URL-encoded params in Postman.
+		if (_playerService.DeleteGoogleAccount(email) == 0 && _playerService.DeleteGoogleAccount(email.Trim().Replace(" ", "+")) == 0)
 			throw new PlatformException("Rumble account not found.");
 		
 		return Ok();

@@ -553,13 +553,24 @@ public class PlayerAccountService : PlatformMongoService<Player>
 		.UpdateMany(
 			filter: Builders<Player>.Filter.Eq(player => player.RumbleAccount.Email, email),
 			update: Builders<Player>.Update.Unset(player => player.RumbleAccount)
-		)
-		.ModifiedCount;
+		).ModifiedCount;
 
 	public long DeleteAllRumbleAccounts() => _collection
 		.UpdateMany(
 			filter: player => true,
 			update: Builders<Player>.Update.Unset(player => player.RumbleAccount)
+		).ModifiedCount;
+
+	public long DeleteGoogleAccount(string email) => _collection
+		.UpdateMany(
+			filter: Builders<Player>.Filter.Eq(player => player.GoogleAccount.Email, email),
+			update: Builders<Player>.Update.Unset(player => player.GoogleAccount)
+		).ModifiedCount;
+	
+	public long DeleteAllGoogleAccounts() => _collection
+		.UpdateMany(
+			filter: player => true,
+			update: Builders<Player>.Update.Unset(player => player.GoogleAccount)
 		).ModifiedCount;
 }
 
