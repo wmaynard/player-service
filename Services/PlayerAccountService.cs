@@ -20,10 +20,10 @@ public class PlayerAccountService : PlatformMongoService<Player>
 	public const long CODE_EXPIRATION = 15 * 60; // 15 minutes
 	
 	private readonly ApiService _apiService;
-	private readonly DC2Service _config;
+	private readonly DynamicConfig _config;
 	private readonly NameGeneratorService _nameGenerator;
 
-	public PlayerAccountService(ApiService api, DC2Service config, NameGeneratorService nameGenerator) : base("players")
+	public PlayerAccountService(ApiService api, DynamicConfig config, NameGeneratorService nameGenerator) : base("players")
 	{
 		_apiService = api;
 		_config = config;

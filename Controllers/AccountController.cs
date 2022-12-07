@@ -36,7 +36,7 @@ public class AccountController : PlatformController
     
 #pragma warning disable
     private readonly PlayerAccountService _playerService;
-    private readonly DC2Service _dc2Service;
+    private readonly DynamicConfig _dynamicConfig;
     private readonly DiscriminatorService _discriminatorService;
     private readonly ItemService _itemService;
     private readonly NameGeneratorService _nameGeneratorService;
@@ -82,6 +82,11 @@ public class AccountController : PlatformController
     [HttpPatch, Route("google")]
     public ActionResult LinkGoogle()
     {
+        if (PlatformEnvironment.IsDev)
+            Log.Info(Owner.Austin, "PATCH /google body received.", data: new
+            {
+                body = Body
+            });
         DeviceInfo device = Require<DeviceInfo>(Player.FRIENDLY_KEY_DEVICE);
         GoogleAccount google = GoogleAccount.ValidateToken(Require<string>(SsoData.FRIENDLY_KEY_GOOGLE_TOKEN));
         

@@ -32,7 +32,7 @@ public class TopController : PlatformController
 
 #pragma warning disable
 	private readonly PlayerAccountService _playerService;
-	private readonly DC2Service _dc2Service;
+	private readonly DynamicConfig _dynamicConfig;
 	private readonly DiscriminatorService _discriminatorService;
 	private readonly ItemService _itemService;
 	private readonly NameGeneratorService _nameGeneratorService;
@@ -260,7 +260,7 @@ public class TopController : PlatformController
 	{
 		const string OVERRIDE = ":";
 		Version clientVersion = new Version(Optional<string>("clientVersion") ?? "0.0.0.0");
-		RumbleJson config = _dc2Service.GetValuesFor(Audience.GameClient);
+		RumbleJson config = _dynamicConfig.GetValuesFor(Audience.GameClient);
 		RumbleJson variables = new RumbleJson();
 		
 		List<ConfigOverride> overrides = new List<ConfigOverride>();
