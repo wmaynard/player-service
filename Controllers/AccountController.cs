@@ -133,8 +133,33 @@ public class AccountController : PlatformController
         string id = Require<string>("id");
         string code = Require<string>(RumbleAccount.FRIENDLY_KEY_CODE);
 
-        Player player = _playerService.UseConfirmationCode(id, code)
-            ?? throw new PlatformException("Incorrect or expired code.");
+        Player player = _playerService.UseConfirmationCode(id, code);
+
+        string redirectUrl = null;
+        string failure = PlatformEnvironment.Require<string>("confirmationFailurePage");
+        string success = PlatformEnvironment.Require<string>("confirmationSuccessPage");
+
+        if (player == null)
+            return Redirect($"{failure}?reason=invalidCode");
+
+        _apiService
+            .Request("/dmz/otp/token")
+            .AddAuthorization(GenerateToken(player))
+            .OnSuccess(response => redirectUrl = $"{success}?otp={response.Require<string>("otp")}")
+            .OnFailure(response =>
+            {
+                Log.Error(Owner.Will, "Unable to generate OTP.", data: new
+                {
+                    Player = player,
+                    Response = response
+                });
+                
+                redirectUrl = $"{failure}?reason=otpFailure";
+            })
+            .Post();
+
+        if (player.RumbleAccount == null)
+            return Redirect(redirectUrl);
 
         long affected = _playerService.ClearUnconfirmedAccounts(player.RumbleAccount);
         if (affected > 0)
@@ -145,7 +170,7 @@ public class AccountController : PlatformController
                 Player = player.RumbleAccount.Email
             });
 
-        return Ok(player.Prune());
+        return Redirect(redirectUrl);
     }
 
 
