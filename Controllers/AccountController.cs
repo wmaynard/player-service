@@ -139,13 +139,17 @@ public class AccountController : PlatformController
         string failure = PlatformEnvironment.Require<string>("confirmationFailurePage");
         string success = PlatformEnvironment.Require<string>("confirmationSuccessPage");
 
+        // e.g. https://eng.towersandtitans.com/email/failure/invalidCode
         if (player == null)
-            return Redirect($"{failure}?reason=invalidCode");
+            return Redirect(failure.Replace("{reason}", "invalidCode"));
 
         _apiService
             .Request("/dmz/otp/token")
             .AddAuthorization(GenerateToken(player))
-            .OnSuccess(response => redirectUrl = $"{success}?otp={response.Require<string>("otp")}")
+            .OnSuccess(response => redirectUrl = success
+                .Replace("{env}", PlatformEnvironment.Url("").Replace("https://", ""))
+                .Replace("{otp}", response.Require<string>("otp"))
+            )
             .OnFailure(response =>
             {
                 Log.Error(Owner.Will, "Unable to generate OTP.", data: new
@@ -153,11 +157,11 @@ public class AccountController : PlatformController
                     Player = player,
                     Response = response
                 });
-                
-                redirectUrl = $"{failure}?reason=otpFailure";
+                redirectUrl = failure.Replace("{reason}", "otpFailure");
             })
-            .Post();
+            .Post(out RumbleJson json, out int rCode);
 
+        // e.g. https://eng.towersandtitans.com/email/failure/otpFailure
         if (player.RumbleAccount == null)
             return Redirect(redirectUrl);
 
@@ -170,6 +174,7 @@ public class AccountController : PlatformController
                 Player = player.RumbleAccount.Email
             });
 
+        // e.g. https://eng.towersandtitans.com/email/dev.nonprod.cdrentertainment.com/success/deadbeefdeadbeefdeadbeef
         return Redirect(redirectUrl);
     }
 
