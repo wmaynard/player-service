@@ -178,7 +178,6 @@ public class AccountController : PlatformController
         return Redirect(redirectUrl);
     }
 
-
     [HttpPatch, Route("twoFactor")]
     public ActionResult VerifyTwoFactor()
     {
@@ -190,7 +189,6 @@ public class AccountController : PlatformController
         return Ok(output.Prune());
     }
     
-
     /// <summary>
     /// Starts the password reset process.  Doing this sends an email to the player with a 2FA recovery code.
     /// </summary>

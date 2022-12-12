@@ -13,6 +13,7 @@ using Rumble.Platform.Common.Services;
 using Rumble.Platform.Common.Utilities;
 using Rumble.Platform.Data;
 
+
 namespace PlayerService.Services;
 
 public class PlayerAccountService : PlatformMongoService<Player>
@@ -141,9 +142,12 @@ public class PlayerAccountService : PlatformMongoService<Player>
 			Log.Local(Owner.Will, $"Deleted {deleted} old rumble accounts.");
 
 		long usernameCount = _collection
-			.CountDocuments(Builders<Player>.Filter.Or(
-				Builders<Player>.Filter.Eq(player => player.RumbleAccount.Username, rumble.Username),
-				Builders<Player>.Filter.Eq(player => player.RumbleAccount.Email, rumble.Email)
+			.CountDocuments(Builders<Player>.Filter.And(
+				Builders<Player>.Filter.Or(
+					Builders<Player>.Filter.Eq(player => player.RumbleAccount.Username, rumble.Username),
+					Builders<Player>.Filter.Eq(player => player.RumbleAccount.Email, rumble.Email)
+				),
+				Builders<Player>.Filter.Gte(player => player.RumbleAccount.Status, RumbleAccount.AccountStatus.Confirmed)
 			));
 
 		if (mustNotExist && usernameCount > 0)
