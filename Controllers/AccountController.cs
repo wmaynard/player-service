@@ -263,38 +263,44 @@ public class AccountController : PlatformController
     [HttpPost, Route("login"), NoAuth, HealthMonitor(weight: 1)]
     public ActionResult Login()
     {
-        DeviceInfo device = Require<DeviceInfo>(Player.FRIENDLY_KEY_DEVICE);
-        SsoData sso = Optional<SsoData>("sso")?.ValidateTokens();
-
-        Player fromDevice = _playerService.FromDevice(device, isUpsert: true);
-        Player player = fromDevice.Parent ?? fromDevice;
-        Player[] others = _playerService.FromSso(sso);
-        
-        player.Discriminator = _discriminatorService.Lookup(player);
-        player.LastLogin = Timestamp.UnixTime;
-        
-        ValidatePlayerScreenname(ref player);
-        sso?.ValidatePlayers(others.Union(new []{ player }).ToArray());
-
-        GenerateToken(player);
-
-        if (AccountConflictExists(player, others, out ActionResult conflictResult))
-            return conflictResult;
-
-        player.GoogleAccount ??= sso?.GoogleAccount;
-        player.AppleAccount ??= sso?.AppleAccount;
-
-        if (player.LinkExpiration > 0 && player.LinkExpiration <= Timestamp.UnixTime)
-            _playerService.RemoveExpiredLinkCodes();
-
-        _playerService.Update(player);
-
-        return Ok(new RumbleJson
+        try
         {
-            { "geoData", GeoIPData },
-            { "requestId", HttpContext.Request.Headers["X-Request-ID"].ToString() ?? Guid.NewGuid().ToString() },
-            { "player", player.Prune() }
-        });
+            DeviceInfo device = Require<DeviceInfo>(Player.FRIENDLY_KEY_DEVICE);
+            SsoData sso = Optional<SsoData>("sso")?.ValidateTokens();
+
+            Player fromDevice = _playerService.FromDevice(device, isUpsert: true);
+            Player player = fromDevice.Parent ?? fromDevice;
+            Player[] others = _playerService.FromSso(sso);
+
+            player.Discriminator = _discriminatorService.Lookup(player);
+            player.LastLogin = Timestamp.UnixTime;
+
+            ValidatePlayerScreenname(ref player);
+            sso?.ValidatePlayers(others.Union(new[] { player }).ToArray());
+
+            GenerateToken(player);
+
+            if (AccountConflictExists(player, others, out ActionResult conflictResult))
+                return conflictResult;
+
+            player.GoogleAccount ??= sso?.GoogleAccount;
+            player.AppleAccount ??= sso?.AppleAccount;
+
+            if (player.LinkExpiration > 0 && player.LinkExpiration <= Timestamp.UnixTime)
+                _playerService.RemoveExpiredLinkCodes();
+
+            _playerService.Update(player);
+            return Ok(new RumbleJson
+            {
+                { "geoData", GeoIPData },
+                { "requestId", HttpContext.Request.Headers["X-Request-ID"].ToString() ?? Guid.NewGuid().ToString() },
+                { "player", player.Prune() }
+            });
+        }
+        catch (PlatformException e)
+        {
+            return Problem(new LoginDiagnosis(e));
+        }
     }
 
     [HttpGet, Route("status")]

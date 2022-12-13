@@ -9,7 +9,7 @@ public class RumbleUnlinkedException : PlatformException
     public RumbleAccount Account { get; init; }
     public string Email { get; init; }
 
-    public RumbleUnlinkedException(RumbleAccount account = null) : base("Rumble account not yet linked.", code: ErrorCode.RumbleAccountUnconfirmed)
+    public RumbleUnlinkedException(RumbleAccount account = null) : base("Rumble account not yet linked.", code: ErrorCode.RumbleAccountMissing)
     {
         Account = account?.Prune();
     }
