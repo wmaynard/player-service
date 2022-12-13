@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Configuration;
 using MongoDB.Driver;
 using PlayerService.Exceptions;
+using PlayerService.Exceptions.Login;
 using PlayerService.Models;
 using PlayerService.Models.Login;
 using Rumble.Platform.Common.Web;
@@ -113,7 +114,7 @@ public class TopController : PlatformController
 		
 		// TODO: Remove this when "items" is removed.
 		if ((itemCreations.Any() || itemUpdates.Any() || itemDeletions.Any()) && items.Any())
-			throw new PlatformException("If using the new item update capabilities, passing 'items' is not supported.  Remove the key from your request.");
+			throw new ObsoleteOperationException("If using the new item update capabilities, passing 'items' is not supported.  Remove the key from your request.");
 
 		foreach (Item item in items)
 			item.AccountId = Token.AccountId;

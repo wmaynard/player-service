@@ -3,7 +3,9 @@ using System.Linq;
 using System.Text.Json.Serialization;
 using MongoDB.Bson.Serialization.Attributes;
 using PlayerService.Exceptions;
+using PlayerService.Exceptions.Login;
 using Rumble.Platform.Common.Exceptions;
+using Rumble.Platform.Common.Exceptions.Mongo;
 using Rumble.Platform.Data;
 
 namespace PlayerService.Models.Login;
@@ -47,22 +49,22 @@ public class SsoData : PlatformDataModel
         {
             GoogleAccount = GoogleAccount.ValidateToken(GoogleToken);
             if (!string.IsNullOrWhiteSpace(GoogleToken) && GoogleAccount == null)
-                throw new PlatformException("Unable to validate Google token.");
+                throw new GoogleValidationException(GoogleToken);
         }
         catch (Exception e)
         {
-            throw new SsoInvalidException(GoogleToken, "google", inner: e);
+            throw new GoogleValidationException(GoogleToken, e);
         }
     
         try
         {
             AppleAccount = AppleAccount.ValidateToken(AppleToken);
             if (!string.IsNullOrWhiteSpace(AppleToken) && AppleAccount == null)
-                throw new PlatformException("Unable to validate Apple token.");
+                throw new AppleValidationException(AppleToken);
         }
         catch (Exception e)
         {
-            throw new SsoInvalidException(AppleToken, "Apple", inner: e);
+            throw new AppleValidationException(AppleToken, e);
         }
 
         if (string.IsNullOrWhiteSpace(RumbleAccount?.Hash))
@@ -76,12 +78,12 @@ public class SsoData : PlatformDataModel
         if (!AccountsProvided)
             return;
         if (players == null || players.Length == 0)
-            throw new PlatformException("No players found for SSO.");
+            throw new RecordNotFoundException("players", "No players found for SSO.");
         if (GoogleAccount != null && !players.Any(player => player.GoogleAccount != null))
-            throw new PlatformException("Missing Google account.");
+            throw new GoogleUnlinkedException(GoogleAccount);
         if (AppleAccount != null && !players.Any(player => player.AppleAccount != null))
-            throw new PlatformException("Missing Apple account.");
+            throw new AppleUnlinkedException(AppleAccount);
         if (RumbleAccount != null && !players.Any(player => player.RumbleAccount != null))
-            throw new PlatformException("Missing Rumble account.");
+            throw new RumbleUnlinkedException(RumbleAccount);
     }
 }

@@ -5,6 +5,8 @@ using System.Text.RegularExpressions;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Configuration;
 using MongoDB.Driver;
+using PlayerService.Exceptions;
+using PlayerService.Exceptions.Login;
 using PlayerService.Models;
 using PlayerService.Services;
 using PlayerService.Services.ComponentServices;
@@ -12,6 +14,7 @@ using RCL.Logging;
 using Rumble.Platform.Common.Attributes;
 using Rumble.Platform.Common.Enums;
 using Rumble.Platform.Common.Exceptions;
+using Rumble.Platform.Common.Exceptions.Mongo;
 using Rumble.Platform.Common.Interop;
 using Rumble.Platform.Common.Models;
 using Rumble.Platform.Common.Utilities;
@@ -66,11 +69,14 @@ public class AdminController : PlatformController
 	{
 		// TODO: Mock player?
 		Component update = Require<Component>("component");
-		
+
 		if (ComponentServices[update.Name]?.Lookup(update.AccountId) == null)
-			throw new PlatformException("Component not found.", code: ErrorCode.InvalidRequestData);
+			throw new RecordNotFoundException(update.Name, "Component not found.", data: new RumbleJson
+			{
+				{ "accountId", update.AccountId }
+			});
 		if (string.IsNullOrEmpty(update.AccountId))
-			throw new PlatformException("Component does not contain an accountId and can not be used for an update.", code: ErrorCode.InvalidRequestData);
+			throw new ComponentInvalidException(update.AccountId, reason: "Missing accountId; can not be used for an update.");
 		
 		IClientSessionHandle session = ComponentServices[update.Name].StartTransaction();
 		try
@@ -102,7 +108,10 @@ public class AdminController : PlatformController
 
 		Player player = _playerService.Find(accountId);
 		if (player == null)
-			throw new PlatformException("Player not found.", code: ErrorCode.InvalidRequestData);
+			throw new RecordNotFoundException(_playerService.CollectionName, "Player not found.", data: new RumbleJson
+			{
+				{ "accountId", accountId }
+			});
 		player.Discriminator = _discriminatorService.Lookup(player);
 
 		output["player"] = player;
@@ -119,7 +128,7 @@ public class AdminController : PlatformController
 		string name = Require<string>("screenname");
 
 		if (string.IsNullOrWhiteSpace(name))
-			throw new PlatformException("Invalid screenname.", code: ErrorCode.InvalidRequestData);
+			throw new InvalidFieldException("screenname", "Field is null or empty.");
 		
 		int affected = _playerService.SyncScreenname(name, accountId);
 		
@@ -134,7 +143,7 @@ public class AdminController : PlatformController
 		string[] terms = Require<string>("terms").ToLower().Split(',');
 
 		if (terms.Any(term => term.Length < 3))
-			throw new PlatformException("Search terms must contain at least 3 characters.");
+			throw new InvalidFieldException("terms", "Search terms must contain at least 3 characters each.");
 
 		Player[] results = _playerService.Search(terms);
 		RumbleJson discs = _discriminatorService.Search(results.Select(player => player.AccountId).ToArray());
@@ -150,8 +159,7 @@ public class AdminController : PlatformController
 	[HttpPost, Route("clone")]
 	public ActionResult Clone()
 	{
-		if (!(PlatformEnvironment.IsLocal || PlatformEnvironment.IsDev))
-			throw new PlatformException("Not allowed outside of local / dev.");
+		PlatformEnvironment.EnforceNonprod();
 
 		string source = Require<string>("sourceAccountId");
 		string target = Require<string>("targetAccountId");
@@ -193,8 +201,7 @@ public class AdminController : PlatformController
 	[HttpDelete, Route("rumbleAccount")]
 	public ActionResult DeleteRumbleAccount()
 	{
-		if (PlatformEnvironment.IsProd)
-			throw new PlatformException("Not allowed on prod.");
+		PlatformEnvironment.EnforceNonprod();
 
 		string email = Optional<string>("email");
 
@@ -218,7 +225,7 @@ public class AdminController : PlatformController
 		// When using postman, '+' comes through as a space because it's not URL-encoded.
 		// This is a quick kluge to enable debugging purposes without having to worry about URL-encoded params in Postman.
 		if (_playerService.DeleteRumbleAccount(email) == 0 && _playerService.DeleteRumbleAccount(email.Trim().Replace(" ", "+")) == 0)
-			throw new PlatformException("Rumble account not found.");
+			throw new RecordNotFoundException(_playerService.CollectionName, "Rumble account not found.");
 		
 		return Ok();
 	}
@@ -226,8 +233,7 @@ public class AdminController : PlatformController
 	[HttpDelete, Route("googleAccount")]
 	public ActionResult DeleteGoogleAccount()
 	{
-		if (PlatformEnvironment.IsProd)
-			throw new PlatformException("Not allowed on prod.");
+		PlatformEnvironment.EnforceNonprod();
 
 		string email = Optional<string>("email");
 		
@@ -251,7 +257,10 @@ public class AdminController : PlatformController
 		// When using postman, '+' comes through as a space because it's not URL-encoded.
 		// This is a quick kluge to enable debugging purposes without having to worry about URL-encoded params in Postman.
 		if (_playerService.DeleteGoogleAccount(email) == 0 && _playerService.DeleteGoogleAccount(email.Trim().Replace(" ", "+")) == 0)
-			throw new PlatformException("Rumble account not found.");
+			throw new RecordNotFoundException(_playerService.CollectionName, "Rumble account not found.", data: new RumbleJson
+			{
+				{ "email", email }
+			});
 		
 		return Ok();
 	}

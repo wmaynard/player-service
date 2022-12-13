@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using Microsoft.AspNetCore.Mvc;
+using PlayerService.Exceptions.Login;
 using PlayerService.Models;
 using PlayerService.Models.Login;
 using PlayerService.Services;
@@ -11,6 +12,7 @@ using RCL.Logging;
 using Rumble.Platform.Common.Attributes;
 using Rumble.Platform.Common.Enums;
 using Rumble.Platform.Common.Exceptions;
+using Rumble.Platform.Common.Exceptions.Mongo;
 using Rumble.Platform.Common.Extensions;
 using Rumble.Platform.Common.Services;
 using Rumble.Platform.Common.Utilities;
@@ -93,12 +95,11 @@ public class AccountController : PlatformController
         Player fromDevice = _playerService.FromDevice(device, isUpsert: true);
         Player fromGoogle = _playerService.FromGoogle(google);
 
-        if (fromGoogle != null && fromDevice.Id != fromGoogle.Id)
-            throw new PlatformException("Account conflict.");
-        
         if (fromGoogle != null)
-            throw new PlatformException("Account already linked.");
-
+            throw fromDevice.Id == fromGoogle.Id
+                ? new AlreadyLinkedAccountException("Google")
+                : new AccountOwnershipException("Google", fromDevice.Id, fromGoogle.Id);
+        
         return Ok(_playerService.AttachGoogle(fromDevice, google)?.Prune());
     }
     
@@ -114,11 +115,10 @@ public class AccountController : PlatformController
         Player fromDevice = _playerService.FromDevice(device, isUpsert: true);
         Player fromRumble = _playerService.FromRumble(rumble, mustExist: false, mustNotExist: true);
         
-        if (fromRumble != null && fromDevice.Id != fromRumble.Id)
-            throw new PlatformException("Account conflict.  The account exists on a different account and can't be added to this one.");
-
         if (fromRumble != null)
-            throw new PlatformException("Account already linked.");
+            throw fromDevice.Id == fromRumble.Id
+                ? new AlreadyLinkedAccountException("Rumble")
+                : new AccountOwnershipException("Rumble", fromDevice.Id, fromRumble.Id);
 
         _playerService.AttachRumble(fromDevice, rumble);
         return Ok(fromDevice.Prune());
@@ -184,7 +184,7 @@ public class AccountController : PlatformController
         string code = Require<string>("code");
 
         Player output = _playerService.UseTwoFactorCode(Token.AccountId, code)
-            ?? throw new PlatformException("Invalid or expired code.");
+            ?? throw new RecordNotFoundException(_playerService.CollectionName, "Invalid or expired code.");
 
         return Ok(output.Prune());
     }
@@ -208,8 +208,7 @@ public class AccountController : PlatformController
         if (string.IsNullOrWhiteSpace(accountId))
             accountId = null;
 
-        if (accountId != null && !accountId.CanBeMongoId())
-            throw new PlatformException("Invalid accountId.");
+        accountId?.MustBeMongoId();
 
         return Ok(_playerService.CompleteReset(username, code)?.Prune());
     }
@@ -225,9 +224,9 @@ public class AccountController : PlatformController
         string newHash = Require<string>("newHash");
 
         if (oldHash == newHash)
-            throw new PlatformException("Invalid hash.  Passwords cannot be the same.");
+            throw new InvalidPasswordException(username, "Passwords cannot be the same.");
         if (string.IsNullOrWhiteSpace(newHash))
-            throw new PlatformException("Invalid hash.  Cannot be empty or null.");
+            throw new InvalidPasswordException(username, "Passwords cannot be empty or null.");
 
         Player output = _playerService.UpdateHash(username, oldHash, newHash);
         output.Token = GenerateToken(output);
@@ -374,7 +373,7 @@ public class AccountController : PlatformController
         if (!rumbles.Any())
             return false;
         if (rumbles.Length > 1)
-            throw new PlatformException("More than one rumble account found.");
+            throw new RecordsFoundException(1, rumbles.Length, "More than one Rumble account found.");
 
         RumbleAccount rumble = rumbles.First();
 

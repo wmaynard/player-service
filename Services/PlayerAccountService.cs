@@ -3,16 +3,17 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text.RegularExpressions;
 using MongoDB.Driver;
+using PlayerService.Exceptions.Login;
 using PlayerService.Models;
 using PlayerService.Models.Login;
 using RCL.Logging;
 using Rumble.Platform.Common.Exceptions;
+using Rumble.Platform.Common.Exceptions.Mongo;
 using Rumble.Platform.Common.Extensions;
 using Rumble.Platform.Common.Models;
 using Rumble.Platform.Common.Services;
 using Rumble.Platform.Common.Utilities;
 using Rumble.Platform.Data;
-
 
 namespace PlayerService.Services;
 
@@ -93,7 +94,6 @@ public class PlayerAccountService : PlatformMongoService<Player>
 		FilterDefinitionBuilder<Player> builder = Builders<Player>.Filter;
 
 		List<FilterDefinition<Player>> filters = new List<FilterDefinition<Player>>();
-		
 
 		if (useGoogle)
 			filters.Add(builder.Eq(player => player.GoogleAccount.Id, sso.GoogleAccount.Id));
@@ -115,11 +115,11 @@ public class PlayerAccountService : PlatformMongoService<Player>
 			.ToArray();
 
 		if (useGoogle && !output.Any(player => player.GoogleAccount != null))
-			throw new PlatformException("Google account not found.");
+			throw new GoogleUnlinkedException();
 		if (useApple && !output.Any(player => player.AppleAccount != null))
-			throw new PlatformException("Apple account not found.");
+			throw new AppleUnlinkedException();
 		if (useRumble && !output.Any(player => player.RumbleAccount != null))
-			throw new PlatformException("Rumble account not found.");
+			throw DiagnoseEmailPasswordLogin(sso.RumbleAccount.Email, sso.RumbleAccount.Hash);
 		
 		return output;
 	}
@@ -129,10 +129,10 @@ public class PlayerAccountService : PlatformMongoService<Player>
 		List<Player> accounts = _collection
 			.Find(Builders<Player>.Filter.Eq(player => player.GoogleAccount.Id, google.Id))
 			.ToList();
-
-		if (accounts.Count > 1)
-			throw new PlatformException("Found more than one Google account.");
-		return accounts.FirstOrDefault();
+		
+		return accounts.Count <= 1
+			? accounts.FirstOrDefault()
+			: throw new RecordsFoundException(1, accounts.Count);
 	}
 
 	public Player FromRumble(RumbleAccount rumble, bool mustExist = true, bool mustNotExist = false)
@@ -151,7 +151,7 @@ public class PlayerAccountService : PlatformMongoService<Player>
 			));
 
 		if (mustNotExist && usernameCount > 0)
-			throw new PlatformException("Account conflict.  The username or email is already in use.");
+			throw new AccountOwnershipException("Rumble", "The username or email is already in use.");
 
 		List<Player> accounts = _collection
 			.Find(
@@ -167,8 +167,8 @@ public class PlayerAccountService : PlatformMongoService<Player>
 
 		return accounts.Count switch
 		{
-			0 when usernameCount > 0 && mustExist => throw new PlatformException("Invalid password"),
-			> 1 => throw new PlatformException("Found more than one Rumble account."),
+			0 when usernameCount > 0 && mustExist => throw DiagnoseEmailPasswordLogin(rumble.Email, rumble.Hash),
+			> 1 => throw new RecordsFoundException(1, accounts.Count),
 			_ => accounts.FirstOrDefault()
 		};
 	}
@@ -199,7 +199,7 @@ public class PlayerAccountService : PlatformMongoService<Player>
 					IsUpsert = false,
 					ReturnDocument = ReturnDocument.After
 				})
-		) ?? throw new PlatformException("Account not found.");
+		) ?? throw new RecordNotFoundException(CollectionName, "Account not found.");
 
 	public Player AttachRumble(Player player, RumbleAccount rumble)
 	{
@@ -371,7 +371,7 @@ public class PlayerAccountService : PlatformMongoService<Player>
 					IsUpsert = false,
 					ReturnDocument = ReturnDocument.After
 				}
-			) ?? throw new PlatformException("Account not found.");
+			) ?? throw new RecordNotFoundException(CollectionName, "Account not found.");
 
 		_apiService
 			.Request("/dmz/player/account/reset")
@@ -414,7 +414,7 @@ public class PlayerAccountService : PlatformMongoService<Player>
 			{
 				IsUpsert = false,
 				ReturnDocument = ReturnDocument.After
-			}) ?? throw new PlatformException("Account not found.");
+			}) ?? throw new RecordNotFoundException(CollectionName, "Account not found.");
 	}
 
 	public string SetLinkCode(string[] ids)
@@ -439,13 +439,19 @@ public class PlayerAccountService : PlatformMongoService<Player>
 	public Player LinkAccounts(string accountId)
 	{
 		Player player = Find(accountId)
-			?? throw new PlatformException("Account not found.");
+			?? throw new RecordNotFoundException(CollectionName, "No player account found with specified ID.", data: new RumbleJson
+			{
+				{ "accountId", accountId }
+			});
 
 		if (string.IsNullOrEmpty(player.LinkCode))
-			throw new PlatformException("No link code found.");
+			throw new RecordNotFoundException(CollectionName, "No matching link code found.", data: new RumbleJson
+			{
+				{ "accountId", accountId }
+			});
 
 		if (player.LinkExpiration <= Timestamp.UnixTime)
-			throw new PlatformException("Link code is expired.");
+			throw new WindowExpiredException("Link code is expired.");
 		
 		List<Player> others = _collection
 			.Find(Builders<Player>.Filter.And(
@@ -458,7 +464,10 @@ public class PlayerAccountService : PlatformMongoService<Player>
 			.ToList();
 
 		if (!others.Any())
-			throw new PlatformException("No other accounts found.");
+			throw new RecordNotFoundException(CollectionName, "No other accounts found to link.", data: new RumbleJson
+			{
+				{ "accountId", accountId }
+			});
 
 		List<GoogleAccount> googles = others
 			.Select(other => other.GoogleAccount)
@@ -478,11 +487,11 @@ public class PlayerAccountService : PlatformMongoService<Player>
 
 
 		if (googles.Count > 1)
-			throw new PlatformException("Multiple Google accounts found.");
+			throw new RecordsFoundException(1, googles.Count, "Multiple Google accounts found.");
 		if (apples.Count > 1)
-			throw new PlatformException("Multiple Apple accounts found.");
+			throw new RecordsFoundException(1, apples.Count, "Multiple Apple accounts found.");
 		if (rumbles.Count > 1)
-			throw new PlatformException("Multiple Rumble accounts found.");
+			throw new RecordsFoundException(1, rumbles.Count, "Multiple Rumble accounts found.");
 		
 		player.GoogleAccount = googles.FirstOrDefault();
 		player.AppleAccount = apples.FirstOrDefault();
@@ -551,7 +560,7 @@ public class PlayerAccountService : PlatformMongoService<Player>
 	public Player FromToken(TokenInfo token) => _collection
 		.Find(Builders<Player>.Filter.Eq(player => player.Id, token?.AccountId))
 		.FirstOrDefault()
-		?? throw new PlatformException("Account not found."); 
+		?? throw new RecordNotFoundException(CollectionName, "Account not found.");
 
 	public long DeleteRumbleAccount(string email) => _collection
 		.UpdateMany(
@@ -576,6 +585,38 @@ public class PlayerAccountService : PlatformMongoService<Player>
 			filter: player => true,
 			update: Builders<Player>.Update.Unset(player => player.GoogleAccount)
 		).ModifiedCount;
+
+	public PlatformException DiagnoseEmailPasswordLogin(string email, string hash)
+	{
+		RumbleAccount[] accounts = GetRumbleAccountsByEmail(email);
+
+		int confirmed = accounts.Count(rumble => rumble.Status == RumbleAccount.AccountStatus.Confirmed);
+
+		bool waitingOnConfirmation = confirmed == 0 && accounts.Any(rumble => rumble.Status == RumbleAccount.AccountStatus.NeedsConfirmation && rumble.CodeExpiration > Timestamp.UnixTime);
+		bool allExpired = confirmed == 0 && !accounts.Any(rumble => rumble.Status == RumbleAccount.AccountStatus.NeedsConfirmation && rumble.CodeExpiration > Timestamp.UnixTime);
+
+		PlatformException output = confirmed switch
+		{
+			0 when waitingOnConfirmation => new RumbleNotConfirmedException(email),
+			0 when allExpired => new ConfirmationCodeExpiredException(email),
+			0 => new RumbleUnlinkedException(email),
+			1 => new InvalidPasswordException(email),
+			_ => new RecordsFoundException(0, 1, confirmed, "Found more than one confirmed Rumble account for an email address!")
+		};
+
+		return output;
+	}
+
+	private RumbleAccount[] GetRumbleAccountsByEmail(string email) => _collection
+		.Find(Builders<Player>.Filter.Eq(player => player.RumbleAccount.Email, email))
+		.Project(Builders<Player>.Projection.Expression(player => player.RumbleAccount))
+		.Limit(1_000)
+		.SortByDescending(player => player.RumbleAccount.Status)
+		.ThenByDescending(player => player.RumbleAccount.CodeExpiration)
+		.ToList()
+		.ToArray();
+
+
 }
 
 
