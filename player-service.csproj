@@ -13,6 +13,14 @@
 	  <None Remove="adjectives.txt" />
 	  <None Remove="nouns.txt" />
 	  <None Remove="GeoIP2-Country.mmdb" />
+	  <Content Include=".gitlab\deploy-eb.yaml" />
+	  <Content Include=".gitlab\deploy-k8s.yaml" />
+	  <Content Include=".gitlab\dev.values.yaml" />
+	  <Content Include=".gitlab\prod-b.values.yaml" />
+	  <Content Include=".gitlab\prod.values.yaml" />
+	  <Content Include=".gitlab\stage-a.values.yaml" />
+	  <Content Include=".gitlab\stage-b.values.yaml" />
+	  <Content Include=".gitlab\stage-c.values.yaml" />
 	  <Content Include="GeoIP2-Country.mmdb">
 	    <CopyToOutputDirectory>Always</CopyToOutputDirectory>
 	  </Content>
@@ -23,7 +31,7 @@
 	  <PackageReference Include="BCrypt.Net-Core" Version="1.6.0" />
 	  <PackageReference Include="Google.Apis.Auth.AspNetCore3" Version="1.55.0" />
 	  <PackageReference Include="Microsoft.IdentityModel.Tokens" Version="6.15.0" />
-	  <PackageReference Include="platform-csharp-common" Version="1.2.41" />
+	  <PackageReference Include="platform-csharp-common" Version="1.2.42" />
 	</ItemGroup>
 
 	<!-- QOL comment-->
