@@ -258,24 +258,43 @@ public class PlayerAccountService : PlatformMongoService<Player>
 			update: Builders<Player>.Update.Unset(player => player.RumbleAccount)
 		).ModifiedCount;
 
-	public Player UseConfirmationCode(string id, string code) => _collection
-		.FindOneAndUpdate(
-			filter: Builders<Player>.Filter.And(
-				Builders<Player>.Filter.Eq(player => player.Id, id),
-				Builders<Player>.Filter.Eq(player => player.RumbleAccount.ConfirmationCode, code),
-				Builders<Player>.Filter.Gt(player => player.RumbleAccount.CodeExpiration, Timestamp.UnixTime)
-			),
-			update: Builders<Player>.Update
-				.Set(player => player.RumbleAccount.CodeExpiration, default)
-				.Set(player => player.RumbleAccount.ConfirmationCode, null)
-				.Set(player => player.RumbleAccount.Status, RumbleAccount.AccountStatus.Confirmed)
-				.AddToSet(player => player.RumbleAccount.ConfirmedIds, id),
-			options: new FindOneAndUpdateOptions<Player>
-			{
-				IsUpsert = false,
-				ReturnDocument = ReturnDocument.After
-			}
-		);
+	public Player UseConfirmationCode(string id, string code)
+	{
+		Player output = _collection
+			.FindOneAndUpdate(
+				filter: Builders<Player>.Filter.And(
+					Builders<Player>.Filter.Eq(player => player.Id, id),
+					Builders<Player>.Filter.Eq(player => player.RumbleAccount.ConfirmationCode, code),
+					Builders<Player>.Filter.Lte(player => player.RumbleAccount.Status, RumbleAccount.AccountStatus.NeedsConfirmation),
+					Builders<Player>.Filter.Gt(player => player.RumbleAccount.CodeExpiration, Timestamp.UnixTime)
+				),
+				update: Builders<Player>.Update
+					.Set(player => player.RumbleAccount.CodeExpiration, default)
+					.Set(player => player.RumbleAccount.ConfirmationCode, null)
+					.Set(player => player.RumbleAccount.Status, RumbleAccount.AccountStatus.Confirmed)
+					.AddToSet(player => player.RumbleAccount.ConfirmedIds, id),
+				options: new FindOneAndUpdateOptions<Player>
+				{
+					IsUpsert = false,
+					ReturnDocument = ReturnDocument.After
+				}
+			);
+		
+		if (output != null)
+			_apiService
+				.Request("/dmz/player/account/welcome")
+				.AddAuthorization(_config.AdminToken)
+				.SetPayload(new RumbleJson
+				{
+					{ "email", output.RumbleAccount?.Email }
+				})
+				.OnFailure(response => Log.Error(Owner.Will, "Unable to send welcome email.", data: new
+				{
+					Player = output,
+					Response = response
+				}))
+				.Post();
+	}
 
 	public Player UseTwoFactorCode(string id, string code)
 	{
