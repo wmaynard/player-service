@@ -8,19 +8,8 @@ public class RumbleNotConfirmedException : PlatformException
 {
     public string Email { get; init; }
 
-    public RumbleNotConfirmedException(string email) : base("Rumble account not yet confirmed.", code: ErrorCode.RumbleAccountMissing)
+    public RumbleNotConfirmedException(string email) : base("Rumble account not yet confirmed.", code: ErrorCode.RumbleAccountUnconfirmed)
     {
         Email = email;
     }
-}
-
-public class ConfirmationCodeExpiredException : PlatformException
-{
-    public string Email { get; init; }
-
-    public ConfirmationCodeExpiredException(string email) : base("Confirmation code has expired.", code: ErrorCode.ConfirmationCodeExpired)
-    {
-        Email = email;
-    }
-
 }

@@ -597,6 +597,7 @@ public class PlayerAccountService : PlatformMongoService<Player>
 
 		PlatformException output = confirmed switch
 		{
+			0 when accounts.Length == 0 => new RumbleUnlinkedException(email),
 			0 when waitingOnConfirmation => new RumbleNotConfirmedException(email),
 			0 when allExpired => new ConfirmationCodeExpiredException(email),
 			0 => new RumbleUnlinkedException(email),
