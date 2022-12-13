@@ -294,6 +294,8 @@ public class PlayerAccountService : PlatformMongoService<Player>
 					Response = response
 				}))
 				.Post();
+
+		return output;
 	}
 
 	public Player UseTwoFactorCode(string id, string code)
