@@ -381,7 +381,8 @@ public class PlayerAccountService : PlatformMongoService<Player>
 		Player output = _collection
 			.FindOneAndUpdate(
 				filter: Builders<Player>.Filter.And(
-					Builders<Player>.Filter.Eq(player => player.RumbleAccount.Email, email)
+					Builders<Player>.Filter.Eq(player => player.RumbleAccount.Email, email),
+					Builders<Player>.Filter.Gte(player => player.RumbleAccount.Status, RumbleAccount.AccountStatus.Confirmed)
 				),
 				update: Builders<Player>.Update
 					.Set(player => player.RumbleAccount.CodeExpiration, Timestamp.UnixTime + CODE_EXPIRATION)
@@ -392,7 +393,7 @@ public class PlayerAccountService : PlatformMongoService<Player>
 					IsUpsert = false,
 					ReturnDocument = ReturnDocument.After
 				}
-			) ?? throw new RecordNotFoundException(CollectionName, "Account not found.");
+			) ?? throw new RumbleUnlinkedException(email);
 
 		_apiService
 			.Request("/dmz/player/account/reset")
@@ -435,7 +436,7 @@ public class PlayerAccountService : PlatformMongoService<Player>
 			{
 				IsUpsert = false,
 				ReturnDocument = ReturnDocument.After
-			}) ?? throw new RecordNotFoundException(CollectionName, "Account not found.");
+			}) ?? throw DiagnoseEmailPasswordLogin(username, null, code);
 	}
 
 	public string SetLinkCode(string[] ids)
@@ -607,7 +608,7 @@ public class PlayerAccountService : PlatformMongoService<Player>
 			update: Builders<Player>.Update.Unset(player => player.GoogleAccount)
 		).ModifiedCount;
 
-	public PlatformException DiagnoseEmailPasswordLogin(string email, string hash)
+	private PlatformException DiagnoseEmailPasswordLogin(string email, string hash, string code = null)
 	{
 		RumbleAccount[] accounts = GetRumbleAccountsByEmail(email);
 
@@ -615,6 +616,7 @@ public class PlayerAccountService : PlatformMongoService<Player>
 
 		bool waitingOnConfirmation = confirmed == 0 && accounts.Any(rumble => rumble.Status == RumbleAccount.AccountStatus.NeedsConfirmation && rumble.CodeExpiration > Timestamp.UnixTime);
 		bool allExpired = confirmed == 0 && !accounts.Any(rumble => rumble.Status == RumbleAccount.AccountStatus.NeedsConfirmation && rumble.CodeExpiration > Timestamp.UnixTime);
+		bool codeInvalid = !allExpired && code != null && !accounts.Any(rumble => rumble.ConfirmationCode == code);
 
 		PlatformException output = confirmed switch
 		{
@@ -622,6 +624,7 @@ public class PlayerAccountService : PlatformMongoService<Player>
 			0 when waitingOnConfirmation => new RumbleNotConfirmedException(email),
 			0 when allExpired => new ConfirmationCodeExpiredException(email),
 			0 => new RumbleUnlinkedException(email),
+			1 when codeInvalid => new CodeInvalidException(email),
 			1 => new InvalidPasswordException(email),
 			_ => new RecordsFoundException(0, 1, confirmed, "Found more than one confirmed Rumble account for an email address!")
 		};
@@ -630,7 +633,10 @@ public class PlayerAccountService : PlatformMongoService<Player>
 	}
 
 	private RumbleAccount[] GetRumbleAccountsByEmail(string email) => _collection
-		.Find(Builders<Player>.Filter.Eq(player => player.RumbleAccount.Email, email))
+		.Find(Builders<Player>.Filter.Or(
+				Builders<Player>.Filter.Eq(player => player.RumbleAccount.Email, email),
+				Builders<Player>.Filter.Eq(player => player.RumbleAccount.Username, email)
+		))
 		.Project(Builders<Player>.Projection.Expression(player => player.RumbleAccount))
 		.Limit(1_000)
 		.SortByDescending(player => player.RumbleAccount.Status)

@@ -84,23 +84,30 @@ public class AccountController : PlatformController
     [HttpPatch, Route("google")]
     public ActionResult LinkGoogle()
     {
-        if (PlatformEnvironment.IsDev)
-            Log.Info(Owner.Austin, "PATCH /google body received.", data: new
-            {
-                body = Body
-            });
-        DeviceInfo device = Require<DeviceInfo>(Player.FRIENDLY_KEY_DEVICE);
-        GoogleAccount google = GoogleAccount.ValidateToken(Require<string>(SsoData.FRIENDLY_KEY_GOOGLE_TOKEN));
+        try
+        {
+            if (PlatformEnvironment.IsDev)
+                Log.Info(Owner.Austin, "PATCH /google body received.", data: new
+                {
+                    body = Body
+                });
+            DeviceInfo device = Require<DeviceInfo>(Player.FRIENDLY_KEY_DEVICE);
+            GoogleAccount google = GoogleAccount.ValidateToken(Require<string>(SsoData.FRIENDLY_KEY_GOOGLE_TOKEN));
         
-        Player fromDevice = _playerService.FromDevice(device, isUpsert: true);
-        Player fromGoogle = _playerService.FromGoogle(google);
+            Player fromDevice = _playerService.FromDevice(device, isUpsert: true);
+            Player fromGoogle = _playerService.FromGoogle(google);
 
-        if (fromGoogle != null)
-            throw fromDevice.Id == fromGoogle.Id
-                ? new AlreadyLinkedAccountException("Google")
-                : new AccountOwnershipException("Google", fromDevice.Id, fromGoogle.Id);
+            if (fromGoogle != null)
+                throw fromDevice.Id == fromGoogle.Id
+                    ? new AlreadyLinkedAccountException("Google")
+                    : new AccountOwnershipException("Google", fromDevice.Id, fromGoogle.Id);
         
-        return Ok(_playerService.AttachGoogle(fromDevice, google)?.Prune());
+            return Ok(_playerService.AttachGoogle(fromDevice, google)?.Prune());
+        }
+        catch (PlatformException e)
+        {
+            return Problem(new LoginDiagnosis(e));
+        }
     }
     
     /// <summary>
@@ -109,19 +116,26 @@ public class AccountController : PlatformController
     [HttpPatch, Route("rumble")]
     public ActionResult LinkRumble()
     {
-        DeviceInfo device = Require<DeviceInfo>(Player.FRIENDLY_KEY_DEVICE);
-        RumbleAccount rumble = Require<RumbleAccount>(SsoData.FRIENDLY_KEY_RUMBLE_ACCOUNT);
+        try
+        {
+            DeviceInfo device = Require<DeviceInfo>(Player.FRIENDLY_KEY_DEVICE);
+            RumbleAccount rumble = Require<RumbleAccount>(SsoData.FRIENDLY_KEY_RUMBLE_ACCOUNT);
 
-        Player fromDevice = _playerService.FromDevice(device, isUpsert: true);
-        Player fromRumble = _playerService.FromRumble(rumble, mustExist: false, mustNotExist: true);
+            Player fromDevice = _playerService.FromDevice(device, isUpsert: true);
+            Player fromRumble = _playerService.FromRumble(rumble, mustExist: false, mustNotExist: true);
         
-        if (fromRumble != null)
-            throw fromDevice.Id == fromRumble.Id
-                ? new AlreadyLinkedAccountException("Rumble")
-                : new AccountOwnershipException("Rumble", fromDevice.Id, fromRumble.Id);
+            if (fromRumble != null)
+                throw fromDevice.Id == fromRumble.Id
+                    ? new AlreadyLinkedAccountException("Rumble")
+                    : new AccountOwnershipException("Rumble", fromDevice.Id, fromRumble.Id);
 
-        _playerService.AttachRumble(fromDevice, rumble);
-        return Ok(fromDevice.Prune());
+            _playerService.AttachRumble(fromDevice, rumble);
+            return Ok(fromDevice.Prune());
+        }
+        catch (PlatformException e)
+        {
+            return Problem(new LoginDiagnosis(e));
+        }
     }
 
     /// <summary>
@@ -181,12 +195,19 @@ public class AccountController : PlatformController
     [HttpPatch, Route("twoFactor")]
     public ActionResult VerifyTwoFactor()
     {
-        string code = Require<string>("code");
+        try
+        {
+            string code = Require<string>("code");
 
-        Player output = _playerService.UseTwoFactorCode(Token.AccountId, code)
-            ?? throw new RecordNotFoundException(_playerService.CollectionName, "Invalid or expired code.");
+            Player output = _playerService.UseTwoFactorCode(Token.AccountId, code)
+                ?? throw new RecordNotFoundException(_playerService.CollectionName, "Invalid or expired code.");
 
-        return Ok(output.Prune());
+            return Ok(output.Prune());
+        }
+        catch (PlatformException e)
+        {
+            return Problem(new LoginDiagnosis(e));
+        }
     }
     
     /// <summary>
@@ -201,16 +222,23 @@ public class AccountController : PlatformController
     [HttpPatch, Route("reset")]
     public ActionResult UsePasswordRecoveryCode()
     {
-        string username = Require<string>(RumbleAccount.FRIENDLY_KEY_USERNAME);
-        string code = Require<string>(RumbleAccount.FRIENDLY_KEY_CODE);
-        string accountId = Token?.AccountId ?? Optional<string>(Player.FRIENDLY_KEY_ACCOUNT_ID);
+        try
+        {
+            string username = Require<string>(RumbleAccount.FRIENDLY_KEY_USERNAME);
+            string code = Require<string>(RumbleAccount.FRIENDLY_KEY_CODE);
+            string accountId = Token?.AccountId ?? Optional<string>(Player.FRIENDLY_KEY_ACCOUNT_ID);
 
-        if (string.IsNullOrWhiteSpace(accountId))
-            accountId = null;
+            if (string.IsNullOrWhiteSpace(accountId))
+                accountId = null;
 
-        accountId?.MustBeMongoId();
+            accountId?.MustBeMongoId();
 
-        return Ok(_playerService.CompleteReset(username, code)?.Prune());
+            return Ok(_playerService.CompleteReset(username, code)?.Prune());
+        }
+        catch (PlatformException e)
+        {
+            return Problem(new LoginDiagnosis(e));
+        }
     }
 
     /// <summary>
@@ -219,19 +247,26 @@ public class AccountController : PlatformController
     [HttpPatch, Route("password")]
     public ActionResult ChangePassword()
     {
-        string username = Require<string>(RumbleAccount.FRIENDLY_KEY_USERNAME);
-        string oldHash = Optional<string>("oldHash");
-        string newHash = Require<string>("newHash");
+        try
+        {
+            string username = Require<string>(RumbleAccount.FRIENDLY_KEY_USERNAME);
+            string oldHash = Optional<string>("oldHash");
+            string newHash = Require<string>("newHash");
 
-        if (oldHash == newHash)
-            throw new InvalidPasswordException(username, "Passwords cannot be the same.");
-        if (string.IsNullOrWhiteSpace(newHash))
-            throw new InvalidPasswordException(username, "Passwords cannot be empty or null.");
+            if (string.IsNullOrWhiteSpace(newHash))
+                throw new InvalidPasswordException(username, "Passwords cannot be empty or null.");
+            if (oldHash == newHash)
+                throw new InvalidPasswordException(username, "Passwords cannot be the same.");
 
-        Player output = _playerService.UpdateHash(username, oldHash, newHash);
-        output.Token = GenerateToken(output);
+            Player output = _playerService.UpdateHash(username, oldHash, newHash);
+            output.Token = GenerateToken(output);
 
-        return Ok(output.Prune());
+            return Ok(output.Prune());
+        }
+        catch (PlatformException e)
+        {
+            return Problem(new LoginDiagnosis(e));
+        }
     }
 
     /// <summary>
