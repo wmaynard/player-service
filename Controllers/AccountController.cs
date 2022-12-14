@@ -300,6 +300,10 @@ public class AccountController : PlatformController
     {
         try
         {
+            string maintenance = _dynamicConfig.Optional<string>("maintenance");
+            if (maintenance != null && PlatformEnvironment.Url().Contains(maintenance))
+                throw new MaintenanceException();
+            
             DeviceInfo device = Require<DeviceInfo>(Player.FRIENDLY_KEY_DEVICE);
             SsoData sso = Optional<SsoData>("sso")?.ValidateTokens();
 

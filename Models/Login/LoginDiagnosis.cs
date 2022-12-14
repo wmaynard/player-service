@@ -15,11 +15,14 @@ public class LoginDiagnosis : PlatformDataModel
     public bool PasswordInvalid { get; set; }
     public bool CodeInvalid { get; set; }
     public bool DuplicateAccount { get; set; }
+    public bool Maintenance { get; set; }
     public bool Other { get; set; }
     public string Message { get; set; }
+    public ErrorCode Code { get; set; }
 
     public LoginDiagnosis(PlatformException ex)
     {
+        Maintenance = ex.Code == ErrorCode.DownForMaintenance;
         EmailNotLinked = ex.Code == ErrorCode.RumbleAccountMissing;
         EmailNotConfirmed = ex.Code == ErrorCode.RumbleAccountUnconfirmed;
         EmailCodeExpired = ex.Code == ErrorCode.ConfirmationCodeExpired;
@@ -27,7 +30,9 @@ public class LoginDiagnosis : PlatformDataModel
         PasswordInvalid = ex.Code == ErrorCode.Unauthorized;
         CodeInvalid = ex.Code == ErrorCode.ConfirmationCodeInvalid;
         DuplicateAccount = ex.Code == ErrorCode.MongoUnexpectedFoundCount;
-        Other = !(EmailNotLinked || EmailNotConfirmed || EmailCodeExpired || PasswordInvalid || DuplicateAccount || CodeInvalid);
+        
+        Other = !(Maintenance || EmailNotLinked || EmailNotConfirmed || EmailCodeExpired || PasswordInvalid || DuplicateAccount || CodeInvalid);
         Message = ex.Message;
+        Code = ex.Code;
     }
 }
