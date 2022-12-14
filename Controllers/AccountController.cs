@@ -301,7 +301,7 @@ public class AccountController : PlatformController
         try
         {
             string maintenance = _dynamicConfig.Optional<string>("maintenance");
-            if (maintenance != null && PlatformEnvironment.Url().Contains(maintenance))
+            if (!string.IsNullOrWhiteSpace(maintenance) && PlatformEnvironment.Url().Contains(maintenance))
                 throw new MaintenanceException();
             
             DeviceInfo device = Require<DeviceInfo>(Player.FRIENDLY_KEY_DEVICE);
