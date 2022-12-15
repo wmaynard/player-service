@@ -152,12 +152,17 @@ public class AccountController : PlatformController
     {
         string id = Require<string>("id");
         string code = Require<string>(RumbleAccount.FRIENDLY_KEY_CODE);
+        
+        string failure = PlatformEnvironment.Require<string>("confirmationFailurePage");
+        string success = PlatformEnvironment.Require<string>("confirmationSuccessPage");
 
+        bool alreadyConfirmed = _playerService.Find(id)?.RumbleAccount?.Status.HasFlag(RumbleAccount.AccountStatus.Confirmed) ?? false;
+        if (alreadyConfirmed)
+            return Ok(new LoginRedirect(failure.Replace("{reason}", "confirmed")));
+        
         Player player = _playerService.UseConfirmationCode(id, code);
 
         string redirectUrl = null;
-        string failure = PlatformEnvironment.Require<string>("confirmationFailurePage");
-        string success = PlatformEnvironment.Require<string>("confirmationSuccessPage");
 
         // e.g. https://eng.towersandtitans.com/email/failure/invalidCode
         if (player == null)
