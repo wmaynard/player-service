@@ -2,6 +2,7 @@ using System.Text.Json.Serialization;
 using System.Threading.Tasks;
 using Google.Apis.Auth;
 using MongoDB.Bson.Serialization.Attributes;
+using Rumble.Platform.Common.Attributes;
 using Rumble.Platform.Data;
 
 namespace PlayerService.Models.Login;
@@ -24,6 +25,7 @@ public class GoogleAccount : PlatformDataModel
     
     [BsonElement(DB_KEY_EMAIL)]
     [JsonPropertyName(FRIENDLY_KEY_EMAIL)]
+    [CompoundIndex(group: Player.INDEX_KEY_SEARCH, priority: 6)]
     public string Email { get; set; }
     
     [BsonElement(DB_KEY_EMAIL_VERIFIED)]
@@ -40,6 +42,7 @@ public class GoogleAccount : PlatformDataModel
     
     [BsonElement(DB_KEY_NAME)]
     [JsonPropertyName(FRIENDLY_KEY_NAME)]
+    [CompoundIndex(group: Player.INDEX_KEY_SEARCH, priority: 7)]
     public string Name { get; set; }
     
     [BsonElement(DB_KEY_PICTURE)]

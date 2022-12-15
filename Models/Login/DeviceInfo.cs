@@ -40,6 +40,7 @@ public class DeviceInfo : PlatformDataModel
     [BsonElement(DB_KEY_INSTALL_ID)]
     [JsonInclude, JsonPropertyName(FRIENDLY_KEY_INSTALL_ID)]
     [SimpleIndex]
+    [CompoundIndex(group: Player.INDEX_KEY_SEARCH, priority: 3)]
     public string InstallId { get; set; }
     
     [BsonElement(DB_KEY_LANGUAGE)]

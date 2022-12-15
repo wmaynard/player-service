@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text.Json.Serialization;
 using MongoDB.Bson.Serialization;
 using MongoDB.Bson.Serialization.Attributes;
+using Rumble.Platform.Common.Attributes;
 using Rumble.Platform.Data;
 
 namespace PlayerService.Models.Login;
@@ -40,6 +41,7 @@ public class RumbleAccount : PlatformDataModel
     
     [BsonElement(DB_KEY_EMAIL)]
     [JsonPropertyName(FRIENDLY_KEY_EMAIL)]
+    [CompoundIndex(group: Player.INDEX_KEY_SEARCH, priority: 4)]
     public string Email { get; set; }
 
     [BsonElement(DB_KEY_HASH)]
@@ -52,6 +54,7 @@ public class RumbleAccount : PlatformDataModel
     
     [BsonElement(DB_KEY_USERNAME)]
     [JsonPropertyName(FRIENDLY_KEY_USERNAME)]
+    [CompoundIndex(group: Player.INDEX_KEY_SEARCH, priority: 5)]
     public string Username { get; set; }   
 
     [Flags]

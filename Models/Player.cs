@@ -21,6 +21,8 @@ namespace PlayerService.Models;
 [BsonIgnoreExtraElements]
 public class Player : PlatformCollectionDocument
 {
+	public const string INDEX_KEY_SEARCH = "search"; 
+
 	private const string DB_KEY_APPLE_ACCOUNT = "apple";
 	private const string DB_KEY_CREATED = "created";
 	private const string DB_KEY_DEVICE = "device";
@@ -94,7 +96,8 @@ public class Player : PlatformCollectionDocument
 	[BsonElement(DB_KEY_SCREENNAME)]
 	[JsonPropertyName(FRIENDLY_KEY_SCREENNAME)]
 	[SimpleIndex]
-	// [TextIndex]
+	[CompoundIndex(group: INDEX_KEY_SEARCH, priority: 2)]
+	[AdditionalIndexKey(group: INDEX_KEY_SEARCH, key: "_id", priority: 1)]
 	public string Screenname { get; set; }
 	
 	[BsonIgnore]
