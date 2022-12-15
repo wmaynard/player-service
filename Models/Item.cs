@@ -23,7 +23,6 @@ public class Item : PlatformCollectionDocument
 
 	private const string GROUP_ACCOUNT_LINK = "AccountLink";
 
-	[SimpleIndex]
 	[BsonElement(DB_KEY_ACCOUNT_ID), BsonRepresentation(BsonType.ObjectId)]
 	[JsonInclude, JsonPropertyName(FRIENDLY_KEY_ACCOUNT_ID)]
 	[CompoundIndex(group: GROUP_ACCOUNT_LINK, priority: 1)]
@@ -41,6 +40,7 @@ public class Item : PlatformCollectionDocument
 	
 	[BsonElement(DB_KEY_TYPE)]
 	[JsonInclude, JsonPropertyName(FRIENDLY_KEY_TYPE), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+	[CompoundIndex(group: GROUP_ACCOUNT_LINK, priority: 3)]
 	public string Type { get; set; }
 	
 	[BsonIgnore]
