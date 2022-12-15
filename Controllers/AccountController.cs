@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using Microsoft.AspNetCore.Mvc;
+using MongoDB.Bson;
 using PlayerService.Exceptions.Login;
 using PlayerService.Models;
 using PlayerService.Models.Login;
@@ -118,8 +119,11 @@ public class AccountController : PlatformController
     {
         try
         {
-            DeviceInfo device = Require<DeviceInfo>(Player.FRIENDLY_KEY_DEVICE);
+            DeviceInfo device = _playerService.Find(Token?.AccountId)?.Device ?? Require<DeviceInfo>(Player.FRIENDLY_KEY_DEVICE) ;
             RumbleAccount rumble = Require<RumbleAccount>(SsoData.FRIENDLY_KEY_RUMBLE_ACCOUNT);
+
+            if (device == null)
+                throw new RecordNotFoundException(_playerService.CollectionName, "No device found for an account.", data: Token?.ToJson());
 
             Player fromDevice = _playerService.FromDevice(device, isUpsert: true);
             Player fromRumble = _playerService.FromRumble(rumble, mustExist: false, mustNotExist: true);
@@ -155,13 +159,13 @@ public class AccountController : PlatformController
 
         // e.g. https://eng.towersandtitans.com/email/failure/invalidCode
         if (player == null)
-            return Redirect(failure.Replace("{reason}", "invalidCode"));
+            return Problem(new LoginRedirect(failure.Replace("{reason}", "invalidCode")));
 
         _apiService
             .Request("/dmz/otp/token")
             .AddAuthorization(GenerateToken(player))
             .OnSuccess(response => redirectUrl = success
-                .Replace("{env}", PlatformEnvironment.Url("").Replace("https://", ""))
+                .Replace("{env}", PlatformEnvironment.Url("").Replace("https://", "").TrimEnd('/'))
                 .Replace("{otp}", response.Require<string>("otp"))
             )
             .OnFailure(response =>
@@ -177,7 +181,7 @@ public class AccountController : PlatformController
 
         // e.g. https://eng.towersandtitans.com/email/failure/otpFailure
         if (player.RumbleAccount == null)
-            return Redirect(redirectUrl);
+            return Ok(new LoginRedirect(redirectUrl));
 
         long affected = _playerService.ClearUnconfirmedAccounts(player.RumbleAccount);
         if (affected > 0)
@@ -189,7 +193,7 @@ public class AccountController : PlatformController
             });
 
         // e.g. https://eng.towersandtitans.com/email/dev.nonprod.cdrentertainment.com/success/deadbeefdeadbeefdeadbeef
-        return Redirect(redirectUrl);
+        return Ok(new LoginRedirect(redirectUrl));
     }
 
     [HttpPatch, Route("twoFactor")]
