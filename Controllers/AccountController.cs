@@ -144,6 +144,8 @@ public class AccountController : PlatformController
 
     /// <summary>
     /// Confirms an email address for a Rumble account.  Enables the Rumble account to be used as a login.
+    /// We need to return Ok() even when the confirmation fails.  DMZ is expecting a 200-level code; anything other than
+    /// 200 causes DMZ to throw the exception as per standardized behavior of other Platform services.
     /// </summary>
     [HttpGet, Route("confirm")]
     public ActionResult ConfirmAccount()
@@ -159,7 +161,7 @@ public class AccountController : PlatformController
 
         // e.g. https://eng.towersandtitans.com/email/failure/invalidCode
         if (player == null)
-            return Problem(new LoginRedirect(failure.Replace("{reason}", "invalidCode")));
+            return Ok(new LoginRedirect(failure.Replace("{reason}", "invalidCode")));
 
         _apiService
             .Request("/dmz/otp/token")
