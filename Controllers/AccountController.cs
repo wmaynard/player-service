@@ -154,11 +154,15 @@ public class AccountController : PlatformController
         string code = Require<string>(RumbleAccount.FRIENDLY_KEY_CODE);
         
         string failure = PlatformEnvironment.Require<string>("confirmationFailurePage");
-        string success = PlatformEnvironment.Require<string>("confirmationSuccessPage");
+        string success = PlatformEnvironment.Require<string>("confirmationSuccessPage")
+            .Replace("{env}", PlatformEnvironment.Url("")
+                .Replace("https://", "")
+                .TrimEnd('/')
+            );
 
         bool alreadyConfirmed = _playerService.Find(id)?.RumbleAccount?.Status.HasFlag(RumbleAccount.AccountStatus.Confirmed) ?? false;
         if (alreadyConfirmed)
-            return Ok(new LoginRedirect(failure.Replace("{reason}", "confirmed")));
+            return Ok(new LoginRedirect(success.Replace("{otp}", "")));
         
         Player player = _playerService.UseConfirmationCode(id, code);
 
@@ -172,7 +176,6 @@ public class AccountController : PlatformController
             .Request("/dmz/otp/token")
             .AddAuthorization(GenerateToken(player))
             .OnSuccess(response => redirectUrl = success
-                .Replace("{env}", PlatformEnvironment.Url("").Replace("https://", "").TrimEnd('/'))
                 .Replace("{otp}", response.Require<string>("otp"))
             )
             .OnFailure(response =>
