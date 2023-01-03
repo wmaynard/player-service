@@ -328,8 +328,6 @@ public class TopController : PlatformController
 			{ "clientVars", variables.Sort() }
 		});
 	}
-	
-
 
 	[HttpGet, Route("items"), RequireAccountId]
 	public ActionResult GetItems()

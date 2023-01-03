@@ -162,7 +162,7 @@ public class AccountController : PlatformController
 
         bool alreadyConfirmed = _playerService.Find(id)?.RumbleAccount?.Status.HasFlag(RumbleAccount.AccountStatus.Confirmed) ?? false;
         if (alreadyConfirmed)
-            return Ok(new LoginRedirect(success.Replace("{otp}", "")));
+            return Ok(new LoginRedirect(failure.Replace("{reason}", "confirmed")));
         
         Player player = _playerService.UseConfirmationCode(id, code);
 
