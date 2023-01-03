@@ -223,12 +223,22 @@ public class AccountController : PlatformController
             return Problem(new LoginDiagnosis(e));
         }
     }
-    
+
     /// <summary>
     /// Starts the password reset process.  Doing this sends an email to the player with a 2FA recovery code.
     /// </summary>
     [HttpPatch, Route("recover")]
-    public ActionResult RecoverAccount() => Ok(_playerService.BeginReset(Require<string>(RumbleAccount.FRIENDLY_KEY_EMAIL)));
+    public ActionResult RecoverAccount()
+    {
+        try
+        {
+            return Ok(_playerService.BeginReset(Require<string>(RumbleAccount.FRIENDLY_KEY_EMAIL)));
+        }
+        catch (PlatformException e)
+        {
+            return Problem(new LoginDiagnosis(e));
+        }
+    }
 
     /// <summary>
     /// Primes a Rumble account to accept a new password hash without knowledge of the old one.  Comes in after 2FA codes.
