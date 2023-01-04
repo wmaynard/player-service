@@ -1,8 +1,6 @@
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Text.Json.Serialization;
-using MongoDB.Bson.Serialization;
 using MongoDB.Bson.Serialization.Attributes;
 using Rumble.Platform.Common.Attributes;
 using Rumble.Platform.Data;
@@ -55,7 +53,7 @@ public class RumbleAccount : PlatformDataModel
     [BsonElement(DB_KEY_USERNAME)]
     [JsonPropertyName(FRIENDLY_KEY_USERNAME)]
     [CompoundIndex(group: Player.INDEX_KEY_SEARCH, priority: 5)]
-    public string Username { get; set; }   
+    public string Username { get; set; }
 
     [Flags]
     public enum AccountStatus
@@ -117,6 +115,8 @@ public class RumbleAccount : PlatformDataModel
             errors.Add($"{FRIENDLY_KEY_USERNAME} is a required field.");
         if (string.IsNullOrWhiteSpace(Hash))
             errors.Add($"Hash is missing or empty.");
+
+        Email = Email?.ToLower();
     }
 
     /// <summary>
