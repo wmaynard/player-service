@@ -42,7 +42,7 @@ Only send _hashes_.  Under no circumstance are we to store plaintext passwords. 
 
 ## Login
 
-First, let's look at what a sample login request looks like.  Every request **must** have a `device` field.  The other field, `sso`, is optional, as are all of its contents.  However, if `sso` accounts are specified here, and those accounts can't be found, the login request **will fail**, and no token will be generated.
+First, let's look at what a sample login request looks like.  Every game client request **must** have a `device` field.  The other field, `sso`, is optional, as are all of its contents.  However, if `sso` accounts are specified here, and those accounts can't be found, the login request **will fail**, and no token will be generated.  If, for example, you're not using `appleToken`, do not send the key.
 
 ```
 POST /player/account/login
@@ -65,11 +65,62 @@ POST /player/account/login
 }
 ```
 
+### Login from Web Applications
+
+Unlike a device login, it is impossible for a web application to know the `deviceInfo` for the above request.  Consequently,
+web applications are **unable to create new accounts.**  They can only access accounts that have been linked from within the
+game client.
+
+For a web login, **do not** include `deviceInfo` in your request.  Otherwise, the request is still the same as above.
+
+```
+POST /dmz/player/account/login
+{
+    "sso": {
+        "appleToken": "eyJhb....ABSsQ",
+        "googleToken": "eyJhb....ABSsQ",
+        "rumble": {
+            "username": "atakechi",
+            "hash": "deadbeefdeadbeefdeadbeefdeadbeef"
+        }
+    }
+}
+```
+
 ## Anonymous Accounts
 
 To use an anonymous account, simply omit the `sso` field, or don't include any information inside it.  This means the account will be tied _only_ to the current device.
 
 However, if the device has been previously linked to an account, you may still see account information come back in the response.
+
+## A Primer on Salt & Cryptography
+
+Before we can create a Rumble account - that is, an account with a username and password - it's important to have a basic understanding of how we're protecting our users.  The most important thing to know is that **no client application, either web or device, should be sending passwords to the service.**  Instead, the service only cares about seeing a _hash_ of the password.  The hash must be calculated on the application's side.
+
+We're using BCrypt to tackle this.  It's a widely-supported password-hashing utility, and is available for most major languages.  BCrypt works by taking a "salt" - a randomly-generated value - to protect against rainbow tables (cached / precomputed hashes) and add a work factor in that we can control to deliberately slow down login processes.  If we increase the work factor, the hash takes longer to compute; this means that as hardware improves in processing speed, we can make our system more resilient to more-capable brute-force attacks.
+
+Player-service is responsible for generating the salts used with login.  Each username gets its own salt.  If you generate your own salt at runtime, you won't be able to log in; the salt must remain the same for each account to generate the same hash.  Whenever you need your salt, you must make a request to player-service similar to the following:
+
+```
+GET /account/salt?username=atakechi
+
+// Sample response
+{
+    "salt": "$2b$06$IqGk004Uzqx58qTnUCvtfu"
+}
+```
+
+Once you have this value, you can use BCrypt to calculate your password hash.  Once calculated, an example hash might look like:
+
+```
+$2b$06$GXUEm02SBQ.3Ya7lcPlyNeZJ/M5O/A191tsGWYBcQ4iW5JlF3faa
+```
+
+This calculated hash is the value that should be sent to player-service when creating or logging into an existing Rumble account.
+
+#### Important Note for Web Applications
+
+The `/salt` endpoint on the player-service side requires a token for security.  Game clients have a token already, but a web client doesn't.  However, DMZ will authenticate the request with its own admin token.  Use the DMZ version of the endpoint: `GET /dmz/player/account/salt?username=atakechi`.
 
 ## Create Account
 
@@ -117,7 +168,6 @@ Rumble accounts have the following states:
 | ResetPrimed       | The player has entered the code from the reset and the account will accept any new (non-empty) hash sent to `PATCH /password`.                                                              |
 
 These statuses are held in a `[Flags]` enum.  The "reset" states also function as a confirmed state, so if the player decides to keep trying their password, they are not prevented from using their account.
-
 
 ## Change Password
 
