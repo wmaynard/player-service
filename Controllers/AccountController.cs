@@ -337,6 +337,8 @@ public class AccountController : PlatformController
 
             player.Discriminator = _discriminatorService.Lookup(player);
             player.LastLogin = Timestamp.UnixTime;
+            if (player.CreatedTimestamp == default)
+                player.CreatedTimestamp = player.LastLogin;
 
             ValidatePlayerScreenname(ref player);
             sso?.ValidatePlayers(others.Union(new[] { player }).ToArray());
