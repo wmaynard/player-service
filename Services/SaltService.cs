@@ -5,6 +5,7 @@ using MongoDB.Bson.Serialization.Attributes;
 using MongoDB.Driver;
 using PlayerService.Models.Login;
 using Rumble.Platform.Common.Attributes;
+using Rumble.Platform.Common.Exceptions.Mongo;
 using Rumble.Platform.Common.Services;
 using Rumble.Platform.Common.Utilities;
 using Rumble.Platform.Data;
@@ -15,7 +16,7 @@ public class SaltService : PlatformMongoService<Salt>
 {
     public SaltService() : base("salt") { }
 
-    public Salt Fetch(string username)
+    public Salt Fetch(string username, bool fromWeb = false)
     {
         Salt upsert = new Salt
         {
@@ -34,9 +35,13 @@ public class SaltService : PlatformMongoService<Salt>
                         .Set(salt => salt.Value, upsert.Value),
                     options: new FindOneAndUpdateOptions<Salt>
                     {
-                        IsUpsert = true,
+                        IsUpsert = !fromWeb,
                         ReturnDocument = ReturnDocument.After
                     }
-                );
+                )
+            ?? throw new RecordNotFoundException(CollectionName, "No salt found for provided username.", data: new RumbleJson
+            {
+                { "username", username }
+            });
     }
 }

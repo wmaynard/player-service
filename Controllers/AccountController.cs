@@ -302,7 +302,12 @@ public class AccountController : PlatformController
     [HttpGet, Route("salt"), RequireAuth]
     public ActionResult GetSalt() => Ok(new RumbleJson
     {
-        { Salt.FRIENDLY_KEY_SALT, _saltService.Fetch(username: Require<string>(RumbleAccount.FRIENDLY_KEY_USERNAME))?.Value }
+        { Salt.FRIENDLY_KEY_SALT, _saltService
+            .Fetch(
+                username: Require<string>(RumbleAccount.FRIENDLY_KEY_USERNAME), 
+                fromWeb: Token.IsAdmin
+            )?.Value 
+        }
     });
 
     [HttpGet, Route("refresh"), RequireAuth]
@@ -327,13 +332,26 @@ public class AccountController : PlatformController
             string maintenance = _dynamicConfig.Optional<string>("maintenance");
             if (!string.IsNullOrWhiteSpace(maintenance) && PlatformEnvironment.Url().Contains(maintenance))
                 throw new MaintenanceException();
-            
-            DeviceInfo device = Require<DeviceInfo>(Player.FRIENDLY_KEY_DEVICE);
-            SsoData sso = Optional<SsoData>("sso")?.ValidateTokens();
 
-            Player fromDevice = _playerService.FromDevice(device, isUpsert: true);
-            Player player = fromDevice.Parent ?? fromDevice;
+            // Device used to be a required field.  However, in order to support web logins for marketplace, it must now
+            // be an optional field.  Websites can't possibly know the correct installId, and as such can only be used
+            // to access existing linked accounts through SSO.
+            DeviceInfo device = Optional<DeviceInfo>(Player.FRIENDLY_KEY_DEVICE);
+            SsoData sso = Optional<SsoData>("sso")?.ValidateTokens();
+            Player player;
             Player[] others = _playerService.FromSso(sso);
+            
+            if (device != null) // The request originates from the game client since we have an installId.
+            {
+                Player fromDevice = _playerService.FromDevice(device, isUpsert: true);
+                player = fromDevice.Parent ?? fromDevice;
+            }
+            else // The request originates from a web client trying to log in to an existing account.
+            {
+                if (!others.Any(other => other != null))
+                    throw new RecordsFoundException(expected: 1, found: 0, reason: "No player exists with provided SSO.");
+                player = others.First();
+            }
 
             player.Discriminator = _discriminatorService.Lookup(player);
             player.LastLogin = Timestamp.UnixTime;
