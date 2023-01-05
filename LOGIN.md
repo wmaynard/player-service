@@ -63,6 +63,46 @@ POST /player/account/login
         }
     }
 }
+
+// Sample Response
+{
+    "geoData": {
+        "continent": "North America",
+        "continentCode": "NA",
+        "country": "United States",
+        "countryCode": "US",
+        "registeredCountry": "United States",
+        "registeredCountryCode": null,
+        "ipAddress": "73.162.30.116"
+    },
+    "requestId": "d5446978d8cb4f022ae0a65e08118676",
+    "player": {
+        "appleAccount": null,
+        "createdOn": 1672947347,
+        "deviceInfo": {
+            "clientVersion": "0.1.432",
+            "dataVersion": null,
+            "installId": "ead2650691e50ba2f4079632c11cf9fe",
+            "language": null,
+            "osVersion": null,
+            "type": null
+        },
+        "discriminator": 3850,
+        "googleAccount": null,
+        "lastLogin": 1672952598,
+        "rumbleAccount": {
+            "associatedAccounts": [
+                "6375681659c472bca7dabc40"
+            ],
+            "email": "darius.germano@rumbleentertainment.com",
+            "status": 18,
+            "username": "darius.germano@rumbleentertainment.com"
+        },
+        "screenname": "Player25cc11b",
+        "token": "eyJhbG....w63jbzw",
+        "id": "6375681659c472bca7dabc40"
+    }
+}
 ```
 
 ### Login from Web Applications
