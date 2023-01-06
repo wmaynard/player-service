@@ -1,3 +1,5 @@
+using System.Text.Json.Serialization;
+using MongoDB.Bson.Serialization.Attributes;
 using RCL.Logging;
 using Rumble.Platform.Common.Enums;
 using Rumble.Platform.Common.Exceptions;
@@ -19,6 +21,9 @@ public class LoginDiagnosis : PlatformDataModel
     public bool Other { get; set; }
     public string Message { get; set; }
     public ErrorCode Code { get; set; }
+    [BsonIgnore]
+    [JsonInclude, JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string StackTrace { get; set; }
 
     public LoginDiagnosis(PlatformException ex)
     {
@@ -34,5 +39,8 @@ public class LoginDiagnosis : PlatformDataModel
         Other = !(Maintenance || EmailNotLinked || EmailNotConfirmed || EmailCodeExpired || PasswordInvalid || DuplicateAccount || CodeInvalid);
         Message = ex.Message;
         Code = ex.Code;
+
+        if (!PlatformEnvironment.IsProd)
+            StackTrace = ex.StackTrace;
     }
 }
