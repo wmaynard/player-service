@@ -75,7 +75,7 @@ public class SsoData : PlatformDataModel
 
     public void ValidatePlayers(Player[] players)
     {
-        RumbleAccount.Validate();
+        RumbleAccount?.Validate();
         
         if (!AccountsProvided)
             return;
