@@ -152,6 +152,7 @@ public class AdminController : PlatformController
 
 		return Ok(new RumbleJson
 		{
+			{ "count", results.Length },
 			{ "players", results }
 		});
 	}

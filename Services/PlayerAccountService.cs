@@ -572,6 +572,16 @@ public class PlayerAccountService : PlatformMongoService<Player>
 				.ToList()
 			);
 		}
+
+		foreach (Player parent in output.Where(player => string.IsNullOrWhiteSpace(player.ParentId)))
+			parent.Children = output
+				.Where(player => player.ParentId == parent.Id)
+				.Select(player => player.Id)
+				.ToArray();
+
+		output = output
+			.DistinctBy(player => player.AccountId)
+			.ToList();
 		
 		
 		Player.WeighSearchResults(terms, ref output);

@@ -35,6 +35,7 @@ public class Player : PlatformCollectionDocument
 	private const string DB_KEY_SCREENNAME = "sn";
 	
 	public const string FRIENDLY_KEY_APPLE_ACCOUNT = "appleAccount";
+	public const string FRIENDLY_KEY_CHILDREN = "childAccounts";
 	public const string FRIENDLY_KEY_CREATED = "createdOn";
 	public const string FRIENDLY_KEY_DEVICE = "deviceInfo";
 	public const string FRIENDLY_KEY_DISCRIMINATOR = "discriminator";
@@ -83,6 +84,10 @@ public class Player : PlatformCollectionDocument
 	[BsonIgnore]
 	[JsonIgnore]
 	public Player Parent { get; set; }
+	
+	[BsonIgnore]
+	[JsonPropertyName(FRIENDLY_KEY_CHILDREN), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
+	public string[] Children { get; set; }
 	
 	[BsonElement(DB_KEY_PARENT_ID), BsonIgnoreIfNull]
 	[JsonPropertyName(FRIENDLY_KEY_PARENT_ID), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
