@@ -700,7 +700,7 @@ public class PlayerAccountService : PlatformMongoService<Player>
 		// Link the two accounts together.
 		parent.Children ??= new List<string>();
 		parent.Children.Add(child.Id);
-		child.ParentId = parent.Id;
+		child.ParentId = parent.AccountId;
 		
 		Update(parent);
 		Update(child);
