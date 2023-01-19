@@ -87,7 +87,7 @@ public class Player : PlatformCollectionDocument
 	
 	[BsonIgnore]
 	[JsonPropertyName(FRIENDLY_KEY_CHILDREN), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
-	public string[] Children { get; set; }
+	public List<string> Children { get; set; }
 	
 	[BsonElement(DB_KEY_PARENT_ID), BsonIgnoreIfNull]
 	[JsonPropertyName(FRIENDLY_KEY_PARENT_ID), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]

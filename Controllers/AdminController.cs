@@ -265,4 +265,17 @@ public class AdminController : PlatformController
 		
 		return Ok();
 	}
+
+	// TD-14514 | Account linking (previously known as "merge tool")
+	[HttpPatch, Route("accountLink")]
+	public ActionResult LinkAccounts()
+	{
+		string child = Require<string>("accountId");
+		string parent = Require<string>("parentAccountId");
+		bool force = Require<bool>("force");
+
+		Player result = _playerService.LinkPlayerAccounts(child, parent, force, Token);
+
+		return Ok(result);
+	}
 }

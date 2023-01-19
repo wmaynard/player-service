@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text.RegularExpressions;
+using Microsoft.Extensions.Options;
 using MongoDB.Driver;
 using PlayerService.Exceptions.Login;
 using PlayerService.Models;
@@ -458,6 +459,14 @@ public class PlayerAccountService : PlatformMongoService<Player>
 		return code;
 	}
 
+	/// <summary>
+	/// Uses a code on the database to complete account links; responsible for tying new accounts to SSO.
+	/// </summary>
+	/// <param name="accountId"></param>
+	/// <returns></returns>
+	/// <exception cref="RecordNotFoundException"></exception>
+	/// <exception cref="WindowExpiredException"></exception>
+	/// <exception cref="RecordsFoundException"></exception>
 	public Player LinkAccounts(string accountId)
 	{
 		Player player = Find(accountId)
@@ -577,7 +586,7 @@ public class PlayerAccountService : PlatformMongoService<Player>
 			parent.Children = output
 				.Where(player => player.ParentId == parent.Id)
 				.Select(player => player.Id)
-				.ToArray();
+				.ToList();
 
 		output = output
 			.DistinctBy(player => player.AccountId)
@@ -654,7 +663,50 @@ public class PlayerAccountService : PlatformMongoService<Player>
 		.ToList()
 		.ToArray();
 
+	/// <summary>
+	/// Manually links two accounts together.
+	/// </summary>
+	/// <param name="childId"></param>
+	/// <param name="parentId"></param>
+	/// <param name="force"></param>
+	/// <returns></returns>
+	public Player LinkPlayerAccounts(string childId, string parentId, bool force, TokenInfo token)
+	{
+		Player child = Find(childId);
+		Player parent = Find(parentId);
 
+		if (!string.IsNullOrWhiteSpace(child.ParentId))
+			if (force)
+				Log.Warn(Owner.Will, "Account was previously linked to another account, but the force flag allows a link override.", data: new
+				{
+					Child = child,
+					Parent = parent,
+					Token = token
+				});
+			else
+				throw new PlatformException("Account is already linked to another account.");
+
+		if (parent.GoogleAccount != null || parent.RumbleAccount != null || parent.AppleAccount != null)
+			if (force)
+				Log.Warn(Owner.Will, "Parent account has SSO, but the force flag allows a link override.", data: new
+				{
+					Child = child,
+					Parent = parent,
+					Token = token
+				});
+			else
+				throw new PlatformException("Parent account has SSO; no link can be made without the force flag.");
+
+		// Link the two accounts together.
+		parent.Children ??= new List<string>();
+		parent.Children.Add(child.Id);
+		child.ParentId = parent.Id;
+		
+		Update(parent);
+		Update(child);
+		
+		return child;
+	}
 }
 
 
