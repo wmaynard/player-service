@@ -50,7 +50,7 @@ We're using BCrypt to tackle this.  It's a widely-supported password-hashing uti
 Player-service is responsible for generating the salts used with login.  Each username gets its own salt.  If you generate your own salt at runtime, you won't be able to log in; the salt must remain the same for each account to generate the same hash.  Whenever you need your salt, you must make a request to player-service similar to the following:
 
 ```
-GET /account/salt?username=atakechi
+GET /player/v2/account/salt?username=atakechi
 
 // Sample response
 {
@@ -72,7 +72,7 @@ This calculated hash is the value that should be sent to player-service when cre
 First, let's look at what a sample login request looks like.  Every game client request **must** have a `device` field.  The other field, `sso`, is optional, as are all of its contents.  However, if `sso` accounts are specified here, and those accounts can't be found, the login request **will fail**, and no token will be generated.  If, for example, you're not using `appleToken`, do not send the key.
 
 ```
-POST /player/account/login
+POST /player/v2/account/login
 {
     "deviceInfo": {
         "installId": "locust-postman",            // Device GUID
@@ -169,17 +169,17 @@ The `/salt` endpoint on the player-service side requires a token for security.  
 To add SSO capabilities to any account, each SSO type requires a separate call.  If you want to link a Google, Apple, _and_ a Rumble account, you will need to hit three separate endpoints:
 
 ```
-PATCH /account/apple
+PATCH /player/v2/account/apple
 {
     "deviceInfo": { ... },
     "appleToken": "eyJhb....ABSsQ"
 }
-PATCH /account/google
+PATCH /player/v2/account/google
 {
     "deviceInfo": { ... },
     "googleToken": "eyJhb....ABSsQ"
 }
-PATCH /account/rumble
+PATCH /player/v2/account/rumble
 {
      "rumble": {
         "email": "austin.takechi@rumbleentertainment.com",
@@ -192,7 +192,7 @@ PATCH /account/rumble
 For the first two, no further steps will be required.  The accounts are already verified by Apple / Google security, so those tokens can then be immediately used for login.  However, in the case of the Rumble account, a code will be emailed to the player that they then have to enter.  This confirms that the player has access to the email address they provided.  This can be done by clicking a button / URL in their inbox, which translates to the following call:
 
 ```
-GET /player/account/confirm?id={...}&code={...}
+GET /player/v2/account/confirm?id={...}&code={...}
 ```
 
 As soon as this call is completed successfully, the account can be used to log in.  This link is only valid for a brief time.
@@ -218,7 +218,7 @@ Changing passwords is straightforward when we know the players old hash; it's a 
 After confirming and entering a 2FA code (covered later), the player can then reset their password without their old hash.
 
 ```
-PATCH /player/account/password
+PATCH /player/v2/account/password
 {
     "username": "atakechi",
     "oldHash": "deadbeefdeadbeefdeadbeefdeadbeef2",       // Optional
@@ -268,7 +268,7 @@ When a player has forgotten their password, we have the following flow defined:
 
 1. Player enters their email address they used to sign up
 ```
-PATCH player/account/recover
+PATCH /player/v2/account/recover
 {
     "email": "austin.takechi@rumbleentertainment.com"
 }
@@ -276,7 +276,7 @@ PATCH player/account/recover
 3. A 6-digit code is sent to their email, valid for 15 minutes
 4. The player enters their 6-digit code in the client
 ```
-PATCH player/account/reset
+PATCH player/v2/account/reset
 {
     "username": "atakechi",
     "code": "622155"
@@ -284,7 +284,7 @@ PATCH player/account/reset
 ```
 5. The player enters a new password in the client
 ```
-PATCH /player/account/password
+PATCH /player/v2/account/password
 {
     "username": "atakechi",
     "newHash": "deadbeefdeadbeefdeadbeefdeadbeef"
