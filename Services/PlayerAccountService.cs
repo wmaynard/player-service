@@ -179,33 +179,43 @@ public class PlayerAccountService : PlatformMongoService<Player>
 		};
 	}
 
-	public Player UpdateHash(string username, string oldHash, string newHash) =>
-		(string.IsNullOrWhiteSpace(oldHash)
-			? _collection.FindOneAndUpdate(
-				filter: Builders<Player>.Filter.And(
-					Builders<Player>.Filter.Eq(player => player.RumbleAccount.Username, username),
-					Builders<Player>.Filter.Eq(player => player.RumbleAccount.Status, RumbleAccount.AccountStatus.ResetPrimed)
-				),
-				update: Builders<Player>.Update
-					.Set(player => player.RumbleAccount.Hash, newHash)
-					.Set(player => player.RumbleAccount.Status, RumbleAccount.AccountStatus.Confirmed),
-				options: new FindOneAndUpdateOptions<Player>
-				{
-					IsUpsert = false,
-					ReturnDocument = ReturnDocument.After
-				})
-			: _collection.FindOneAndUpdate(
-				filter: Builders<Player>.Filter.And(
-					Builders<Player>.Filter.Eq(player => player.RumbleAccount.Username, username),
-					Builders<Player>.Filter.Eq(player => player.RumbleAccount.Hash, oldHash)
-				),
-				update: Builders<Player>.Update.Set(player => player.RumbleAccount.Hash, newHash),
-				options: new FindOneAndUpdateOptions<Player>
-				{
-					IsUpsert = false,
-					ReturnDocument = ReturnDocument.After
-				})
+	public Player UpdateHash(string username, string oldHash, string newHash, string callingAccountId)
+	{
+		UpdateDefinition<Player> update = Builders<Player>.Update.Set(player => player.RumbleAccount.Hash, newHash);
+		FilterDefinition<Player> filter;
+
+
+
+		// The previous hash is known; the filter can use the old hash and we don't need to worry about account status.
+		if (!string.IsNullOrWhiteSpace(oldHash))
+			filter = Builders<Player>.Filter.And(
+				Builders<Player>.Filter.Eq(player => player.RumbleAccount.Username, username),
+				Builders<Player>.Filter.Eq(player => player.RumbleAccount.Hash, oldHash)
+			);
+		else
+		{
+			// Since the previous hash is unknown, our filter must be primed to accept the new hash.
+			filter = Builders<Player>.Filter.And(
+				Builders<Player>.Filter.Eq(player => player.RumbleAccount.Username, username),
+				Builders<Player>.Filter.Eq(player => player.RumbleAccount.Status, RumbleAccount.AccountStatus.ResetPrimed)
+			);
+			// If we the incoming account ID is specified, we can add it here to the confirmed IDs.
+			// The only way to get to this step without the old hash is to go through 2FA already, so we can skip it.
+			if (!string.IsNullOrWhiteSpace(callingAccountId))
+				update = update.AddToSet(player => player.RumbleAccount.ConfirmedIds, callingAccountId);
+			update = update.Set(player => player.RumbleAccount.Status, RumbleAccount.AccountStatus.Confirmed);
+		}
+
+		return _collection.FindOneAndUpdate(
+			filter: filter,
+			update: update,
+			options: new FindOneAndUpdateOptions<Player>
+			{
+				IsUpsert = false,
+				ReturnDocument = ReturnDocument.After
+			}
 		) ?? throw new RecordNotFoundException(CollectionName, "Account not found.");
+	}
 
 	public Player AttachRumble(Player player, RumbleAccount rumble)
 	{

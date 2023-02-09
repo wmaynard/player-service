@@ -282,7 +282,7 @@ public class AccountController : PlatformController
             if (oldHash == newHash)
                 throw new InvalidPasswordException(username, "Passwords cannot be the same.");
 
-            Player output = _playerService.UpdateHash(username, oldHash, newHash);
+            Player output = _playerService.UpdateHash(username, oldHash, newHash, Token?.AccountId);
             output.Token = GenerateToken(output);
 
             return Ok(output.Prune());
