@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text.Json.Serialization;
 using MongoDB.Bson.Serialization.Attributes;
+using Rumble.Platform.Common.Attributes;
 using Rumble.Platform.Common.Models;
 using Rumble.Platform.Common.Web;
 using Rumble.Platform.Data;
@@ -18,10 +19,12 @@ public class DiscriminatorGroup : PlatformCollectionDocument
 
 	[BsonElement(DB_KEY_MEMBERS)]
 	[JsonInclude, JsonPropertyName(FRIENDLY_KEY_MEMBERS), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+	[SimpleIndex]
 	public List<DiscriminatorMember> Members { get; private set; }
 	
 	[BsonElement(DB_KEY_NUMBER)]
 	[JsonInclude, JsonPropertyName(FRIENDLY_KEY_NUMBER)]
+	[SimpleIndex]
 	public int Number { get; private set; }
 
 	public DiscriminatorGroup(int number)

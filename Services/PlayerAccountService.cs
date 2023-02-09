@@ -7,6 +7,7 @@ using MongoDB.Driver;
 using PlayerService.Exceptions.Login;
 using PlayerService.Models;
 using PlayerService.Models.Login;
+using PlayerService.Services.ComponentServices;
 using RCL.Logging;
 using Rumble.Platform.Common.Exceptions;
 using Rumble.Platform.Common.Exceptions.Mongo;
@@ -21,16 +22,18 @@ namespace PlayerService.Services;
 public class PlayerAccountService : PlatformMongoService<Player>
 {
 	public const long CODE_EXPIRATION = 15 * 60; // 15 minutes
-	
+
+	private readonly AccountService _accountService;
 	private readonly ApiService _apiService;
 	private readonly DynamicConfig _config;
 	private readonly NameGeneratorService _nameGenerator;
 
-	public PlayerAccountService(ApiService api, DynamicConfig config, NameGeneratorService nameGenerator) : base("players")
+	public PlayerAccountService(ApiService api, DynamicConfig config, NameGeneratorService nameGenerator, AccountService account) : base("players")
 	{
 		_apiService = api;
 		_config = config;
 		_nameGenerator = nameGenerator;
+		_accountService = account;
 	}  
 
 	public Player Find(string accountId) => FindOne(player => player.Id == accountId);
@@ -52,8 +55,10 @@ public class PlayerAccountService : PlatformMongoService<Player>
 			filter: player => player.Id == accountId || player.ParentId == accountId,
 			update: Builders<Player>.Update.Set(player => player.Screenname, screenname)
 		).ModifiedCount;
-		
-		// TODO: project accountId / accountIdOverride, use that in AccountService to update field in components
+
+		// NOTE: This is a kluge; the game server may overwrite this component if their session is active.
+		// TD-14516: Screenname changes from Portal do not affect the account screen in-game.
+		_accountService.SetScreenname(accountId, screenname);
 
 		return affected;
 	}
