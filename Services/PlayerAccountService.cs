@@ -48,8 +48,10 @@ public class PlayerAccountService : PlatformMongoService<Player>
 	/// </summary>
 	/// <param name="screenname"></param>
 	/// <param name="accountId"></param>
+	/// <param name="fromAdmin">If true, this will increase the component version number; rejecting any other
+	/// immediately-following component writes.</param>
 	/// <returns></returns>
-	public int SyncScreenname(string screenname, string accountId)
+	public int SyncScreenname(string screenname, string accountId, bool fromAdmin = false)
 	{
 		int affected = (int)_collection.UpdateMany(
 			filter: player => player.Id == accountId || player.ParentId == accountId,
@@ -58,7 +60,7 @@ public class PlayerAccountService : PlatformMongoService<Player>
 
 		// NOTE: This is a kluge; the game server may overwrite this component if their session is active.
 		// TD-14516: Screenname changes from Portal do not affect the account screen in-game.
-		_accountService.SetScreenname(accountId, screenname);
+		_accountService.SetScreenname(accountId, screenname, fromAdmin);
 
 		return affected;
 	}
@@ -183,8 +185,6 @@ public class PlayerAccountService : PlatformMongoService<Player>
 	{
 		UpdateDefinition<Player> update = Builders<Player>.Update.Set(player => player.RumbleAccount.Hash, newHash);
 		FilterDefinition<Player> filter;
-
-
 
 		// The previous hash is known; the filter can use the old hash and we don't need to worry about account status.
 		if (!string.IsNullOrWhiteSpace(oldHash))

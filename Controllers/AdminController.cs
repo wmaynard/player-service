@@ -130,7 +130,7 @@ public class AdminController : PlatformController
 		if (string.IsNullOrWhiteSpace(name))
 			throw new InvalidFieldException("screenname", "Field is null or empty.");
 		
-		int affected = _playerService.SyncScreenname(name, accountId);
+		int affected = _playerService.SyncScreenname(name, accountId, true);
 		
 		// TODO: Invalidate tokens
 

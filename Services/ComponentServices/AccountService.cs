@@ -13,7 +13,7 @@ public class AccountService : ComponentService
 	public const string DB_KEY_SCREENNAME = "accountName";
 	public AccountService() : base(Component.ACCOUNT) { }
 
-	public int SetScreenname(string accountId, string screenname)
+	public int SetScreenname(string accountId, string screenname, bool fromAdmin)
 	{
 		try
 		{
@@ -21,7 +21,8 @@ public class AccountService : ComponentService
 				.Find(Builders<Component>.Filter.Eq(component => component.AccountId, accountId))
 				.FirstOrDefault();
 			component.Data["accountName"] = screenname;
-			component.Version++;
+			if (fromAdmin)
+				component.Version++;
 			Update(component);
 			
 			return 1;
