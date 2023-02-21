@@ -34,7 +34,7 @@ public class RumbleAccount : PlatformDataModel
     public string ConfirmationCode { get; set; }
     
     [BsonElement(DB_KEY_CODE_EXPIRATION)]
-    [JsonIgnore]
+    [JsonPropertyName(FRIENDLY_KEY_CODE_EXPIRATION)]
     public long CodeExpiration { get; set; }
     
     [BsonElement(DB_KEY_EMAIL)]
