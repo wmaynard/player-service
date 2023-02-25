@@ -175,9 +175,7 @@ public class AccountController : PlatformController
         _apiService
             .Request("/dmz/otp/token")
             .AddAuthorization(GenerateToken(player))
-            .OnSuccess(response => redirectUrl = success
-                .Replace("{otp}", response.Require<string>("otp"))
-            )
+            .OnSuccess(response => redirectUrl = success.Replace("{otp}", response.Require<string>("otp")))
             .OnFailure(response =>
             {
                 Log.Error(Owner.Will, "Unable to generate OTP.", data: new
@@ -185,6 +183,15 @@ public class AccountController : PlatformController
                     Player = player,
                     Response = response
                 });
+                _apiService.Alert(
+                    title: "OTP Generation Failure",
+                    message: "One-time password generation is failing in player-service ",
+                    countRequired: 15,
+                    timeframe: 600,
+                    owner: Owner.Will,
+                    impact: ImpactType.ServicePartiallyUsable,
+                    data: response.AsRumbleJson
+                );
                 redirectUrl = failure.Replace("{reason}", "otpFailure");
             })
             .Post(out RumbleJson json, out int rCode);
