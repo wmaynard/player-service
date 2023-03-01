@@ -7,6 +7,7 @@ using MongoDB.Driver;
 using PlayerService.Exceptions;
 using PlayerService.Models;
 using RCL.Logging;
+using Rumble.Platform.Common.Enums;
 using Rumble.Platform.Common.Exceptions;
 using Rumble.Platform.Common.Services;
 using Rumble.Platform.Common.Utilities;
@@ -17,6 +18,9 @@ namespace PlayerService.Services.ComponentServices;
 
 public abstract class ComponentService : PlatformMongoService<Component>
 {
+#pragma warning disable
+	private readonly ApiService _apiService;
+#pragma warning restore
 	private new string Name { get; set; } // TODO: done to silence warning, but needs to be renamed.
 	protected ComponentService(string name) : base("c_" + name) => Name = name;
 
@@ -82,6 +86,14 @@ public abstract class ComponentService : PlatformMongoService<Component>
 			{
 				Detail = $"Session state invalid, even after retrying {retries} times with exponential backoff."
 			}, exception: e);
+			_apiService.Alert(
+				title: "Player Component Update Failure",
+				message: "There may be concurrency conflicts with too many components being updated at once.",
+				countRequired: 15,
+				timeframe: 600,
+				owner: Owner.Will,
+				impact: ImpactType.ServicePartiallyUsable
+			);
 			return false;
 		}
 	}
