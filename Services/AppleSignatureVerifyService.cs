@@ -17,7 +17,7 @@ namespace PlayerService.Services
 	{
 #pragma warning disable
 		private readonly ApiService    _apiService;
-		private readonly IMemoryCache  _memoryCache;
+		private readonly CacheService  _cache;
 		private readonly DynamicConfig _dynamicConfig;
 #pragma warning restore
 		
@@ -25,15 +25,15 @@ namespace PlayerService.Services
 		
 		RSAParameters _rsaKeyInfo;
 
-		public AppleSignatureVerifyService(IMemoryCache memoryCache)
+		public AppleSignatureVerifyService() //CacheService cache)
 		{
 			Instance = this;
-			_memoryCache = memoryCache;
+			//_cache = cache;
 		}
 
 		public AppleAccount Verify(string appleToken)
 		{
-			if (!_memoryCache.TryGetValue("AppleAuth", out AppleResponse cacheValue))
+			if (!_cache.HasValue("AppleAuth", out AppleResponse cacheValue))
 			{
 				string url = _dynamicConfig.Require<string>(key: "appleAuthKeysUrl");
 				_apiService
@@ -49,11 +49,8 @@ namespace PlayerService.Services
 					.Get(out AppleResponse response, out int code);
 				
 				cacheValue = response;
-
-				MemoryCacheEntryOptions cacheEntryOptions = new MemoryCacheEntryOptions()
-					.SetSlidingExpiration(TimeSpan.FromMinutes(10));
 				
-				_memoryCache.Set("AppleAuth", cacheValue, cacheEntryOptions);
+				_cache.Store("AppleAuth", cacheValue, expirationMS: 600_000);
 			}
 
 			JwtSecurityTokenHandler handler = new JwtSecurityTokenHandler();
@@ -65,10 +62,11 @@ namespace PlayerService.Services
 			if (authKey == null)
 			{
 				Log.Warn(owner: Owner.Nathan, message: "No valid Apple auth key was found for Apple SSO attempt. Attempting to fetch new auth keys.", data: $"Token: {appleToken}. Apple Keys: {cacheValue}.");
-				_memoryCache.Remove("AppleAuth");
+				_cache.Clear("AppleAuth");
 				
+				string url = _dynamicConfig.Require<string>(key: "appleAuthKeysUrl");
 				_apiService
-					.Request("https://appleid.apple.com/auth/keys")
+					.Request("url")
 					.OnSuccess(action: (sender, apiResponse) =>
 					                   {
 						                   Log.Local(Owner.Nathan, "New Apple auth keys fetched.");
@@ -80,11 +78,8 @@ namespace PlayerService.Services
 					.Get(out AppleResponse response, out int code);
 				
 				cacheValue = response;
-
-				MemoryCacheEntryOptions cacheEntryOptions = new MemoryCacheEntryOptions()
-					.SetSlidingExpiration(TimeSpan.FromMinutes(10));
 				
-				_memoryCache.Set("AppleAuth", cacheValue, cacheEntryOptions);
+				_cache.Store("AppleAuth", cacheValue, 600_000);
 				
 				authKey = cacheValue.Keys.Find(key => key.Kid == kid);
 
