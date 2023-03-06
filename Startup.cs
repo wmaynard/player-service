@@ -3,6 +3,7 @@ using System.Reflection;
 using Google.Apis.Auth.AspNetCore3;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.Extensions.DependencyInjection;
+using PlayerService.Filters;
 using RCL.Logging;
 using Rumble.Platform.Common.Enums;
 using Rumble.Platform.Common.Utilities;
@@ -35,5 +36,6 @@ public class Startup : PlatformStartup
 		.SetTokenAudience(Audience.PlayerService)
 		.SetPerformanceThresholds(warnMS: 5_000, errorMS: 30_000, criticalMS: 90_000)
 		.DisableFeatures(CommonFeature.ConsoleObjectPrinting)
-		.SetLogglyThrottleThreshold(suppressAfter: 100, period: 1800);
+		.SetLogglyThrottleThreshold(suppressAfter: 100, period: 1800)
+		.AddFilter<MaintenanceFilter>();
 }
