@@ -2,7 +2,6 @@ using System;
 using System.IdentityModel.Tokens.Jwt;
 using System.Linq;
 using System.Security.Cryptography;
-using Microsoft.Extensions.Caching.Memory;
 using Microsoft.IdentityModel.Tokens;
 using PlayerService.Models.Login;
 using PlayerService.Models.Login.AppleAuth;
@@ -66,7 +65,7 @@ namespace PlayerService.Services
 				
 				string url = _dynamicConfig.Require<string>(key: "appleAuthKeysUrl");
 				_apiService
-					.Request("url")
+					.Request(url)
 					.OnSuccess(action: (sender, apiResponse) =>
 					                   {
 						                   Log.Local(Owner.Nathan, "New Apple auth keys fetched.");
@@ -105,14 +104,21 @@ namespace PlayerService.Services
 				                                                 RequireSignedTokens = true,
 				                                                 ValidateAudience = true,
 				                                                 ValidateIssuer = true,
-				                                                 ValidateLifetime = true,
+				                                                 ValidateLifetime = false,
 				                                                 IssuerSigningKey = new RsaSecurityKey(rsa),
 				                                                 ValidIssuer = "https://appleid.apple.com",
 				                                                 ValidAudience = "com.rumbleentertainment.towersandtitans"
 			                                                 };
 
 			SecurityToken validatedSecurityToken = null;
-			handler.ValidateToken(appleToken, validationParameters, out validatedSecurityToken);
+			try
+			{
+				handler.ValidateToken(appleToken, validationParameters, out validatedSecurityToken);
+			}
+			catch (SecurityTokenSignatureKeyNotFoundException e)
+			{
+				Log.Error(owner: Owner.Nathan, message: "Apple SSO token validation failed.", data: $"exception: {e}");
+			}
 			JwtSecurityToken validatedJwt = validatedSecurityToken as JwtSecurityToken;
 
 			AppleAccount appleAccount = null;
