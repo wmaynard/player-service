@@ -129,17 +129,12 @@ namespace PlayerService.Services
 				appleAccount = new AppleAccount(
 												iss: validatedJwt?.Claims.First(claim => claim.Type == "iss").Value,
 												aud: validatedJwt?.Claims.First(claim => claim.Type == "aud").Value,
-												exp: Int64.Parse(validatedJwt?.Claims.First(claim => claim.Type == "exp").Value),
-												iat: Int64.Parse(validatedJwt?.Claims.First(claim => claim.Type == "iat").Value),
 												id: validatedJwt?.Claims.First(claim => claim.Type == "sub").Value,
-												nonce: validatedJwt?.Claims.First(claim => claim.Type == "nonce").Value,
-												cHash: validatedJwt?.Claims.First(claim => claim.Type == "c_hash").Value,
 												email: validatedJwt?.Claims.First(claim => claim.Type == "email").Value,
 												emailVerified: validatedJwt?.Claims.First(claim => claim.Type == "email_verified").Value,
 												isPrivateEmail: validatedJwt?.Claims.First(claim => claim.Type == "is_private_email").Value,
-												authTime: Int64.Parse(validatedJwt?.Claims.First(claim => claim.Type == "auth_time").Value),
-												nonceSupported: Boolean.Parse( validatedJwt?.Claims.First(claim => claim.Type == "nonce_supported").Value)
-	                                            );
+												authTime: Int64.Parse(validatedJwt?.Claims.First(claim => claim.Type == "auth_time").Value)
+												);
 			}
 			catch (Exception e)
 			{
