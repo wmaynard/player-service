@@ -104,7 +104,7 @@ namespace PlayerService.Services
 				                                                 RequireSignedTokens = true,
 				                                                 ValidateAudience = true,
 				                                                 ValidateIssuer = true,
-				                                                 ValidateLifetime = false,
+				                                                 ValidateLifetime = true,
 				                                                 IssuerSigningKey = new RsaSecurityKey(rsa),
 				                                                 ValidIssuer = "https://appleid.apple.com",
 				                                                 ValidAudience = "com.rumbleentertainment.towersandtitans"
