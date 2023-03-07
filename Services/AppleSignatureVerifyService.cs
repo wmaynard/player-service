@@ -101,12 +101,14 @@ namespace PlayerService.Services
 
 			TokenValidationParameters validationParameters = new TokenValidationParameters
 			                                                 {
-				                                                 RequireExpirationTime = false, // TODO change to true before using
+				                                                 RequireExpirationTime = true,
 				                                                 RequireSignedTokens = true,
 				                                                 ValidateAudience = true,
 				                                                 ValidateIssuer = true,
-				                                                 ValidateLifetime = false,
-				                                                 IssuerSigningKey = new RsaSecurityKey(rsa)
+				                                                 ValidateLifetime = true,
+				                                                 IssuerSigningKey = new RsaSecurityKey(rsa),
+				                                                 ValidIssuer = "https://appleid.apple.com",
+				                                                 ValidAudience = "com.rumbleentertainment.towersandtitans"
 			                                                 };
 
 			SecurityToken validatedSecurityToken = null;
