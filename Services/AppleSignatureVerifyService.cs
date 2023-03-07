@@ -117,7 +117,9 @@ namespace PlayerService.Services
 			}
 			catch (SecurityTokenSignatureKeyNotFoundException e)
 			{
-				Log.Error(owner: Owner.Nathan, message: "Apple SSO token validation failed.", data: $"exception: {e}");
+				Log.Error(owner: Owner.Nathan, message: "Apple SSO token validation failed.", data: $"Apple Token: {appleToken}.");
+
+				throw new PlatformException(message: "Apple SSO token validation failed.", inner: e);
 			}
 			JwtSecurityToken validatedJwt = validatedSecurityToken as JwtSecurityToken;
 
