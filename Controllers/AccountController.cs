@@ -371,10 +371,6 @@ public class AccountController : PlatformController
     {
         try
         {
-            string maintenance = _dynamicConfig.Optional<string>("maintenance");
-            if (!string.IsNullOrWhiteSpace(maintenance) && PlatformEnvironment.Url().Contains(maintenance))
-                throw new MaintenanceException();
-
             // Device used to be a required field.  However, in order to support web logins for marketplace, it must now
             // be an optional field.  Websites can't possibly know the correct installId, and as such can only be used
             // to access existing linked accounts through SSO.
