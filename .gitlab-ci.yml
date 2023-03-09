@@ -101,7 +101,8 @@ sonarqube-check:
   allow_failure: true
   only:
     - merge_requests
-    - main 
+    - main
+    - master
 
 build_image:
   stage: build
