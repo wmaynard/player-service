@@ -80,6 +80,41 @@ public class AccountController : PlatformController
         };
 
     /// <summary>
+    /// Adds an Apple account to the player's record.
+    /// </summary>
+    [HttpPatch, Route("apple")]
+    public ActionResult LinkApple()
+    {
+        try
+        {
+            if (PlatformEnvironment.IsDev)
+            {
+                Log.Info(owner: Owner.Nathan, "PATCH /apple body received.", data: new
+                {
+                    body = Body
+                });
+            }
+            DeviceInfo device = Require<DeviceInfo>(Player.FRIENDLY_KEY_DEVICE);
+            AppleAccount apple = AppleAccount.ValidateToken(Require<string>(SsoData.FRIENDLY_KEY_APPLE_TOKEN));
+
+            Player fromDevice = _playerService.FromDevice(device, isUpsert: true);
+            Player fromApple = _playerService.FromApple(apple);
+
+            if (fromApple != null)
+                throw fromDevice.Id == fromApple.Id
+                          ? new AlreadyLinkedAccountException("Apple")
+                          : new AccountOwnershipException("Apple", fromDevice.Id, fromApple.Id);
+
+            return Ok(_playerService.AttachApple(fromDevice, apple)?.Prune());
+        }
+        catch (PlatformException e)
+        {
+            return Problem(new LoginDiagnosis(e));
+        }
+    }
+    
+    
+    /// <summary>
     /// Adds a Google account to the player's record.
     /// </summary>
     [HttpPatch, Route("google")]

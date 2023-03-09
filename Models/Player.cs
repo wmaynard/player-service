@@ -160,6 +160,7 @@ public class Player : PlatformCollectionDocument
 		weigh(Device?.InstallId, WEIGHT_ID_INSTALL);
 		weigh(RumbleAccount?.Email, WEIGHT_EMAIL);
 		weigh(RumbleAccount?.Username, WEIGHT_LOGIN_NAME);
+		weigh(AppleAccount?.Email, WEIGHT_EMAIL);
 		weigh(GoogleAccount?.Email, WEIGHT_EMAIL);
 		weigh(GoogleAccount?.Name, WEIGHT_REAL_NAME);
 

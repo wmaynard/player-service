@@ -132,6 +132,17 @@ public class PlayerAccountService : PlatformMongoService<Player>
 		return output;
 	}
 
+	public Player FromApple(AppleAccount apple)
+	{
+		List<Player> accounts = _collection
+		                        .Find(Builders<Player>.Filter.Eq(player => player.AppleAccount.Id, apple.Id))
+		                        .ToList();
+		
+		return accounts.Count <= 1
+			       ? accounts.FirstOrDefault()
+			       : throw new RecordsFoundException(1, accounts.Count);
+	}
+
 	public Player FromGoogle(GoogleAccount google)
 	{
 		List<Player> accounts = _collection
@@ -257,6 +268,13 @@ public class PlayerAccountService : PlatformMongoService<Player>
 			Response = response
 		}))
 		.Post();
+
+	public Player AttachApple(Player player, AppleAccount apple)
+	{
+		player.AppleAccount = apple;
+		Update(player);
+		return player;
+	}
 
 	public Player AttachGoogle(Player player, GoogleAccount google)
 	{
