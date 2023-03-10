@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.IdentityModel.Tokens.Jwt;
 using System.Linq;
 using System.Security.Cryptography;
@@ -105,9 +106,11 @@ namespace PlayerService.Services
 				                                                 ValidateAudience = true,
 				                                                 ValidateIssuer = true,
 				                                                 ValidateLifetime = true,
-				                                                 IssuerSigningKey = new RsaSecurityKey(rsa),
 				                                                 ValidIssuer = "https://appleid.apple.com",
-				                                                 ValidAudience = "com.rumbleentertainment.towersandtitans"
+				                                                 ValidAudience = "com.rumbleentertainment.towersandtitans",
+				                                                 TryAllIssuerSigningKeys = true,
+				                                                 IssuerSigningKey = new RsaSecurityKey(rsa),
+				                                                 IssuerSigningKeys = new List<SecurityKey>() { new RsaSecurityKey(rsa) }
 			                                                 };
 
 			SecurityToken validatedSecurityToken = null;
