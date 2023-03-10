@@ -647,6 +647,18 @@ public class PlayerAccountService : PlatformMongoService<Player>
 			filter: player => true,
 			update: Builders<Player>.Update.Unset(player => player.RumbleAccount)
 		).ModifiedCount;
+	
+	public long DeleteAppleAccount(string email) => _collection
+		.UpdateMany(
+			filter: Builders<Player>.Filter.Eq(player => player.AppleAccount.Email, email),
+			update: Builders<Player>.Update.Unset(player => player.AppleAccount)
+		).ModifiedCount;
+	
+	public long DeleteAllAppleAccounts() => _collection
+		.UpdateMany(
+			filter: player => true,
+			update: Builders<Player>.Update.Unset(player => player.AppleAccount)
+		).ModifiedCount;
 
 	public long DeleteGoogleAccount(string email) => _collection
 		.UpdateMany(
