@@ -57,9 +57,9 @@ public class AppleAccount : PlatformDataModel
         Iss = iss;
         Aud = aud;
         Id = id;
-        Email = email;
-        EmailVerified = emailVerified;
-        IsPrivateEmail = isPrivateEmail;
+        Email = email ?? "";
+        EmailVerified = emailVerified ?? "false";
+        IsPrivateEmail = isPrivateEmail ?? "false";
         AuthTime = authTime;
     }
     
