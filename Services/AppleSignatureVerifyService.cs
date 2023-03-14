@@ -133,9 +133,9 @@ namespace PlayerService.Services
 												iss: validatedJwt?.Claims.First(claim => claim.Type == "iss").Value,
 												aud: validatedJwt?.Claims.First(claim => claim.Type == "aud").Value,
 												id: validatedJwt?.Claims.First(claim => claim.Type == "sub").Value,
-												email: validatedJwt?.Claims.First(claim => claim.Type == "email").Value,
-												emailVerified: validatedJwt?.Claims.First(claim => claim.Type == "email_verified").Value,
-												isPrivateEmail: validatedJwt?.Claims.First(claim => claim.Type == "is_private_email").Value,
+												email: validatedJwt?.Claims.FirstOrDefault(claim => claim.Type == "email")?.Value,
+												emailVerified: validatedJwt?.Claims.FirstOrDefault(claim => claim.Type == "email_verified")?.Value,
+												isPrivateEmail: validatedJwt?.Claims.FirstOrDefault(claim => claim.Type == "is_private_email")?.Value,
 												authTime: Int64.Parse(validatedJwt?.Claims.First(claim => claim.Type == "auth_time").Value)
 												);
 			}
