@@ -113,7 +113,42 @@ public class AccountController : PlatformController
         }
     }
     
-    
+    /// <summary>
+    /// Removes an Apple account from the player's record.
+    /// </summary>
+    [HttpDelete, Route("appleAccount")]
+    public ActionResult DeleteAppleAccount()
+    {
+        // PlatformEnvironment.EnforceNonprod(); // Probably needed in prod eventually
+
+        string playerId = Token.AccountId;
+        try
+        {
+            Player player = _playerService.Find(playerId);
+            string email = player.AppleAccount.Email;
+
+            // When using postman, '+' comes through as a space because it's not URL-encoded.
+            // This is a quick kluge to enable debugging purposes without having to worry about URL-encoded params in Postman.
+            if (_playerService.DeleteAppleAccount(email) == 0 &&
+                _playerService.DeleteAppleAccount(email.Trim().Replace(" ", "+")) == 0)
+            {
+                throw new RecordNotFoundException(_playerService.CollectionName, "Rumble account not found.",
+                                                  data: new RumbleJson
+                                                        {
+                                                            {"email", email}
+                                                        });
+            }
+        }
+        catch (Exception e)
+        {
+            Log.Error(owner: Owner.Nathan, message: "Error occurred while trying to delete Apple account from player.", data: $"PlayerId: {playerId}. Error: {e}.");
+            throw new PlatformException(message: "Error occurred while trying to delete Apple account from player.",
+                                        inner: e);
+        }
+		
+        return Ok();
+    }
+
     /// <summary>
     /// Adds a Google account to the player's record.
     /// </summary>
