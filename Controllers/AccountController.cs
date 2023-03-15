@@ -124,18 +124,15 @@ public class AccountController : PlatformController
         string playerId = Token.AccountId;
         try
         {
-            Player player = _playerService.Find(playerId);
-            string email = player.AppleAccount.Email;
-
             // When using postman, '+' comes through as a space because it's not URL-encoded.
             // This is a quick kluge to enable debugging purposes without having to worry about URL-encoded params in Postman.
-            if (_playerService.DeleteAppleAccount(email) == 0 &&
-                _playerService.DeleteAppleAccount(email.Trim().Replace(" ", "+")) == 0)
+            if (_playerService.DeleteAppleAccountById(playerId) == 0 &&
+                _playerService.DeleteAppleAccountById(playerId.Trim().Replace(" ", "+")) == 0)
             {
                 throw new RecordNotFoundException(_playerService.CollectionName, "Rumble account not found.",
                                                   data: new RumbleJson
                                                         {
-                                                            {"email", email}
+                                                            {"accountId", playerId}
                                                         });
             }
         }
