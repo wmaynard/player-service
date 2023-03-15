@@ -654,6 +654,12 @@ public class PlayerAccountService : PlatformMongoService<Player>
 			update: Builders<Player>.Update.Unset(player => player.AppleAccount)
 		).ModifiedCount;
 	
+	public long DeleteAppleAccountById(string playerId) => _collection
+		.UpdateOne(
+			filter: Builders<Player>.Filter.Eq(player => player.AccountId, playerId),
+			update: Builders<Player>.Update.Unset(player => player.AppleAccount)
+		).ModifiedCount;
+	
 	public long DeleteAllAppleAccounts() => _collection
 		.UpdateMany(
 			filter: player => true,
