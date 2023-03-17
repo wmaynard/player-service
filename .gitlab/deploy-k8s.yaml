@@ -1,5 +1,5 @@
 .auto-deploy:
-  image: "registry.gitlab.com/gitlab-org/cluster-integration/auto-deploy-image:v2.26.0"
+  image: "registry.gitlab.com/gitlab-org/cluster-integration/auto-deploy-image:v2.47.0"
   dependencies: []
   variables:
     KUBE_CONTEXT: "platform-services/platform-services-agent:platform-services"
@@ -97,7 +97,7 @@ TT-production-a1-apse1:
 
 TT-production-a2:
   extends: .auto-deploy
-  stage: production
+  stage: production-2
   variables:
     KUBE_CONTEXT: "platform-services/platform-services-agent:prod-a2-platform-services"
     KUBE_INGRESS_BASE_DOMAIN: platform-a2.prod.tower.rumblegames.com

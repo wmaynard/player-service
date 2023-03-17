@@ -106,8 +106,7 @@ ingress:
     acme: true
     secretName: ""
     useDefaultSecret: false
-  annotations:
-    kubernetes.io/ingress.class: "nginx"
+  annotations: {}
   modSecurity:
     enabled: true
     secRuleEngine: "DetectionOnly"
