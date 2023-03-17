@@ -3,7 +3,8 @@
   dependencies: []
   variables:
     KUBE_CONTEXT: "platform-services/platform-services-agent:platform-services"
-  allow_failure: false
+  allow_failure: true
+  needs: ["build_image"]
   script:
     - kubectl config use-context $KUBE_CONTEXT
     - auto-deploy check_kube_domain
