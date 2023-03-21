@@ -3,6 +3,7 @@
   dependencies: []
   variables:
     KUBE_CONTEXT: "platform-services/platform-services-agent:platform-services"
+    K8S_SECRET_RUMBLE_REGION: "US"
   allow_failure: true
   needs: ["build_image"]
   script:
@@ -89,6 +90,7 @@ TT-production-a1-apse1:
     KUBE_CONTEXT: "platform-services/platform-services-agent:prod-a1-apse1-platform-services"
     KUBE_INGRESS_BASE_DOMAIN: platform-a1.prod.tower.rumblegames.com
     KUBE_NAMESPACE: "player-service-v2"
+    K8S_SECRET_RUMBLE_REGION: "AP"
   tags:
     - production-a1-apse1
   environment:
@@ -115,6 +117,7 @@ TT-production-a2-apse1:
     KUBE_CONTEXT: "platform-services/platform-services-agent:prod-a2-apse1-platform-services"
     KUBE_INGRESS_BASE_DOMAIN: platform-a2.prod.tower.rumblegames.com
     KUBE_NAMESPACE: "player-service-v2"
+    K8S_SECRET_RUMBLE_REGION: "AP"
   tags:
     - production-a2-apse1
   environment:
