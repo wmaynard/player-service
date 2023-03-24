@@ -296,7 +296,7 @@ public class TopController : PlatformController
 					overrides.Add(new ConfigOverride
 					{
 						Key = key,
-						Version = version,
+						Version = new Version(version),
 						Value = pair.Value
 					});
 			}
@@ -318,8 +318,13 @@ public class TopController : PlatformController
 		// 	}
 		// }
 
-		foreach (ConfigOverride o in overrides.OrderByDescending(o => o.Version).DistinctBy(o => o.Key))
+		IEnumerable<ConfigOverride> ordered = overrides
+		                                      .OrderByDescending(o => o.Version)
+		                                      .DistinctBy(o => o.Key);
+
+		foreach (ConfigOverride o in ordered)
 			variables[o.Key] = o.Value;
+
 		
 		return Ok(new RumbleJson
 		{
