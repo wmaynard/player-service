@@ -319,8 +319,8 @@ public class TopController : PlatformController
 		// }
 
 		IEnumerable<ConfigOverride> ordered = overrides
-		                                      .OrderByDescending(o => o.Version)
-		                                      .DistinctBy(o => o.Key);
+			.OrderByDescending(o => o.Version)
+			.DistinctBy(o => o.Key);
 
 		foreach (ConfigOverride o in ordered)
 			variables[o.Key] = o.Value;
