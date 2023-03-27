@@ -135,12 +135,12 @@ public class PlayerAccountService : PlatformMongoService<Player>
 	public Player FromApple(AppleAccount apple)
 	{
 		List<Player> accounts = _collection
-		                        .Find(Builders<Player>.Filter.Eq(player => player.AppleAccount.Id, apple.Id))
-		                        .ToList();
+			.Find(Builders<Player>.Filter.Eq(player => player.AppleAccount.Id, apple.Id))
+			.ToList();
 		
 		return accounts.Count <= 1
-			       ? accounts.FirstOrDefault()
-			       : throw new RecordsFoundException(1, accounts.Count);
+			? accounts.FirstOrDefault()
+			: throw new RecordsFoundException(1, accounts.Count);
 	}
 
 	public Player FromGoogle(GoogleAccount google)
@@ -609,6 +609,7 @@ public class PlayerAccountService : PlatformMongoService<Player>
 						|| player.RumbleAccount.Username.Contains(term)
 						|| player.GoogleAccount.Email.Contains(term)
 						|| player.GoogleAccount.Name.Contains(term)
+						|| player.AppleAccount.Email.Contains(term)
 				)
 				.Limit(100)
 				.ToList()
@@ -759,41 +760,3 @@ public class PlayerAccountService : PlatformMongoService<Player>
 		return child;
 	}
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

@@ -17,6 +17,9 @@ public class RumbleAccount : PlatformDataModel
     private const string DB_KEY_STATUS = "status";
     private const string DB_KEY_USERNAME = "username";
 
+    private const string INDEX_KEY_FROM_SSO = "fromSso";
+    private const string INDEX_KEY_USERNAME = "byUsername"; // TODO: Since username / email is the same, might be able to remove this
+
     public const string FRIENDLY_KEY_ASSOCIATIONS = "associatedAccounts";
     public const string FRIENDLY_KEY_CODE = "code";
     public const string FRIENDLY_KEY_CODE_EXPIRATION = "expiration";
@@ -40,19 +43,25 @@ public class RumbleAccount : PlatformDataModel
     [BsonElement(DB_KEY_EMAIL)]
     [JsonPropertyName(FRIENDLY_KEY_EMAIL)]
     [CompoundIndex(group: Player.INDEX_KEY_SEARCH, priority: 4)]
+    [CompoundIndex(group: INDEX_KEY_FROM_SSO, priority: 1)]
     public string Email { get; set; }
 
     [BsonElement(DB_KEY_HASH)]
     [JsonInclude, JsonPropertyName(FRIENDLY_KEY_HASH), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    [CompoundIndex(group: INDEX_KEY_FROM_SSO, priority: 2)]
+    [CompoundIndex(group: INDEX_KEY_USERNAME, priority: 1)]
     public string Hash { get; set; }
     
     [BsonElement(DB_KEY_STATUS)]
     [JsonPropertyName(FRIENDLY_KEY_STATUS)]
+    [CompoundIndex(group: INDEX_KEY_FROM_SSO, priority: 3)]
+    [CompoundIndex(group: INDEX_KEY_USERNAME, priority: 3)]
     public AccountStatus Status { get; set; }
     
     [BsonElement(DB_KEY_USERNAME)]
     [JsonPropertyName(FRIENDLY_KEY_USERNAME)]
     [CompoundIndex(group: Player.INDEX_KEY_SEARCH, priority: 5)]
+    [CompoundIndex(group: INDEX_KEY_USERNAME, priority: 2)]
     public string Username { get; set; }
 
     [Flags]

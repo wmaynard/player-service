@@ -22,10 +22,12 @@ public class Item : PlatformCollectionDocument
 	public const string FRIENDLY_KEY_DELETE = "delete";
 
 	private const string GROUP_ACCOUNT_LINK = "AccountLink";
+	private const string GROUP_ACCOUNT_TYPE = "aid_1_type_1";
 
 	[BsonElement(DB_KEY_ACCOUNT_ID), BsonRepresentation(BsonType.ObjectId)]
 	[JsonInclude, JsonPropertyName(FRIENDLY_KEY_ACCOUNT_ID)]
 	[CompoundIndex(group: GROUP_ACCOUNT_LINK, priority: 1)]
+	[CompoundIndex(group: GROUP_ACCOUNT_TYPE, priority: 1)]
 	public string AccountId { get; set; }
 	
 	[BsonElement(DB_KEY_ITEM_ID)]
@@ -41,6 +43,7 @@ public class Item : PlatformCollectionDocument
 	[BsonElement(DB_KEY_TYPE)]
 	[JsonInclude, JsonPropertyName(FRIENDLY_KEY_TYPE), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
 	[CompoundIndex(group: GROUP_ACCOUNT_LINK, priority: 3)]
+	[CompoundIndex(group: GROUP_ACCOUNT_TYPE, priority: 2)]
 	public string Type { get; set; }
 	
 	[BsonIgnore]

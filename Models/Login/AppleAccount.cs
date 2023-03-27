@@ -1,13 +1,18 @@
+using System;
+using System.IdentityModel.Tokens.Jwt;
+using System.Linq;
+using System.Security.Claims;
 using System.Text.Json.Serialization;
 using MongoDB.Bson.Serialization.Attributes;
 using PlayerService.Services;
+using Rumble.Platform.Common.Attributes;
 using Rumble.Platform.Data;
 
 namespace PlayerService.Models.Login;
 
 public class AppleAccount : PlatformDataModel
 {
-    private const string DB_KEY_ISS              = "iss";
+    private const string DB_KEY_ISSUER           = "iss";
     private const string DB_KEY_AUD              = "aud";
     private const string DB_KEY_SUB              = "sub";
     private const string DB_KEY_EMAIL            = "email";
@@ -15,7 +20,7 @@ public class AppleAccount : PlatformDataModel
     private const string DB_KEY_IS_PRIVATE_EMAIL = "isPvt";
     private const string DB_KEY_AUTH_TIME        = "authTime";
     
-    public const string FRIENDLY_KEY_ISS              = "iss";
+    public const string FRIENDLY_KEY_ISSUER           = "iss";
     public const string FRIENDLY_KEY_AUD              = "aud";
     public const string FRIENDLY_KEY_SUB              = "sub";
     public const string FRIENDLY_KEY_EMAIL            = "email";
@@ -23,13 +28,13 @@ public class AppleAccount : PlatformDataModel
     public const string FRIENDLY_KEY_IS_PRIVATE_EMAIL = "isPrivateEmail";
     public const string FRIENDLY_KEY_AUTH_TIME        = "authTime";
     
-    [BsonElement(DB_KEY_ISS)]
-    [JsonInclude, JsonPropertyName(FRIENDLY_KEY_ISS)]
-    public string Iss { get; set; }
+    [BsonElement(DB_KEY_ISSUER)]
+    [JsonInclude, JsonPropertyName(FRIENDLY_KEY_ISSUER)]
+    public string Issuer { get; set; }
     
     [BsonElement(DB_KEY_AUD)]
     [JsonInclude, JsonPropertyName(FRIENDLY_KEY_AUD)]
-    public string Aud { get; set; }
+    public string Audience { get; set; }
     
     [BsonElement(DB_KEY_SUB)]
     [JsonInclude, JsonPropertyName(FRIENDLY_KEY_SUB)]
@@ -37,6 +42,7 @@ public class AppleAccount : PlatformDataModel
 
     [BsonElement(DB_KEY_EMAIL)]
     [JsonInclude, JsonPropertyName(FRIENDLY_KEY_EMAIL)]
+    [CompoundIndex(group: Player.INDEX_KEY_SEARCH, priority: 8)]
     public string Email { get; set; }
     
     [BsonElement(DB_KEY_EMAIL_VERIFIED)]
@@ -51,25 +57,21 @@ public class AppleAccount : PlatformDataModel
     [JsonInclude, JsonPropertyName(FRIENDLY_KEY_AUTH_TIME)]
     public long AuthTime { get; set; }
 
-    public AppleAccount(string iss,           string aud,            string id, string email, 
-                        string emailVerified, string isPrivateEmail, long authTime)
+    public AppleAccount(JwtSecurityToken token)
     {
-        Iss = iss;
-        Aud = aud;
-        Id = id;
-        Email = email ?? "";
-        EmailVerified = emailVerified ?? "false";
-        IsPrivateEmail = isPrivateEmail ?? "false";
-        AuthTime = authTime;
+        // TODO: Use private consts for these apple token payload values
+        Issuer = token?.Claims.First(claim => claim.Type == "iss").Value;
+        Audience = token?.Claims.First(claim => claim.Type == "aud").Value;
+        Id = token?.Claims.First(claim => claim.Type == "sub").Value;
+        Email = token?.Claims.FirstOrDefault(claim => claim.Type == "email")?.Value;
+        EmailVerified = token?.Claims.FirstOrDefault(claim => claim.Type == "email_verified")?.Value;
+        IsPrivateEmail = token?.Claims.FirstOrDefault(claim => claim.Type == "is_private_email")?.Value;
+
+        if (long.TryParse(token?.Claims.First(claim => claim.Type == "auth_time").Value, out long authTime))
+            AuthTime = authTime;
     }
     
-    public static AppleAccount ValidateToken(string token)
-    {
-        if (string.IsNullOrWhiteSpace(token))
-        {
-            return null;
-        }
-
-        return AppleSignatureVerifyService.Instance.Verify(token);
-    }
+    public static AppleAccount ValidateToken(string token) => string.IsNullOrWhiteSpace(token)
+        ? null
+        : AppleSignatureVerifyService.Instance.Verify(token);
 }

@@ -23,7 +23,7 @@ namespace PlayerService.Services
 		
 		internal static AppleSignatureVerifyService Instance { get; private set; }
 		
-		RSAParameters _rsaKeyInfo;
+		private RSAParameters _rsaKeyInfo;
 
 		public AppleSignatureVerifyService() //CacheService cache)
 		{
@@ -38,14 +38,8 @@ namespace PlayerService.Services
 				string url = _dynamicConfig.Require<string>(key: "appleAuthKeysUrl");
 				_apiService
 					.Request(url)
-					.OnSuccess(action: (sender, apiResponse) =>
-					                   {
-						                   Log.Local(Owner.Nathan, "New Apple auth keys fetched.");
-					                   })
-					.OnFailure(action: (sender, apiResponse) =>
-					                   {
-						                   Log.Error(Owner.Nathan, "Unable to fetch new Apple auth keys.");
-					                   })
+					.OnSuccess(_ => Log.Local(Owner.Nathan, "New Apple auth keys fetched."))
+					.OnFailure(_ => Log.Error(Owner.Nathan, "Unable to fetch new Apple auth keys."))
 					.Get(out AppleResponse response, out int code);
 				
 				cacheValue = response;
@@ -67,14 +61,8 @@ namespace PlayerService.Services
 				string url = _dynamicConfig.Require<string>(key: "appleAuthKeysUrl");
 				_apiService
 					.Request(url)
-					.OnSuccess(action: (sender, apiResponse) =>
-					                   {
-						                   Log.Local(Owner.Nathan, "New Apple auth keys fetched.");
-					                   })
-					.OnFailure(action: (sender, apiResponse) =>
-					                   {
-						                   Log.Error(Owner.Nathan, "Unable to fetch new Apple auth keys.");
-					                   })
+					.OnSuccess(_ => Log.Local(Owner.Nathan, "New Apple auth keys fetched."))
+					.OnFailure(_ => Log.Error(Owner.Nathan, "Unable to fetch new Apple auth keys."))
 					.Get(out AppleResponse response, out int code);
 				
 				cacheValue = response;
@@ -91,27 +79,27 @@ namespace PlayerService.Services
 			}
 
 			_rsaKeyInfo = new RSAParameters()
-			              {
-				              Exponent = FromBase64Url(authKey.E),
-				              Modulus = FromBase64Url(authKey.N)
-			              };
+			{
+				Exponent = FromBase64Url(authKey.E),
+				Modulus = FromBase64Url(authKey.N)
+			};
 			
 			using RSACryptoServiceProvider rsa = new RSACryptoServiceProvider();
 			rsa.ImportParameters(_rsaKeyInfo);
 
 			TokenValidationParameters validationParameters = new TokenValidationParameters
-			                                                 {
-				                                                 RequireExpirationTime = true,
-				                                                 RequireSignedTokens = true,
-				                                                 ValidateAudience = true,
-				                                                 ValidateIssuer = true,
-				                                                 ValidateLifetime = true,
-				                                                 ValidIssuer = "https://appleid.apple.com",
-				                                                 ValidAudience = "com.rumbleentertainment.towersandtitans",
-				                                                 TryAllIssuerSigningKeys = true,
-				                                                 IssuerSigningKey = new RsaSecurityKey(rsa),
-				                                                 IssuerSigningKeys = new List<SecurityKey>() { new RsaSecurityKey(rsa) }
-			                                                 };
+             {
+                 RequireExpirationTime = true,
+                 RequireSignedTokens = true,
+                 ValidateAudience = true,
+                 ValidateIssuer = true,
+                 ValidateLifetime = true,
+                 ValidIssuer = "https://appleid.apple.com",
+                 ValidAudience = "com.rumbleentertainment.towersandtitans",
+                 TryAllIssuerSigningKeys = true,
+                 IssuerSigningKey = new RsaSecurityKey(rsa),
+                 IssuerSigningKeys = new List<SecurityKey>() { new RsaSecurityKey(rsa) }
+             };
 
 			SecurityToken validatedSecurityToken = null;
 			try
@@ -126,34 +114,22 @@ namespace PlayerService.Services
 			}
 			JwtSecurityToken validatedJwt = validatedSecurityToken as JwtSecurityToken;
 
-			AppleAccount appleAccount = null;
 			try
 			{
-				appleAccount = new AppleAccount(
-												iss: validatedJwt?.Claims.First(claim => claim.Type == "iss").Value,
-												aud: validatedJwt?.Claims.First(claim => claim.Type == "aud").Value,
-												id: validatedJwt?.Claims.First(claim => claim.Type == "sub").Value,
-												email: validatedJwt?.Claims.FirstOrDefault(claim => claim.Type == "email")?.Value,
-												emailVerified: validatedJwt?.Claims.FirstOrDefault(claim => claim.Type == "email_verified")?.Value,
-												isPrivateEmail: validatedJwt?.Claims.FirstOrDefault(claim => claim.Type == "is_private_email")?.Value,
-												authTime: Int64.Parse(validatedJwt?.Claims.First(claim => claim.Type == "auth_time").Value)
-												);
+				return new AppleAccount(validatedJwt);
 			}
 			catch (Exception e)
 			{
-				Log.Error(owner: Owner.Nathan, message: "Error occurred parsing token data into AppleAccount.", data: $"Token data: {validatedJwt}.");
 				throw new PlatformException(message: "Error occurred parsing token data into AppleAccount.", inner: e);
 			}
-			
-			return appleAccount;
 		}
 		
-		static byte[] FromBase64Url(string base64Url)
+		private static byte[] FromBase64Url(string base64Url)
 		{
 			string padded = base64Url.Length % 4 == 0
-				                ? base64Url : base64Url + "====".Substring(base64Url.Length % 4);
-			string base64 = padded.Replace("_", "/")
-			                      .Replace("-", "+");
+				? base64Url 
+				: base64Url + "===="[(base64Url.Length % 4)..];
+			string base64 = padded.Replace("_", "/").Replace("-", "+");
 			return Convert.FromBase64String(base64);
 		}
 	}
