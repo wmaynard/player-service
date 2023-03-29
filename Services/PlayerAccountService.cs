@@ -675,6 +675,12 @@ public class PlayerAccountService : PlatformMongoService<Player>
 			filter: Builders<Player>.Filter.Eq(player => player.RumbleAccount.Email, email),
 			update: Builders<Player>.Update.Unset(player => player.RumbleAccount)
 		).ModifiedCount;
+	
+	public long DeleteRumbleAccountById(string playerId) => _collection
+		.UpdateOne(
+			filter: Builders<Player>.Filter.Eq(player => player.Id, playerId),
+			update: Builders<Player>.Update.Unset(player => player.RumbleAccount)
+		).ModifiedCount;
 
 	public long DeleteAllRumbleAccounts() => _collection
 		.UpdateMany(
@@ -703,6 +709,12 @@ public class PlayerAccountService : PlatformMongoService<Player>
 	public long DeleteGoogleAccount(string email) => _collection
 		.UpdateMany(
 			filter: Builders<Player>.Filter.Eq(player => player.GoogleAccount.Email, email),
+			update: Builders<Player>.Update.Unset(player => player.GoogleAccount)
+		).ModifiedCount;
+	
+	public long DeleteGoogleAccountById(string playerId) => _collection
+		.UpdateOne(
+			filter: Builders<Player>.Filter.Eq(player => player.Id, playerId),
 			update: Builders<Player>.Update.Unset(player => player.GoogleAccount)
 		).ModifiedCount;
 	

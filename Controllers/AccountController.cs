@@ -172,6 +172,34 @@ public class AccountController : PlatformController
     }
     
     /// <summary>
+    /// Removes a Google account from the player's record.
+    /// </summary>
+    [HttpDelete, Route("googleAccount")]
+    public ActionResult DeleteGoogleAccount()
+    {
+        // PlatformEnvironment.EnforceNonprod(); // Probably needed in prod eventually
+
+        string playerId = Token.AccountId;
+        try
+        {
+            // When using postman, '+' comes through as a space because it's not URL-encoded.
+            // This is a quick kluge to enable debugging purposes without having to worry about URL-encoded params in Postman.
+            if (_playerService.DeleteGoogleAccountById(playerId) == 0 && _playerService.DeleteGoogleAccountById(playerId.Trim().Replace(" ", "+")) == 0)
+                throw new RecordNotFoundException(_playerService.CollectionName, "Rumble account not found.", data: new RumbleJson
+                                                                                                                    {
+                                                                                                                        { "accountId", playerId }
+                                                                                                                    });
+        }
+        catch (Exception e)
+        {
+            Log.Error(owner: Owner.Nathan, message: "Error occurred while trying to delete Plarium account from player.", data: $"PlayerId: {playerId}. Error: {e}.");
+            throw new PlatformException(message: "Error occurred while trying to delete Plarium account from player.", inner: e);
+        }
+		
+        return Ok();
+    }
+    
+    /// <summary>
     /// Adds a Plarium account to the player's record.
     /// </summary>
     [HttpPatch, Route("plarium")]
@@ -260,6 +288,34 @@ public class AccountController : PlatformController
         {
             return Problem(new LoginDiagnosis(e));
         }
+    }
+    
+    /// <summary>
+    /// Removes a Rumble account from the player's record.
+    /// </summary>
+    [HttpDelete, Route("rumbleAccount")]
+    public ActionResult DeleteRumbleAccount()
+    {
+        // PlatformEnvironment.EnforceNonprod(); // Probably needed in prod eventually
+
+        string playerId = Token.AccountId;
+        try
+        {
+            // When using postman, '+' comes through as a space because it's not URL-encoded.
+            // This is a quick kluge to enable debugging purposes without having to worry about URL-encoded params in Postman.
+            if (_playerService.DeleteRumbleAccountById(playerId) == 0 && _playerService.DeleteRumbleAccountById(playerId.Trim().Replace(" ", "+")) == 0)
+                throw new RecordNotFoundException(_playerService.CollectionName, "Rumble account not found.", data: new RumbleJson
+                                                                                                                    {
+                                                                                                                        { "accountId", playerId }
+                                                                                                                    });
+        }
+        catch (Exception e)
+        {
+            Log.Error(owner: Owner.Nathan, message: "Error occurred while trying to delete Rumble account from player.", data: $"PlayerId: {playerId}. Error: {e}.");
+            throw new PlatformException(message: "Error occurred while trying to delete Rumble account from player.", inner: e);
+        }
+		
+        return Ok();
     }
 
     /// <summary>
