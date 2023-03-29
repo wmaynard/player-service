@@ -172,6 +172,66 @@ public class AccountController : PlatformController
     }
     
     /// <summary>
+    /// Adds a Plarium account to the player's record.
+    /// </summary>
+    [HttpPatch, Route("plarium")]
+    public ActionResult LinkPlarium()
+    {
+        try
+        {
+            if (PlatformEnvironment.IsDev)
+                Log.Info(owner: Owner.Nathan, "PATCH /plarium body received.", data: new
+                {
+                    body = Body
+                });
+            DeviceInfo device = Require<DeviceInfo>(Player.FRIENDLY_KEY_DEVICE);
+            PlariumAccount plarium = PlariumAccount.ValidateToken(Require<string>(SsoData.FRIENDLY_KEY_APPLE_TOKEN));
+
+            Player fromDevice = _playerService.FromDevice(device, isUpsert: true);
+            Player fromPlarium = _playerService.FromPlarium(plarium);
+
+            if (fromPlarium == null)
+                return Ok(_playerService.AttachPlarium(fromDevice, plarium)?.Prune());
+            
+            throw fromDevice.Id == fromPlarium.Id
+                ? new AlreadyLinkedAccountException("Apple")
+                : new AccountOwnershipException("Apple", fromDevice.Id, fromPlarium.Id);
+        }
+        catch (PlatformException e)
+        {
+            return Problem(new LoginDiagnosis(e));
+        }
+    }
+    
+    /// <summary>
+    /// Removes a Plarium account from the player's record.
+    /// </summary>
+    [HttpDelete, Route("plariumAccount")]
+    public ActionResult DeletePlariumAccount()
+    {
+        // PlatformEnvironment.EnforceNonprod(); // Probably needed in prod eventually
+
+        string playerId = Token.AccountId;
+        try
+        {
+            // When using postman, '+' comes through as a space because it's not URL-encoded.
+            // This is a quick kluge to enable debugging purposes without having to worry about URL-encoded params in Postman.
+            if (_playerService.DeletePlariumAccountById(playerId) == 0 && _playerService.DeletePlariumAccountById(playerId.Trim().Replace(" ", "+")) == 0)
+                throw new RecordNotFoundException(_playerService.CollectionName, "Rumble account not found.", data: new RumbleJson
+                {
+                    { "accountId", playerId }
+                });
+        }
+        catch (Exception e)
+        {
+            Log.Error(owner: Owner.Nathan, message: "Error occurred while trying to delete Plarium account from player.", data: $"PlayerId: {playerId}. Error: {e}.");
+            throw new PlatformException(message: "Error occurred while trying to delete Plarium account from player.", inner: e);
+        }
+		
+        return Ok();
+    }
+    
+    /// <summary>
     /// Adds a Rumble account to the player's record.  Requires external email confirmation to actually be used.
     /// </summary>
     [HttpPatch, Route("rumble")]

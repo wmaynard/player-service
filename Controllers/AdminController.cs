@@ -259,9 +259,9 @@ public class AdminController : PlatformController
 		// This is a quick kluge to enable debugging purposes without having to worry about URL-encoded params in Postman.
 		if (_playerService.DeleteAppleAccount(email) == 0 && _playerService.DeleteAppleAccount(email.Trim().Replace(" ", "+")) == 0)
 			throw new RecordNotFoundException(_playerService.CollectionName, "Rumble account not found.", data: new RumbleJson
-			                                                                                                    {
-				                                                                                                    { "email", email }
-			                                                                                                    });
+            {
+                { "email", email }
+            });
 		
 		return Ok();
 	}
@@ -298,6 +298,41 @@ public class AdminController : PlatformController
 				{ "email", email }
 			});
 		
+		return Ok();
+	}
+	
+	[HttpDelete, Route("plariumAccount")]
+	public ActionResult DeletePlariumAccount()
+	{
+		PlatformEnvironment.EnforceNonprod();
+
+		string email = Optional<string>("email");
+		
+		if (email == null)
+		{
+			long affected = _playerService.DeleteAllPlariumAccounts();
+			
+			if (affected > 0)
+				SlackDiagnostics
+					.Log($"({PlatformEnvironment.Deployment}) All Plarium accounts have been deleted.", $"{Token.ScreenName} is to blame.  {affected} accounts were affected.")
+					.AddChannel("C043FPR7U68")
+					.Send()
+					.Wait();
+
+			return Ok(new RumbleJson
+			          {
+				          { "affected", affected }
+			          });
+		}
+
+		// When using postman, '+' comes through as a space because it's not URL-encoded.
+		// This is a quick kluge to enable debugging purposes without having to worry about URL-encoded params in Postman.
+		if (_playerService.DeletePlariumAccount(email) == 0 && _playerService.DeletePlariumAccount(email.Trim().Replace(" ", "+")) == 0)
+			throw new RecordNotFoundException(_playerService.CollectionName, "Rumble account not found.", data: new RumbleJson
+            {
+                { "email", email }
+            });
+
 		return Ok();
 	}
 
