@@ -97,6 +97,7 @@ public class PlayerAccountService : PlatformMongoService<Player>
 
 		bool useGoogle = sso.GoogleAccount != null;
 		bool useApple = sso.AppleAccount != null;
+		bool usePlarium = sso.PlariumAccount != null;
 		bool useRumble = sso.RumbleAccount != null;
 		
 		FilterDefinitionBuilder<Player> builder = Builders<Player>.Filter;
@@ -107,6 +108,8 @@ public class PlayerAccountService : PlatformMongoService<Player>
 			filters.Add(builder.Eq(player => player.GoogleAccount.Id, sso.GoogleAccount.Id));
 		if (useApple)
 			filters.Add(builder.Eq(player => player.AppleAccount.Id, sso.AppleAccount.Id));
+		if (usePlarium)
+			filters.Add(builder.Eq(player => player.PlariumAccount.Id, sso.PlariumAccount.Id));
 		if (useRumble)
 			filters.Add(builder.And(
 				builder.Eq(player => player.RumbleAccount.Username, sso.RumbleAccount.Username),
@@ -126,6 +129,8 @@ public class PlayerAccountService : PlatformMongoService<Player>
 			throw new GoogleUnlinkedException();
 		if (useApple && !output.Any(player => player.AppleAccount != null))
 			throw new AppleUnlinkedException();
+		if (usePlarium && !output.Any(player => player.PlariumAccount != null))
+			throw new PlariumUnlinkedException();
 		if (useRumble && !output.Any(player => player.RumbleAccount != null))
 			throw DiagnoseEmailPasswordLogin(sso.RumbleAccount.Email, sso.RumbleAccount.Hash);
 		
@@ -149,6 +154,17 @@ public class PlayerAccountService : PlatformMongoService<Player>
 			.Find(Builders<Player>.Filter.Eq(player => player.GoogleAccount.Id, google.Id))
 			.ToList();
 		
+		return accounts.Count <= 1
+			? accounts.FirstOrDefault()
+			: throw new RecordsFoundException(1, accounts.Count);
+	}
+
+	public Player FromPlarium(PlariumAccount plarium)
+	{
+		List<Player> accounts = _collection
+            .Find(Builders<Player>.Filter.Eq(player => player.PlariumAccount.Id, plarium.Id))
+            .ToList();
+
 		return accounts.Count <= 1
 			? accounts.FirstOrDefault()
 			: throw new RecordsFoundException(1, accounts.Count);
@@ -279,6 +295,13 @@ public class PlayerAccountService : PlatformMongoService<Player>
 	public Player AttachGoogle(Player player, GoogleAccount google)
 	{
 		player.GoogleAccount = google;
+		Update(player);
+		return player;
+	}
+
+	public Player AttachPlarium(Player player, PlariumAccount plarium)
+	{
+		player.PlariumAccount = plarium;
 		Update(player);
 		return player;
 	}
@@ -543,6 +566,11 @@ public class PlayerAccountService : PlatformMongoService<Player>
 			.Union(new [] { player.AppleAccount })
 			.Where(account => account != null)
 			.ToList();
+		List<PlariumAccount> plariums = others
+            .Select(other => other.PlariumAccount)
+            .Union(new [] { player.PlariumAccount })
+            .Where(account => account != null)
+            .ToList();
 		List<RumbleAccount> rumbles = others
 			.Select(other => other.RumbleAccount)
 			.Union(new [] { player.RumbleAccount })
@@ -554,11 +582,14 @@ public class PlayerAccountService : PlatformMongoService<Player>
 			throw new RecordsFoundException(1, googles.Count, "Multiple Google accounts found.");
 		if (apples.Count > 1)
 			throw new RecordsFoundException(1, apples.Count, "Multiple Apple accounts found.");
+		if (plariums.Count > 1)
+			throw new RecordsFoundException(1, plariums.Count, "Multiple Plarium accounts found.");
 		if (rumbles.Count > 1)
 			throw new RecordsFoundException(1, rumbles.Count, "Multiple Rumble accounts found.");
 		
 		player.GoogleAccount = googles.FirstOrDefault();
 		player.AppleAccount = apples.FirstOrDefault();
+		player.PlariumAccount = plariums.FirstOrDefault();
 		player.RumbleAccount = rumbles.FirstOrDefault();
 
 		Update(player);
@@ -570,6 +601,7 @@ public class PlayerAccountService : PlatformMongoService<Player>
 					.Set(other => other.ParentId, player.Id)
 					.Unset(other => other.GoogleAccount)
 					.Unset(other => other.AppleAccount)
+					.Unset(other => other.PlariumAccount)
 					.Unset(other => other.RumbleAccount)
 					.Unset(other => other.LinkCode)
 			);
@@ -610,6 +642,7 @@ public class PlayerAccountService : PlatformMongoService<Player>
 						|| player.GoogleAccount.Email.Contains(term)
 						|| player.GoogleAccount.Name.Contains(term)
 						|| player.AppleAccount.Email.Contains(term)
+						|| player.PlariumAccount.Login.Contains(term)
 				)
 				.Limit(100)
 				.ToList()
@@ -640,6 +673,12 @@ public class PlayerAccountService : PlatformMongoService<Player>
 	public long DeleteRumbleAccount(string email) => _collection
 		.UpdateMany(
 			filter: Builders<Player>.Filter.Eq(player => player.RumbleAccount.Email, email),
+			update: Builders<Player>.Update.Unset(player => player.RumbleAccount)
+		).ModifiedCount;
+	
+	public long DeleteRumbleAccountById(string playerId) => _collection
+		.UpdateOne(
+			filter: Builders<Player>.Filter.Eq(player => player.Id, playerId),
 			update: Builders<Player>.Update.Unset(player => player.RumbleAccount)
 		).ModifiedCount;
 
@@ -673,11 +712,36 @@ public class PlayerAccountService : PlatformMongoService<Player>
 			update: Builders<Player>.Update.Unset(player => player.GoogleAccount)
 		).ModifiedCount;
 	
+	public long DeleteGoogleAccountById(string playerId) => _collection
+		.UpdateOne(
+			filter: Builders<Player>.Filter.Eq(player => player.Id, playerId),
+			update: Builders<Player>.Update.Unset(player => player.GoogleAccount)
+		).ModifiedCount;
+	
 	public long DeleteAllGoogleAccounts() => _collection
 		.UpdateMany(
 			filter: player => true,
 			update: Builders<Player>.Update.Unset(player => player.GoogleAccount)
 		).ModifiedCount;
+	
+	public long DeletePlariumAccount(string email) => _collection
+        .UpdateMany(
+            filter: Builders<Player>.Filter.Eq(player => player.PlariumAccount.Login, email),
+            update: Builders<Player>.Update.Unset(player => player.PlariumAccount)
+        ).ModifiedCount;
+	
+	public long DeletePlariumAccountById(string playerId) => _collection
+       .UpdateOne(
+			filter: Builders<Player>.Filter.Eq(player => player.Id, playerId),
+			update: Builders<Player>.Update.Unset(player => player.PlariumAccount)
+		).ModifiedCount;
+	
+	public long DeleteAllPlariumAccounts() => _collection
+        .UpdateMany(
+            filter: player => true,
+            update: Builders<Player>.Update.Unset(player => player.PlariumAccount)
+        ).ModifiedCount;
+	
 
 	private PlatformException DiagnoseEmailPasswordLogin(string email, string hash, string code = null)
 	{

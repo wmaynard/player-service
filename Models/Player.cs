@@ -23,29 +23,31 @@ public class Player : PlatformCollectionDocument
 {
 	public const string INDEX_KEY_SEARCH = "search"; 
 
-	private const string DB_KEY_APPLE_ACCOUNT = "apple";
-	private const string DB_KEY_CREATED = "created";
-	private const string DB_KEY_DEVICE = "device";
-	private const string DB_KEY_GOOGLE_ACCOUNT = "google";
-	private const string DB_KEY_LAST_LOGIN = "login";
-	private const string DB_KEY_LINK_CODE = "linkCode";
+	private const string DB_KEY_APPLE_ACCOUNT        = "apple";
+	private const string DB_KEY_CREATED              = "created";
+	private const string DB_KEY_DEVICE               = "device";
+	private const string DB_KEY_GOOGLE_ACCOUNT       = "google";
+	private const string DB_KEY_LAST_LOGIN           = "login";
+	private const string DB_KEY_LINK_CODE            = "linkCode";
 	private const string DB_KEY_LINK_CODE_EXPIRATION = "linkExp";
-	private const string DB_KEY_PARENT_ID = "parent";
-	private const string DB_KEY_RUMBLE_ACCOUNT = "rumble";
-	private const string DB_KEY_SCREENNAME = "sn";
+	private const string DB_KEY_PARENT_ID            = "parent";
+	private const string DB_KEY_PLARIUM_ACCOUNT      = "plarium";
+	private const string DB_KEY_RUMBLE_ACCOUNT       = "rumble";
+	private const string DB_KEY_SCREENNAME           = "sn";
 	
-	public const string FRIENDLY_KEY_APPLE_ACCOUNT = "appleAccount";
-	public const string FRIENDLY_KEY_CHILDREN = "childAccounts";
-	public const string FRIENDLY_KEY_CREATED = "createdOn";
-	public const string FRIENDLY_KEY_DEVICE = "deviceInfo";
-	public const string FRIENDLY_KEY_DISCRIMINATOR = "discriminator";
-	public const string FRIENDLY_KEY_GOOGLE_ACCOUNT = "googleAccount";
-	public const string FRIENDLY_KEY_LAST_LOGIN = "lastLogin";
-	public const string FRIENDLY_KEY_PARENT_ID = "parentId";
-	public const string FRIENDLY_KEY_RUMBLE_ACCOUNT = "rumbleAccount";
-	public const string FRIENDLY_KEY_SCREENNAME = "screenname";
-	public const string FRIENDLY_KEY_SEARCH_WEIGHT = "weight";
-	public const string FRIENDLY_KEY_TOKEN = "token";
+	public const string FRIENDLY_KEY_APPLE_ACCOUNT   = "appleAccount";
+	public const string FRIENDLY_KEY_CHILDREN        = "childAccounts";
+	public const string FRIENDLY_KEY_CREATED         = "createdOn";
+	public const string FRIENDLY_KEY_DEVICE          = "deviceInfo";
+	public const string FRIENDLY_KEY_DISCRIMINATOR   = "discriminator";
+	public const string FRIENDLY_KEY_GOOGLE_ACCOUNT  = "googleAccount";
+	public const string FRIENDLY_KEY_LAST_LOGIN      = "lastLogin";
+	public const string FRIENDLY_KEY_PARENT_ID       = "parentId";
+	public const string FRIENDLY_KEY_PLARIUM_ACCOUNT = "plariumAccount";
+	public const string FRIENDLY_KEY_RUMBLE_ACCOUNT  = "rumbleAccount";
+	public const string FRIENDLY_KEY_SCREENNAME      = "screenname";
+	public const string FRIENDLY_KEY_SEARCH_WEIGHT   = "weight";
+	public const string FRIENDLY_KEY_TOKEN           = "token";
 
 	internal const string FRIENDLY_KEY_ACCOUNT_ID = "accountId";
 	
@@ -93,6 +95,10 @@ public class Player : PlatformCollectionDocument
 	[JsonPropertyName(FRIENDLY_KEY_PARENT_ID), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
 	// [TextIndex]
 	public string ParentId { get; set; }
+	
+	[BsonElement(DB_KEY_PLARIUM_ACCOUNT)]
+	[JsonPropertyName(FRIENDLY_KEY_PLARIUM_ACCOUNT)]
+	public PlariumAccount PlariumAccount { get; set; }
 	
 	[BsonElement(DB_KEY_RUMBLE_ACCOUNT)]
 	[JsonPropertyName(FRIENDLY_KEY_RUMBLE_ACCOUNT)]
@@ -163,6 +169,7 @@ public class Player : PlatformCollectionDocument
 		weigh(AppleAccount?.Email, WEIGHT_EMAIL);
 		weigh(GoogleAccount?.Email, WEIGHT_EMAIL);
 		weigh(GoogleAccount?.Name, WEIGHT_REAL_NAME);
+		weigh(PlariumAccount?.Login, WEIGHT_EMAIL);
 
 		output += termWeight;
 		

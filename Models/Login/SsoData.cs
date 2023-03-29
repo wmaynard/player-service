@@ -15,8 +15,9 @@ namespace PlayerService.Models.Login;
 /// </summary>
 public class SsoData : PlatformDataModel
 {
-    public const string FRIENDLY_KEY_APPLE_TOKEN = "appleToken";
-    public const string FRIENDLY_KEY_GOOGLE_TOKEN = "googleToken";
+    public const string FRIENDLY_KEY_APPLE_TOKEN    = "appleToken";
+    public const string FRIENDLY_KEY_GOOGLE_TOKEN   = "googleToken";
+    public const string FRIENDLY_KEY_PLARIUM_TOKEN  = "plariumToken";
     public const string FRIENDLY_KEY_RUMBLE_ACCOUNT = "rumble";
     
     [BsonIgnore]
@@ -26,7 +27,11 @@ public class SsoData : PlatformDataModel
     [BsonIgnore]
     [JsonPropertyName(FRIENDLY_KEY_GOOGLE_TOKEN)]
     public string GoogleToken { get; set; }
-
+    
+    [BsonIgnore]
+    [JsonPropertyName(FRIENDLY_KEY_PLARIUM_TOKEN)]
+    public string PlariumToken { get; set; }
+    
     [BsonIgnore]
     [JsonPropertyName(FRIENDLY_KEY_RUMBLE_ACCOUNT)]
     public RumbleAccount RumbleAccount { get; set; }
@@ -41,7 +46,11 @@ public class SsoData : PlatformDataModel
     
     [BsonIgnore]
     [JsonIgnore]
-    public bool AccountsProvided => RumbleAccount != null || GoogleAccount != null || AppleAccount != null;
+    public PlariumAccount PlariumAccount { get; set; }
+    
+    [BsonIgnore]
+    [JsonIgnore]
+    public bool AccountsProvided => RumbleAccount != null || GoogleAccount != null || AppleAccount != null || PlariumAccount != null;
 
     public SsoData ValidateTokens()
     {
@@ -66,6 +75,17 @@ public class SsoData : PlatformDataModel
         {
             throw new AppleValidationException(AppleToken, e);
         }
+        
+        try
+        {
+            PlariumAccount = PlariumAccount.ValidateToken(PlariumToken);
+            if (!string.IsNullOrWhiteSpace(PlariumToken) && PlariumAccount == null)
+                throw new PlariumValidationException(PlariumToken);
+        }
+        catch (Exception e)
+        {
+            throw new PlariumValidationException(PlariumToken, e);
+        }
 
         if (string.IsNullOrWhiteSpace(RumbleAccount?.Hash))
             RumbleAccount = null;
@@ -85,6 +105,8 @@ public class SsoData : PlatformDataModel
             throw new GoogleUnlinkedException(GoogleAccount);
         if (AppleAccount != null && !players.Any(player => player.AppleAccount != null))
             throw new AppleUnlinkedException(AppleAccount);
+        if (PlariumAccount != null && !players.Any(player => player.PlariumAccount != null))
+            throw new PlariumUnlinkedException(PlariumAccount);
         if (RumbleAccount != null && !players.Any(player => player.RumbleAccount != null))
             throw new RumbleUnlinkedException(RumbleAccount);
     }
