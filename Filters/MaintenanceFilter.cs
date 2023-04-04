@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Filters;
 using PlayerService.Models.Login;
@@ -41,7 +42,10 @@ public class MaintenanceFilter : PlatformFilter, IActionFilter
         if (!maintenanceMode || now < start || now >= end)
             return;
 
-        context.Result = new BadRequestObjectResult(new LoginDiagnosis(new MaintenanceException()));
+        context.Result = new BadRequestObjectResult(new LoginDiagnosis(new MaintenanceException()))
+        {
+            StatusCode = StatusCodes.Status423Locked
+        };
     }
 
     public void OnActionExecuted(ActionExecutedContext context) { }
