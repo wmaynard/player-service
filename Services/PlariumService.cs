@@ -27,22 +27,27 @@ namespace PlayerService.Services
 			string url = _dynamicConfig.Require<string>(key: "plariumAuthUrl");
 			_apiService
 				.Request(url)
-				.OnSuccess(_ => Log.Local(owner: Owner.Nathan, message: "Successfully validated Plarium token."))
-				.OnFailure(_ => Log.Error(owner: Owner.Nathan, message: "Failed to validate Plarium token."))
-				.Post(out RumbleJson response, out int code);
-
-			PlariumAccount plariumAccount = null;
-			try
-			{
-				plariumAccount = response.ToModel<PlariumAccount>();
-			}
-			catch (Exception e)
+				.AddHeader(key: "game_id", value: PlatformEnvironment.Require<string>("PLARIUM_GAME"))
+				.AddHeader(key: "secret_key", value: PlatformEnvironment.Require<string>("PLARIUM_SECRET"))
+				.SetPayload(new RumbleJson 
+				            {
+								{ "auth_token", authToken }
+							})
+	            .OnSuccess(_ => Log.Local(owner: Owner.Nathan, message: "Successfully validated Plarium token."))
+	            .OnFailure(_ => Log.Error(owner: Owner.Nathan, message: "Failed to validate Plarium token."))
+	            .Post(out RumbleJson response, out int code);
+			
+            try
+            {
+	            PlariumAccount plariumAccount = new PlariumAccount(plariumId: response["plid"].ToString(), login: response["login"].ToString());
+	            
+	            return plariumAccount;
+            }
+            catch (Exception e)
 			{
 				Log.Error(owner: Owner.Nathan, message: "Error occurred when validating Plarium token.", data: $"Response: {response}.", exception: e);
 				throw new PlatformException(message: "Error occurred when validating Plarium token.", inner: e);
 			}
-
-			return plariumAccount;
 		}
 	}
 }
