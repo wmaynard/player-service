@@ -56,6 +56,7 @@ stage-a-apse1:
     KUBE_INGRESS_BASE_DOMAIN: nonprod.tower.cdrentertainment.com
     KUBE_NAMESPACE: player-service-v2-23-stage-a
     KUBE_CONTEXT: "platform-services/platform-services-agent:nonprod-apse1"
+    K8S_SECRET_RUMBLE_REGION: "AP"
   tags:
     - nonprod-apse1
   environment:
