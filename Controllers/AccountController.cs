@@ -213,7 +213,7 @@ public class AccountController : PlatformController
                     body = Body
                 });
             DeviceInfo device = Require<DeviceInfo>(Player.FRIENDLY_KEY_DEVICE);
-            PlariumAccount plarium = PlariumAccount.ValidateToken(Require<string>(SsoData.FRIENDLY_KEY_APPLE_TOKEN));
+            PlariumAccount plarium = PlariumAccount.ValidateToken(Require<string>(SsoData.FRIENDLY_KEY_PLARIUM_TOKEN));
 
             Player fromDevice = _playerService.FromDevice(device, isUpsert: true);
             Player fromPlarium = _playerService.FromPlarium(plarium);
@@ -222,8 +222,8 @@ public class AccountController : PlatformController
                 return Ok(_playerService.AttachPlarium(fromDevice, plarium)?.Prune());
             
             throw fromDevice.Id == fromPlarium.Id
-                ? new AlreadyLinkedAccountException("Apple")
-                : new AccountOwnershipException("Apple", fromDevice.Id, fromPlarium.Id);
+                ? new AlreadyLinkedAccountException("Plarium")
+                : new AccountOwnershipException("Plarium", fromDevice.Id, fromPlarium.Id);
         }
         catch (PlatformException e)
         {
