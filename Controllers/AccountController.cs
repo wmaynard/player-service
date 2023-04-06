@@ -542,7 +542,8 @@ public class AccountController : PlatformController
 
             GenerateToken(player);
 
-            if (AccountConflictExists(player, others, out ActionResult conflictResult))
+            bool twoFactorEnabled = !(sso?.SkipTwoFactor ?? false);
+            if (AccountConflictExists(player, others, twoFactorEnabled, out ActionResult conflictResult))
                 return conflictResult;
 
             player.GoogleAccount ??= sso?.GoogleAccount;
@@ -664,7 +665,7 @@ public class AccountController : PlatformController
         return true;
     }
 
-    private bool AccountConflictExists(Player player, Player[] others, out ActionResult conflictResult)
+    private bool AccountConflictExists(Player player, Player[] others, bool twoFactorEnabled, out ActionResult conflictResult)
     {
         conflictResult = null;
         Player[] conflicts = others
@@ -674,7 +675,7 @@ public class AccountController : PlatformController
         if (!conflicts.Any())
             return false;
 
-        if (TwoFactorRequired(player, others, out conflictResult))
+        if (twoFactorEnabled && TwoFactorRequired(player, others, out conflictResult))
             return true;
 
         _playerService.Update(player);

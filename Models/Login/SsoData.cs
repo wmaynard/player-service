@@ -48,6 +48,14 @@ public class SsoData : PlatformDataModel
     [JsonIgnore]
     public PlariumAccount PlariumAccount { get; set; }
     
+    /// <summary>
+    /// This needs to be updated whenever we add new SSO providers.  When we see a non-Rumble SSO account, we don't
+    /// need to or want to send out 2FA emails.  TODO: add an SsoAccount interface, grab these two bools with reflection
+    /// </summary>
+    [BsonIgnore]
+    [JsonIgnore]
+    public bool SkipTwoFactor => GoogleAccount != null || AppleAccount != null || PlariumAccount != null;
+    
     [BsonIgnore]
     [JsonIgnore]
     public bool AccountsProvided => RumbleAccount != null || GoogleAccount != null || AppleAccount != null || PlariumAccount != null;
