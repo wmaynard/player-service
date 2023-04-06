@@ -30,13 +30,13 @@ public class PlariumAccount : PlatformDataModel
 		Login = login;
 	}
 
-	public static PlariumAccount ValidateToken(string token)
+	public static PlariumAccount ValidateCode(string code)
 	{
-		if (string.IsNullOrWhiteSpace(token))
+		if (string.IsNullOrWhiteSpace(code))
 		{
 			return null;
 		}
 
-		return PlariumService.Instance.Verify(token);
+		return PlariumService.Instance.Verify(code);
 	}
 }

@@ -213,7 +213,7 @@ public class AccountController : PlatformController
                     body = Body
                 });
             DeviceInfo device = Require<DeviceInfo>(Player.FRIENDLY_KEY_DEVICE);
-            PlariumAccount plarium = PlariumAccount.ValidateToken(Require<string>(SsoData.FRIENDLY_KEY_PLARIUM_TOKEN));
+            PlariumAccount plarium = PlariumAccount.ValidateCode(Require<string>(SsoData.FRIENDLY_KEY_PLARIUM_CODE));
 
             Player fromDevice = _playerService.FromDevice(device, isUpsert: true);
             Player fromPlarium = _playerService.FromPlarium(plarium);
