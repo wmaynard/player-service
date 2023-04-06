@@ -22,8 +22,31 @@ namespace PlayerService.Services
 			Instance = this;
 		}
 		
-		public PlariumAccount Verify(string authToken)
+		public PlariumAccount Verify(string plariumCode)
 		{
+			string authToken = null;
+			
+			string tokenUrl = _dynamicConfig.Require<string>(key: "plariumTokenUrl");
+			_apiService
+				.Request(tokenUrl)
+				.AddHeader(key: "game_id", value: PlatformEnvironment.Require<string>("PLARIUM_GAME"))
+				.AddHeader(key: "secret_key", value: PlatformEnvironment.Require<string>("PLARIUM_SECRET"))
+				.SetPayload(new RumbleJson 
+				            {
+					            { "clientId", 143},
+					            {"code", plariumCode},
+					            {"redirectUri", "towersandtitansdl://plariumplay/"},
+					            {"privateKey", PlatformEnvironment.Require<string>(key: "PLARIUM_PRIVATE_KEY")},
+					            {"grantType", "authorization_code"}
+				            })
+				.OnSuccess(res =>
+				           {
+					           authToken = res.AsString;
+					           Log.Local(owner: Owner.Nathan, message: "Successfully validated Plarium token.");
+				           })
+				.OnFailure(_ => Log.Error(owner: Owner.Nathan, message: "Failed to validate Plarium token."))
+				.Post(out RumbleJson tokenResponse, out int tokenCode);
+			
 			string url = _dynamicConfig.Require<string>(key: "plariumAuthUrl");
 			_apiService
 				.Request(url)
