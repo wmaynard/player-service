@@ -125,6 +125,12 @@ public class Player : PlatformCollectionDocument
 	[JsonIgnore]
 	public string AccountId => ParentId ?? Id;
 	
+	[BsonIgnore]
+	[JsonIgnore]
+	public string Email => RumbleAccount?.Email
+		?? GoogleAccount?.Email
+		?? AppleAccount?.Email;
+	
 	/// <summary>
 	/// Uses arbitrary values to decide how relevant a search term is to this player.  Screennames are heavily favored over all other fields; consider a situation where we have 
 	/// a user with the screenname "Deadpool", and someone is searching with the term "dead".  Being all hex characters, we probably don't want Mongo IDs ranking before

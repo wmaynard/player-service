@@ -577,7 +577,7 @@ public class AccountController : PlatformController
             .GenerateToken(
                 player.AccountId,
                 player.Screenname,
-                email: null, 
+                email: player.Email, 
                 discriminator, 
                 audiences: TOKEN_AUDIENCE
             );
