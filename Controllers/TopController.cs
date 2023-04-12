@@ -230,43 +230,6 @@ public class TopController : PlatformController
 		});
 	}
 
-	/// <summary>
-	/// Used for Titans Website logins.  Since the website does not have access to installId, this performs the same operations on SSO data.
-	/// If there's an account conflict, this will fail 100% of the time.  Account conflicts *should* be impossible without installId information,
-	/// however.
-	/// </summary>
-	/// <returns></returns>
-	/// <exception cref="PlatformException"></exception>
-	[HttpPost, Route("login"), NoAuth]
-	public ActionResult Login()
-	{
-		throw new NotImplementedException();
-		// RumbleJson sso = Optional<RumbleJson>("sso");
-		//
-		// List<Profile> profiles = _profileService.Find(sso, out List<SsoData> ssoData);
-		// string[] accountIds = profiles.Select(profile => profile.AccountId).Distinct().ToArray();
-		//
-		// if (!accountIds.Any())
-		// 	throw new PlatformException("Account does not yet exist, or SSO is invalid.", code: ErrorCode.MongoRecordNotFound);
-		// if (accountIds.Length > 1)
-		// 	throw new PlatformException("Profile was found on multiple accounts!");
-		//
-		// Player player = _playerService.Find(accountIds.First());
-		//
-		// int discriminator = _discriminatorService.Lookup(player);
-		// string email = profiles.FirstOrDefault(profile => profile.Email != null)?.Email;
-		//
-		// string token = _apiService.GenerateToken(player.AccountId, player.Screenname, email, discriminator, AccountController.TOKEN_AUDIENCE);
-		//
-		// return Ok(new RumbleJson
-		// {
-		// 	{ "player", player },
-		// 	{ "discriminator", discriminator },
-		// 	{ "accessToken", token }
-		// });
-	}
-
-
 	[HttpGet, Route("config"), NoAuth, HealthMonitor(weight: 5)]
 	public ActionResult GetConfig()
 	{
