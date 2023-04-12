@@ -203,6 +203,17 @@ public class TopController : PlatformController
 		List<Task<Component>> tasks = new List<Task<Component>>();
 
 		string aid = Token.AccountId;
+
+		if (_playerService.Find(aid) == null)
+		{
+			Log.Warn(Owner.Will, "Unable to find player account.  This ID could be from another service, such as Portal", data: new
+			{
+				AccountId = Token.AccountId,
+				Origin = Token.Requester
+			});
+			throw new PlatformException("Unable to find player account.", code: ErrorCode.AccountNotFound);
+		}
+		
 		foreach (string name in names)
 		{
 			if (!ComponentServices.ContainsKey(name))
