@@ -17,7 +17,8 @@ public class SsoData : PlatformDataModel
 {
     public const string FRIENDLY_KEY_APPLE_TOKEN    = "appleToken";
     public const string FRIENDLY_KEY_GOOGLE_TOKEN   = "googleToken";
-    public const string FRIENDLY_KEY_PLARIUM_CODE  = "plariumCode";
+    public const string FRIENDLY_KEY_PLARIUM_CODE   = "plariumCode";
+    public const string FRIENDLY_KEY_PLARIUM_TOKEN  = "plariumToken";
     public const string FRIENDLY_KEY_RUMBLE_ACCOUNT = "rumble";
     
     [BsonIgnore]
@@ -31,6 +32,10 @@ public class SsoData : PlatformDataModel
     [BsonIgnore]
     [JsonPropertyName(FRIENDLY_KEY_PLARIUM_CODE)]
     public string PlariumCode { get; set; }
+    
+    [BsonIgnore]
+    [JsonPropertyName(FRIENDLY_KEY_PLARIUM_TOKEN)]
+    public string PlariumToken { get; set; }
     
     [BsonIgnore]
     [JsonPropertyName(FRIENDLY_KEY_RUMBLE_ACCOUNT)]
@@ -89,6 +94,17 @@ public class SsoData : PlatformDataModel
             PlariumAccount = PlariumAccount.ValidateCode(PlariumCode);
             if (!string.IsNullOrWhiteSpace(PlariumCode) && PlariumAccount == null)
                 throw new PlariumValidationException(PlariumCode);
+        }
+        catch (Exception e)
+        {
+            throw new PlariumValidationException(PlariumCode, e);
+        }
+
+        try
+        {
+            PlariumAccount = PlariumAccount.ValidateToken(PlariumToken);
+            if (!string.IsNullOrWhiteSpace(PlariumToken) && PlariumAccount == null)
+                throw new PlariumValidationException(PlariumToken);
         }
         catch (Exception e)
         {
