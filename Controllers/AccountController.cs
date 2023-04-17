@@ -216,11 +216,11 @@ public class AccountController : PlatformController
 
             PlariumAccount plarium;
             
-            if (Optional<string>(SsoData.FRIENDLY_KEY_PLARIUM_TOKEN) != null)
+            if (Optional<string>(SsoData.FRIENDLY_KEY_PLARIUM_TOKEN) != null && Optional<string>(SsoData.FRIENDLY_KEY_PLARIUM_TOKEN) != "")
             {
                 plarium = PlariumAccount.ValidateToken(Require<string>(SsoData.FRIENDLY_KEY_PLARIUM_TOKEN));
             }
-            else if (Optional<string>(SsoData.FRIENDLY_KEY_PLARIUM_CODE) != null)
+            else if (Optional<string>(SsoData.FRIENDLY_KEY_PLARIUM_CODE) != null && Optional<string>(SsoData.FRIENDLY_KEY_PLARIUM_CODE) != "")
             {
                 plarium = PlariumAccount.ValidateCode(Require<string>(SsoData.FRIENDLY_KEY_PLARIUM_CODE));
             }
