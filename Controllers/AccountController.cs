@@ -213,7 +213,22 @@ public class AccountController : PlatformController
                     body = Body
                 });
             DeviceInfo device = Require<DeviceInfo>(Player.FRIENDLY_KEY_DEVICE);
-            PlariumAccount plarium = PlariumAccount.ValidateCode(Require<string>(SsoData.FRIENDLY_KEY_PLARIUM_CODE));
+
+            PlariumAccount plarium;
+            
+            if (Optional<string>(SsoData.FRIENDLY_KEY_PLARIUM_TOKEN) != null)
+            {
+                plarium = PlariumAccount.ValidateToken(Require<string>(SsoData.FRIENDLY_KEY_PLARIUM_TOKEN));
+            }
+            else if (Optional<string>(SsoData.FRIENDLY_KEY_PLARIUM_CODE) != null)
+            {
+                plarium = PlariumAccount.ValidateCode(Require<string>(SsoData.FRIENDLY_KEY_PLARIUM_CODE));
+            }
+            else
+            {
+                throw new PlatformException(message:
+                                            "Request did not contain one of two required fields: plariumCode or plariumToken.");
+            }
 
             Player fromDevice = _playerService.FromDevice(device, isUpsert: true);
             Player fromPlarium = _playerService.FromPlarium(plarium);

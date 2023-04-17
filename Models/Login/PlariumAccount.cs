@@ -37,6 +37,18 @@ public class PlariumAccount : PlatformDataModel
 			return null;
 		}
 
-		return PlariumService.Instance.Verify(code);
+		string token = PlariumService.Instance.VerifyCode(code);
+
+		return PlariumService.Instance.VerifyToken(token);
+	}
+
+	public static PlariumAccount ValidateToken(string token)
+	{
+		if (string.IsNullOrWhiteSpace(token))
+		{
+			return null;
+		}
+
+		return PlariumService.Instance.VerifyToken(token);
 	}
 }
