@@ -4,6 +4,7 @@ using System.IdentityModel.Tokens.Jwt;
 using System.Linq;
 using System.Security.Cryptography;
 using Microsoft.IdentityModel.Tokens;
+using PlayerService.Exceptions.Login;
 using PlayerService.Models.Login;
 using PlayerService.Models.Login.AppleAuth;
 using RCL.Logging;
@@ -31,7 +32,7 @@ namespace PlayerService.Services
 			//_cache = cache;
 		}
 
-		public AppleAccount Verify(string appleToken)
+		public AppleAccount Verify(string appleToken, string appleNonce)
 		{
 			if (!_cache.HasValue("AppleAuth", out AppleResponse cacheValue))
 			{
@@ -114,14 +115,20 @@ namespace PlayerService.Services
 			}
 			JwtSecurityToken validatedJwt = validatedSecurityToken as JwtSecurityToken;
 
-			try
+			if (validatedJwt.Claims.First(claim => claim.Type == "nonce").Value == appleNonce)
 			{
-				return new AppleAccount(validatedJwt);
+				try
+				{
+					return new AppleAccount(validatedJwt);
+				}
+				catch (Exception e)
+				{
+					throw new PlatformException(message: "Error occurred parsing token data into AppleAccount.",
+					                            inner: e);
+				}
 			}
-			catch (Exception e)
-			{
-				throw new PlatformException(message: "Error occurred parsing token data into AppleAccount.", inner: e);
-			}
+
+			throw new AppleValidationException(appleToken, inner: new PlatformException(message: "Apple nonce did not match token."));
 		}
 		
 		private static byte[] FromBase64Url(string base64Url)
