@@ -71,7 +71,7 @@ public class AppleAccount : PlatformDataModel
             AuthTime = authTime;
     }
     
-    public static AppleAccount ValidateToken(string token) => string.IsNullOrWhiteSpace(token)
+    public static AppleAccount ValidateToken(string token, string nonce) => string.IsNullOrWhiteSpace(token)
         ? null
-        : AppleSignatureVerifyService.Instance.Verify(token);
+        : AppleSignatureVerifyService.Instance.Verify(token, nonce);
 }

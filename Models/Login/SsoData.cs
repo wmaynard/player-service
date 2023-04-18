@@ -16,6 +16,7 @@ namespace PlayerService.Models.Login;
 public class SsoData : PlatformDataModel
 {
     public const string FRIENDLY_KEY_APPLE_TOKEN    = "appleToken";
+    public const string FRIENDLY_KEY_APPLE_NONCE    = "appleNonce";
     public const string FRIENDLY_KEY_GOOGLE_TOKEN   = "googleToken";
     public const string FRIENDLY_KEY_PLARIUM_CODE   = "plariumCode";
     public const string FRIENDLY_KEY_PLARIUM_TOKEN  = "plariumToken";
@@ -24,6 +25,10 @@ public class SsoData : PlatformDataModel
     [BsonIgnore]
     [JsonPropertyName(FRIENDLY_KEY_APPLE_TOKEN)]
     public string AppleToken { get; set; }
+    
+    [BsonIgnore]
+    [JsonPropertyName(FRIENDLY_KEY_APPLE_NONCE)]
+    public string AppleNonce { get; set; }
     
     [BsonIgnore]
     [JsonPropertyName(FRIENDLY_KEY_GOOGLE_TOKEN)]
@@ -80,7 +85,7 @@ public class SsoData : PlatformDataModel
     
         try
         {
-            AppleAccount = AppleAccount.ValidateToken(AppleToken);
+            AppleAccount = AppleAccount.ValidateToken(AppleToken, AppleNonce);
             if (!string.IsNullOrWhiteSpace(AppleToken) && AppleAccount == null)
                 throw new AppleValidationException(AppleToken);
         }

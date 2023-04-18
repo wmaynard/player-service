@@ -93,7 +93,7 @@ public class AccountController : PlatformController
                     body = Body
                 });
             DeviceInfo device = Require<DeviceInfo>(Player.FRIENDLY_KEY_DEVICE);
-            AppleAccount apple = AppleAccount.ValidateToken(Require<string>(SsoData.FRIENDLY_KEY_APPLE_TOKEN));
+            AppleAccount apple = AppleAccount.ValidateToken(Require<string>(SsoData.FRIENDLY_KEY_APPLE_TOKEN), Require<string>(SsoData.FRIENDLY_KEY_APPLE_NONCE));
 
             Player fromDevice = _playerService.FromDevice(device, isUpsert: true);
             Player fromApple = _playerService.FromApple(apple);
