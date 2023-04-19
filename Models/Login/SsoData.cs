@@ -93,7 +93,7 @@ public class SsoData : PlatformDataModel
         {
             throw new AppleValidationException(AppleToken, e);
         }
-        
+
         try
         {
             PlariumAccount = PlariumAccount.ValidateCode(PlariumCode);

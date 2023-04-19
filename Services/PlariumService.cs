@@ -45,7 +45,7 @@ namespace PlayerService.Services
 					           Log.Local(owner: Owner.Nathan, message: "Successfully fetched Plarium token.");
 				           })
 				.OnFailure(_ => Log.Error(owner: Owner.Nathan, message: "Failed to fetch Plarium token."))
-				.Post(out RumbleJson tokenResponse, out int tokenCode);
+				.Post();
 
 			return authToken;
 		}
