@@ -97,12 +97,12 @@ public class SsoData : PlatformDataModel
         try
         {
             // Plarium can use either the code OR the token to log in.
-            if (!string.IsNullOrWhiteSpace(PlariumCode))
-                PlariumAccount = PlariumAccount.ValidateCode(PlariumCode) 
-                    ?? throw new PlariumValidationException(PlariumCode);
-            else if (!string.IsNullOrWhiteSpace(PlariumToken))
+            if (!string.IsNullOrWhiteSpace(PlariumToken))
                 PlariumAccount = PlariumAccount.ValidateToken(PlariumToken)
                     ?? throw new PlariumValidationException(PlariumToken);
+            else if (!string.IsNullOrWhiteSpace(PlariumCode))
+                PlariumAccount = PlariumAccount.ValidateCode(PlariumCode) 
+                    ?? throw new PlariumValidationException(PlariumCode);
         }
         catch (Exception e)
         {
