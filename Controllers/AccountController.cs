@@ -216,19 +216,12 @@ public class AccountController : PlatformController
 
             PlariumAccount plarium;
             
-            if (Optional<string>(SsoData.FRIENDLY_KEY_PLARIUM_TOKEN) != null && Optional<string>(SsoData.FRIENDLY_KEY_PLARIUM_TOKEN) != "")
-            {
+            if (!string.IsNullOrWhiteSpace(Optional<string>(SsoData.FRIENDLY_KEY_PLARIUM_TOKEN)))
                 plarium = PlariumAccount.ValidateToken(Require<string>(SsoData.FRIENDLY_KEY_PLARIUM_TOKEN));
-            }
-            else if (Optional<string>(SsoData.FRIENDLY_KEY_PLARIUM_CODE) != null && Optional<string>(SsoData.FRIENDLY_KEY_PLARIUM_CODE) != "")
-            {
+            else if (!string.IsNullOrWhiteSpace(Optional<string>(SsoData.FRIENDLY_KEY_PLARIUM_CODE)))
                 plarium = PlariumAccount.ValidateCode(Require<string>(SsoData.FRIENDLY_KEY_PLARIUM_CODE));
-            }
             else
-            {
-                throw new PlatformException(message:
-                                            "Request did not contain one of two required fields: plariumCode or plariumToken.");
-            }
+                throw new PlatformException(message: $"Request did not contain one of two required fields: {SsoData.FRIENDLY_KEY_PLARIUM_CODE} or {SsoData.FRIENDLY_KEY_PLARIUM_TOKEN}.");
 
             Player fromDevice = _playerService.FromDevice(device, isUpsert: true);
             Player fromPlarium = _playerService.FromPlarium(plarium);

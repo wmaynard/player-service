@@ -1,6 +1,7 @@
 using System;
 using PlayerService.Models.Login;
 using RCL.Logging;
+using Rumble.Platform.Common.Enums;
 using Rumble.Platform.Common.Exceptions;
 using Rumble.Platform.Common.Services;
 using Rumble.Platform.Common.Utilities;
@@ -27,25 +28,31 @@ namespace PlayerService.Services
 			string authToken = null;
 			
 			string tokenUrl = _dynamicConfig.Require<string>(key: "plariumTokenUrl");
+
+			string failure = null;
 			_apiService
 				.Request(tokenUrl)
+				.ExpectNonJson()
 				.AddHeader(key: "game_id", value: PlatformEnvironment.Require<string>("PLARIUM_GAME"))
 				.AddHeader(key: "secret_key", value: PlatformEnvironment.Require<string>("PLARIUM_SECRET"))
 				.SetPayload(new RumbleJson 
-				            {
-					            { "clientId", 143},
-					            {"code", plariumCode},
-					            {"redirectUri", "towersandtitansdl://plariumplay/"},
-					            {"privateKey", PlatformEnvironment.Require<string>(key: "PLARIUM_PRIVATE_KEY")},
-					            {"grantType", "authorization_code"}
-				            })
+	            {
+		            { "clientId", 143},
+		            {"code", plariumCode},
+		            {"redirectUri", "towersandtitansdl://plariumplay/"},
+		            {"privateKey", PlatformEnvironment.Require<string>(key: "PLARIUM_PRIVATE_KEY")},
+		            {"grantType", "authorization_code"}
+	            })
 				.OnSuccess(res =>
-				           {
-					           authToken = res.AsString;
-					           Log.Local(owner: Owner.Nathan, message: "Successfully fetched Plarium token.");
-				           })
-				.OnFailure(_ => Log.Error(owner: Owner.Nathan, message: "Failed to fetch Plarium token."))
+				{
+				   authToken = res.AsString;
+				   Log.Local(owner: Owner.Nathan, message: "Successfully fetched Plarium code.");
+				})
+				.OnFailure(response => failure = $"Failed to fetch Plarium token; {response?.Optional<string>("message")}")
 				.Post();
+
+			if (!string.IsNullOrWhiteSpace(failure))
+				throw new PlatformException(failure, code: ErrorCode.ApiFailure);
 
 			return authToken;
 		}
@@ -58,9 +65,9 @@ namespace PlayerService.Services
 				.AddHeader(key: "game_id", value: PlatformEnvironment.Require<string>("PLARIUM_GAME"))
 				.AddHeader(key: "secret_key", value: PlatformEnvironment.Require<string>("PLARIUM_SECRET"))
 				.SetPayload(new RumbleJson 
-				            {
-					            { "auth_token", plariumToken }
-				            })
+				{
+					{ "auth_token", plariumToken }
+				})
 				.OnSuccess(_ => Log.Local(owner: Owner.Nathan, message: "Successfully validated Plarium token."))
 				.OnFailure(_ => Log.Error(owner: Owner.Nathan, message: "Failed to validate Plarium token."))
 				.Post(out RumbleJson response, out int code);
@@ -69,7 +76,7 @@ namespace PlayerService.Services
 			{
 				PlariumAccount plariumAccount = new PlariumAccount(plariumId: response["plid"].ToString(), login: response["login"].ToString());
 	            
-				return plariumAccount;
+				return new PlariumAccount(plariumId: response["plid"].ToString(), login: response["login"].ToString());
 			}
 			catch (Exception e)
 			{
