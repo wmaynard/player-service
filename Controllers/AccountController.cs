@@ -575,7 +575,24 @@ public class AccountController : PlatformController
     }
 
     [HttpGet, Route("status")]
-    public ActionResult GetAccountStatus() => Ok(_playerService.FromToken(Token));
+    public ActionResult GetAccountStatus()
+    {
+        Player output = _playerService.FromToken(Token);
+
+        RumbleAccount rumble = output.RumbleAccount;
+
+        if (rumble != null && rumble.Status == RumbleAccount.AccountStatus.NeedsConfirmation && !rumble.EmailBanned)
+        {
+            _apiService
+                .Request("http://localhost:5131/dmz/bounces/valid")
+                .AddParameter("email", rumble.Email)
+                .Get(out _, out int code);
+            
+            rumble.EmailBanned = code == 400;
+        }
+        
+        return Ok(output);
+    } 
 
 #region Utilities
     private string GenerateToken(Player player)

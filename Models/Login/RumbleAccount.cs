@@ -13,6 +13,7 @@ public class RumbleAccount : PlatformDataModel
     private const string DB_KEY_CODE = "code";
     private const string DB_KEY_CODE_EXPIRATION = "exp";
     private const string DB_KEY_EMAIL = "email";
+    private const string DB_KEY_EMAIL_BANNED = "badEmail";
     private const string DB_KEY_HASH = "hash";
     private const string DB_KEY_STATUS = "status";
     private const string DB_KEY_USERNAME = "username";
@@ -24,6 +25,7 @@ public class RumbleAccount : PlatformDataModel
     public const string FRIENDLY_KEY_CODE = "code";
     public const string FRIENDLY_KEY_CODE_EXPIRATION = "expiration";
     public const string FRIENDLY_KEY_EMAIL = "email";
+    public const string FRIENDLY_KEY_EMAIL_BANNED = "emailBanned";
     public const string FRIENDLY_KEY_HASH = "hash";
     public const string FRIENDLY_KEY_STATUS = "status";
     public const string FRIENDLY_KEY_USERNAME = "username";
@@ -45,6 +47,11 @@ public class RumbleAccount : PlatformDataModel
     [CompoundIndex(group: Player.INDEX_KEY_SEARCH, priority: 4)]
     [CompoundIndex(group: INDEX_KEY_FROM_SSO, priority: 1)]
     public string Email { get; set; }
+    
+    // [BsonElement(DB_KEY_EMAIL_BANNED)]
+    [BsonIgnore]
+    [JsonPropertyName(FRIENDLY_KEY_EMAIL_BANNED)]
+    public bool EmailBanned { get; set; }
 
     [BsonElement(DB_KEY_HASH)]
     [JsonInclude, JsonPropertyName(FRIENDLY_KEY_HASH), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
