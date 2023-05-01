@@ -586,10 +586,14 @@ public class AccountController : PlatformController
             _apiService
                 .Request("/dmz/bounces/valid")
                 .AddParameter("email", rumble.Email)
-                .OnFailure(_ => { })
-                .Get(out _, out int code);
-            
-            rumble.EmailBanned = code == 400;
+                .OnFailure(response =>
+                {
+                    if (response.StatusCode != 400)
+                        return;
+                    rumble.EmailBanned = true;
+                    rumble.Status = RumbleAccount.AccountStatus.EmailInvalid;
+                })
+                .Get();
         }
         
         return Ok(output.Prune());

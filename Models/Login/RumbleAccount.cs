@@ -75,11 +75,12 @@ public class RumbleAccount : PlatformDataModel
     public enum AccountStatus
     {
         None                = 0b0000_0000,
-        NeedsConfirmation   = 0b0000_0001, 
+        NeedsConfirmation   = 0b0000_0001,
         Confirmed           = 0b0000_0010,
         ResetRequested      = 0b0000_0110,
         ResetPrimed         = 0b0000_1010,
-        NeedsTwoFactor      = 0b0001_0010
+        NeedsTwoFactor      = 0b0001_0010,
+        EmailInvalid        = 0b0010_0000
     }
 
     public RumbleAccount() => ConfirmedIds = new List<string>();
