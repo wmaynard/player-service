@@ -584,7 +584,7 @@ public class AccountController : PlatformController
         if (rumble != null && rumble.Status == RumbleAccount.AccountStatus.NeedsConfirmation && !rumble.EmailBanned)
         {
             _apiService
-                .Request("http://localhost:5131/dmz/bounces/valid")
+                .Request("/dmz/bounces/valid")
                 .AddParameter("email", rumble.Email)
                 .Get(out _, out int code);
             
