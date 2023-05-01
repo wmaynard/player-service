@@ -592,7 +592,7 @@ public class AccountController : PlatformController
             rumble.EmailBanned = code == 400;
         }
         
-        return Ok(output);
+        return Ok(output.Prune());
     } 
 
 #region Utilities
