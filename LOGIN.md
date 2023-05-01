@@ -477,3 +477,33 @@ Every single client installation will create its own record in the `players` col
 player-service determines the parent account in the field `player.link`.  The parent account will not have this value, but the children will.
 
 When you hit `/adopt`, the account used becomes the parent (if it wasn't already).  All related accounts become children.
+
+## Handling Banned Emails
+
+On nonprod environments, email domains must be whitelisted to be valid.  In prod, all domains are valid, but DMZ will ban addresses that cause bounces; this is a necessary protection to maintain good standing with email providers.
+
+Of particular mention is during our account creation.  The game client has a loop that executes, checking on the `/account/status`, waiting for the Rumble Account status to change from an unconfirmed state.  If this state corresponds to `RumbleAccount.AccountStatus.EmailInvalid`, the client will know that _no email will ever arrive_, and should let the player know that something went wrong, and future attempts will also fail.
+
+Example response:
+
+```
+GET /account/status
+{
+    "player": {
+        ...
+        "rumbleAccount": {
+            "associatedAccounts": [],
+            "expiration": 1682981510,
+            "email": "william.maynard@blooper.com",
+            "emailBanned": true,                       <---
+            "status": 32,                              <---
+            "username": "william.maynard@blooper.com"
+        },
+        "screenname": "Player8b69ee6",
+        "token": null,
+        "id": "64503ee51d4a77b3227e8182"
+    }
+}
+```
+
+Banned emails are a much larger topic; for more information, refer to [DMZ's documentation](https://gitlab.cdrentertainment.com/platform-services/dmz-service/-/blob/main/EMAIL_BOUNCE_PREVENTION.md).
