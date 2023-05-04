@@ -495,7 +495,7 @@ public class AccountController : PlatformController
     {
         { Salt.FRIENDLY_KEY_SALT, _saltService
             .Fetch(
-                username: Require<string>(RumbleAccount.FRIENDLY_KEY_USERNAME), 
+                username: Require<string>(RumbleAccount.FRIENDLY_KEY_USERNAME).ToLower(), 
                 fromWeb: Token.IsAdmin
             )?.Value 
         }

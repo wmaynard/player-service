@@ -1,5 +1,6 @@
 using System.Text.Json.Serialization;
 using MongoDB.Bson.Serialization.Attributes;
+using Rumble.Platform.Common.Attributes;
 using Rumble.Platform.Data;
 
 namespace PlayerService.Models;
@@ -13,6 +14,7 @@ public class DiscriminatorMember : PlatformDataModel
 	
 	[BsonElement(DB_KEY_ACCOUNT_ID)]
 	[JsonInclude, JsonPropertyName(FRIENDLY_KEY_ACCOUNT_ID)]
+	[SimpleIndex]
 	public string AccountId { get; private set; }
 	
 	[BsonElement(DB_KEY_SCREENNAME)]
