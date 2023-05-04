@@ -115,6 +115,12 @@ public class SsoData : PlatformDataModel
 
         if (string.IsNullOrWhiteSpace(RumbleAccount?.Hash))
             RumbleAccount = null;
+
+        if (RumbleAccount != null)
+        {
+            RumbleAccount.Email = RumbleAccount.Email.ToLower();
+            RumbleAccount.Username = RumbleAccount.Username.ToLower();
+        }
     
         return this;
     }
