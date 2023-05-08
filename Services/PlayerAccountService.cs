@@ -57,6 +57,8 @@ public class PlayerAccountService : PlatformMongoService<Player>
 	{
 		// Change the screenname in the discriminator data first.  If this fails, the screenname change
 		// should also fail, and the exception will cause this to exit early.
+		_discriminatorService.Assign(accountId, screenname);
+		
 		int affected = (int)_collection.UpdateMany(
 			filter: player => player.Id == accountId || player.ParentId == accountId,
 			update: Builders<Player>.Update.Set(player => player.Screenname, screenname)
