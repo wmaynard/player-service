@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text.RegularExpressions;
 using Microsoft.Extensions.Options;
 using MongoDB.Driver;
+using PlayerService.Exceptions;
 using PlayerService.Exceptions.Login;
 using PlayerService.Models;
 using PlayerService.Models.Login;
@@ -27,6 +28,7 @@ public class PlayerAccountService : PlatformMongoService<Player>
 	private readonly ApiService _apiService;
 	private readonly DynamicConfig _config;
 	private readonly NameGeneratorService _nameGenerator;
+	private readonly DiscriminatorService _discriminatorService;
 
 	public PlayerAccountService(ApiService api, DynamicConfig config, NameGeneratorService nameGenerator, AccountService account) : base("players")
 	{
@@ -53,6 +55,8 @@ public class PlayerAccountService : PlatformMongoService<Player>
 	/// <returns></returns>
 	public int SyncScreenname(string screenname, string accountId, bool fromAdmin = false)
 	{
+		// Change the screenname in the discriminator data first.  If this fails, the screenname change
+		// should also fail, and the exception will cause this to exit early.
 		int affected = (int)_collection.UpdateMany(
 			filter: player => player.Id == accountId || player.ParentId == accountId,
 			update: Builders<Player>.Update.Set(player => player.Screenname, screenname)

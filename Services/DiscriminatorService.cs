@@ -30,15 +30,17 @@ public class DiscriminatorService : PlatformMongoService<DiscriminatorGroup>
 
 	private DiscriminatorGroup Find(Player player) => FindOne(group => group.Members.Any(member => member.AccountId == player.AccountId));
 
-	private int Assign(Player player)
+	private int Assign(Player player) => Assign(player.AccountId, player.Screenname);
+
+	public int Assign(string accountId, string screenname)
 	{
 		List<int> attempted = new List<int>();
 		for (int i = 0; i < MAX_ASSIGNMENT_ATTEMPTS; i++)
-			if (TryAssign(player.AccountId, player.Screenname, out int output))
+			if (TryAssign(accountId, screenname, out int output))
 				return output;
 			else
 				attempted.Add(output);
-		throw new DiscriminatorUnavailableException(player.AccountId, attempted);
+		throw new DiscriminatorUnavailableException(accountId, attempted);
 	}
 
 	public int Lookup(Player player)
