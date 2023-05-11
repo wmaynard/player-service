@@ -68,15 +68,25 @@ Examples:
 
 For simplicity, we'll use non-Unix timestamps to demonstrate functionality.  Assume the current time is 1000.
 
-| `Begins` Value | `Ends` Value | Result                                                     | 
-|:---------------|:-------------|:-----------------------------------------------------------|
-| 1600           | 2200         | Maintenance starts in 10 minutes and lasts for 10 minutes. |
-| (blank) | 2200 | Maintenance begins imminently and lasts for 20 minutes. |
-| 1600 | (blank) | Maintenance begins in 10 minutes and lasts an indefinite amount of time, and must be manually ended. |
-| 1600 | 900 | Nothing.  The end time is earlier than the current time. |
-| 1600 | 1600 | Nothing.  By the time maintenance mode would start, the end will be less than or equal to the current time. |
+| `Begins` Value | `Ends` Value | Result                                                                                                      | 
+|:---------------|:-------------|:------------------------------------------------------------------------------------------------------------|
+| 1600           | 2200         | Maintenance starts in 10 minutes and lasts for 10 minutes.                                                  |
+| (blank)        | 2200         | Maintenance begins imminently and lasts for 20 minutes.                                                     |
+| 1600           | (blank)      | Maintenance begins in 10 minutes and lasts an indefinite amount of time, and must be manually ended.        |
+| 1600           | 900          | Nothing.  The end time is earlier than the current time.                                                    |
+| 1600           | 1600         | Nothing.  By the time maintenance mode would start, the end will be less than or equal to the current time. |
 
-Only one period of maintenance can be scheduled at a time.  
+Only one period of maintenance can be scheduled at a time.
+
+## Whitelisting Accounts to Bypass Maintenance
+
+If you need to let players in during maintenance mode, you can do so via Dynamic Config.  This requires players to have signed up with some form of SSO and is not available to anonymous accounts.
+
+Under the player-service section, use the `maintenanceWhitelist` field.  This is a CSV string.  You can whitelist specific accounts (`joe.mcfugal@gmail.com`) or entire domains (`rumbleentertainment.com`).
+
+As long as a player has signed up with an account that matches the pattern, they will be allowed through.
+
+#### Important: the check that's made is just that the email address ends with whatever the whitelist has in it.  If you specify an entry as simply `.com`, or even `gmail.com`, you are opening maintenance mode to huge numbers of players. 
 
 ## Restoring Normal Functionality
 
