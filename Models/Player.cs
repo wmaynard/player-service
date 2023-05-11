@@ -32,6 +32,7 @@ public class Player : PlatformCollectionDocument
 	private const string DB_KEY_LINK_CODE_EXPIRATION = "linkExp";
 	private const string DB_KEY_PARENT_ID            = "parent";
 	private const string DB_KEY_PLARIUM_ACCOUNT      = "plarium";
+	private const string DB_KEY_REGION               = "geo";
 	private const string DB_KEY_RUMBLE_ACCOUNT       = "rumble";
 	private const string DB_KEY_SCREENNAME           = "sn";
 	
@@ -44,6 +45,7 @@ public class Player : PlatformCollectionDocument
 	public const string FRIENDLY_KEY_LAST_LOGIN      = "lastLogin";
 	public const string FRIENDLY_KEY_PARENT_ID       = "parentId";
 	public const string FRIENDLY_KEY_PLARIUM_ACCOUNT = "plariumAccount";
+	public const string FRIENDLY_KEY_REGION          = "geoData";
 	public const string FRIENDLY_KEY_RUMBLE_ACCOUNT  = "rumbleAccount";
 	public const string FRIENDLY_KEY_SCREENNAME      = "screenname";
 	public const string FRIENDLY_KEY_SEARCH_WEIGHT   = "weight";
@@ -86,6 +88,10 @@ public class Player : PlatformCollectionDocument
 	[BsonIgnore]
 	[JsonIgnore]
 	public Player Parent { get; set; }
+	
+	[BsonElement(DB_KEY_REGION)]
+	[JsonInclude, JsonPropertyName(FRIENDLY_KEY_REGION), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+	public GeoIPData LocationData { get; set; }
 	
 	[BsonIgnore]
 	[JsonPropertyName(FRIENDLY_KEY_CHILDREN), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]

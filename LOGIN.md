@@ -158,11 +158,45 @@ POST /dmz/player/account/login
 
 To use an anonymous account, simply omit the `sso` field, or don't include any information inside it.  This means the account will be tied _only_ to the current device.
 
-However, if the device has been previously linked to an account, you may still see account information come back in the response.
+However, if the device has been previously linked to an account, you will still see account information come back in the response.
 
 #### Important Note for Web Applications
 
 The `/salt` endpoint on the player-service side requires a token for security.  Game clients have a token already, but a web client doesn't.  However, DMZ will authenticate the request with its own admin token.  Use the DMZ version of the endpoint: `GET /dmz/player/account/salt?username=atakechi`.
+
+## Device Security (InstallId)
+
+Prior to 2023.05.09, if you knew an `installId`, you could launch into _any_ account, regardless of SSO / other accounts a player record was tied to.  While the `installId` is a 32-character GUID hex string, it was theoretically possible to brute-force your way into someone else's account - and attack the database with bloat at the same time.
+
+To combat the account access problem, player-service supports a **private key** as a secondary access to an account.  This requires client-side cooperation to lock the account down.
+
+### Mini-Glossary
+
+| Term                  | Definition                                                                                                                      |
+|:----------------------|:--------------------------------------------------------------------------------------------------------------------------------|
+| Confirmed Private Key | A key that is never exposed in any endpoint.  Acts as a secondary account access string.                                        |
+| Private Key           | A value provided by the client that's checked against the confirmed private key.  If it does not yet exist, it will be created. |
+| Client Device         | The local installed game client or a web application.                                                                           |
+| Stored Device         | The device record that exists on the database.                                                                                  |
+
+How it works:
+
+1. A request comes in to `/login` with a client device.
+2. player-service looks up the device `installId`.
+3. If the stored device (from the database) has a **confirmed private key**:
+   1. The client device has to also supply the same key in the field `device.privateKey`, or
+   2. The client device information must match perfectly with no private key specified (language, client version, data version, etc)
+4. Else if the stored device does not have a **confirmed private key**, and the client device has provided one, the stored device will update its **confirmed private key** to match.
+
+When the stored device lacks a confirmed private key, Platform will suggest (but not assign) one in the login response.  The suggested key is a hash calculated from the device's current information.  The client device may choose to store this value and use it in future requests or it can provide its own.  If providing your own value, it's encouraged to use some randomness, since a hacked client would be able to see the way you generate the private key.
+
+Note that if the device information changes in any way, has been locked down with a private key, and the private key is lost, the device will be inaccessible with the same `installId`.
+
+This is ultimately an optional security step.  It is not strictly necessary, and the service will operate as it has in the past without it, but adding a second string to validate against is helpful in preventing brute force attacks.  It may be required at a future date.
+
+When an account fails authentication via the private key, a `deviceMismatch` login diagnosis is returned.
+
+#### Important: Once confirmed, a private key cannot change!
 
 ## Create Account
 

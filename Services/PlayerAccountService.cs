@@ -73,27 +73,73 @@ public class PlayerAccountService : PlatformMongoService<Player>
 
 	public Player FromDevice(DeviceInfo device, bool isUpsert = false)
 	{
-		Player output = isUpsert
-			? _collection.FindOneAndUpdate<Player>(
-				filter: player => player.Device.InstallId == device.InstallId,
-				update: Builders<Player>.Update
-					.Set(player => player.Device, device)
-					.Set(player => player.LastLogin, Timestamp.UnixTime),
+		// Before 2023.05.05, a potential security hole was the fact that hitting login with a random ID theoretically
+		// could have resulted in accessing another player's account.  While very unlikely with a 32-digit hex GUID,
+		// it's certainly still possible to guess an installId.  To combat this, we calculate an initial hash.
+		// Device information will change over time, but the initial hash acts as a second secret that can continue to
+		// persist.
+		// The idea here is that 
+		Player stored = null;
+		UpdateDefinition<Player> update = Builders<Player>.Update
+			.Set(player => player.Device.ClientVersion, device.ClientVersion)
+			.Set(player => player.Device.DataVersion, device.DataVersion)
+			.Set(player => player.Device.Language, device.Language)
+			.Set(player => player.Device.OperatingSystem, device.OperatingSystem)
+			.Set(player => player.Device.Type, device.Type)
+			.Set(player => player.LastLogin, Timestamp.UnixTime);
+
+		stored = _collection
+			.Find(Builders<Player>.Filter.Eq(player => player.Device.InstallId, device.InstallId))
+			.Limit(1)
+			.FirstOrDefault();
+		
+		device.Compare(stored?.Device, out bool devicesIdentical, out bool keysAuthorized);
+		
+		// One of these conditions must be true; no record exists on the database, keysAuthorized is always true.
+		if (!(devicesIdentical || keysAuthorized))
+			throw new DeviceMismatchException();
+
+		if (!string.IsNullOrWhiteSpace(device.PrivateKey))
+		{
+			// If the devices are identical, our DB record exists, but the keys are wrong.  This could be an attack.
+			if (devicesIdentical && !keysAuthorized)
+				throw new DeviceMismatchException();
+
+			stored = _collection.FindOneAndUpdate(
+				filter: Builders<Player>.Filter.Eq(player => player.Device.InstallId, device.InstallId),
+				update: string.IsNullOrWhiteSpace(stored?.Device.ConfirmedPrivateKey)
+					// The stored record does not have a confirmed key yet; lock it in now.  This should happen exactly once per record.
+					? update.Set(player => player.Device.ConfirmedPrivateKey, device.PrivateKey) 
+					: update,
 				options: new FindOneAndUpdateOptions<Player>
 				{
 					IsUpsert = true,
 					ReturnDocument = ReturnDocument.After
 				}
-			)
-			: _collection
-				.Find(player => player.Device.InstallId == device.InstallId)
+			);
+		}
+		else // The client doesn't know its initial hash; only look up the record by installId.
+		{
+			
+			stored = _collection.FindOneAndUpdate(
+				filter: Builders<Player>.Filter.Eq(player => player.Device.InstallId, device.InstallId),
+				update: update,
+				options: new FindOneAndUpdateOptions<Player>
+				{
+					IsUpsert = true,
+					ReturnDocument = ReturnDocument.After
+				}
+			);
+			
+			stored?.Device?.CalculatePrivateKey();
+		}
+		
+		if (stored?.ParentId != null)
+			stored.Parent = _collection
+				.Find(player => player.Id == stored.ParentId)
 				.FirstOrDefault();
 
-		if (output?.ParentId != null)
-			output.Parent = _collection
-				.Find(player => player.Id == output.ParentId)
-				.FirstOrDefault();
-		return output?.Parent ?? output;
+		return stored?.Parent ?? stored;
 	}
 
 	public Player[] FromSso(SsoData sso)
@@ -828,5 +874,32 @@ public class PlayerAccountService : PlatformMongoService<Player>
 		Update(child);
 		
 		return child;
+	}
+
+	public override void Update(Player model, bool createIfNotFound = false)
+	{
+		_collection.UpdateOne(
+			filter: Builders<Player>.Filter.Eq(player => player.Id, model.Id),
+			update: Builders<Player>.Update
+				.Set(player => player.AppleAccount, model.AppleAccount)
+				.Set(player => player.GoogleAccount, model.GoogleAccount)
+				.Set(player => player.PlariumAccount, model.PlariumAccount)
+				.Set(player => player.RumbleAccount, model.RumbleAccount)
+				.Set(player => player.CreatedTimestamp, model.CreatedTimestamp)
+				.Set(player => player.LastLogin, model.LastLogin)
+				.Set(player => player.LinkCode, model.LinkCode)
+				.Set(player => player.LocationData, model.LocationData)
+				.Set(player => player.Device.ClientVersion, model.Device.ClientVersion)
+				.Set(player => player.Device.DataVersion, model.Device.DataVersion)
+				.Set(player => player.Device.Language, model.Device.Language)
+				.Set(player => player.Device.OperatingSystem, model.Device.OperatingSystem)
+				.Set(player => player.Device.Type, model.Device.Type)
+				.Set(player => player.LastLogin, Timestamp.UnixTime),
+			options: new UpdateOptions
+			{
+				IsUpsert = createIfNotFound
+			}
+		);
+		// base.Update(model, createIfNotFound);
 	}
 }

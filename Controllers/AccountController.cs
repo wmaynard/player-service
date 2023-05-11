@@ -2,6 +2,8 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
+using System.Security.Cryptography;
+using System.Text;
 using Microsoft.AspNetCore.Mvc;
 using MongoDB.Bson;
 using PlayerService.Exceptions.Login;
@@ -542,6 +544,8 @@ public class AccountController : PlatformController
 
             player.Discriminator = _discriminatorService.Lookup(player);
             player.LastLogin = Timestamp.UnixTime;
+            player.LocationData = GeoIPData;
+            
             if (player.CreatedTimestamp == default)
                 player.CreatedTimestamp = player.LastLogin;
 
@@ -597,9 +601,9 @@ public class AccountController : PlatformController
         }
         
         return Ok(output.Prune());
-    } 
+    }
 
-#region Utilities
+    #region Utilities
     private string GenerateToken(Player player)
     {
         int discriminator = _discriminatorService.Lookup(player);
@@ -734,6 +738,5 @@ public class AccountController : PlatformController
         });
         return true;
     }
-
     #endregion Utilities
 }
