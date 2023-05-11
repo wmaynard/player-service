@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text.RegularExpressions;
 using Microsoft.Extensions.Options;
 using MongoDB.Driver;
+using PlayerService.Controllers;
 using PlayerService.Exceptions;
 using PlayerService.Exceptions.Login;
 using PlayerService.Models;
@@ -876,30 +877,36 @@ public class PlayerAccountService : PlatformMongoService<Player>
 		return child;
 	}
 
-	public override void Update(Player model, bool createIfNotFound = false)
-	{
-		_collection.UpdateOne(
-			filter: Builders<Player>.Filter.Eq(player => player.Id, model.Id),
-			update: Builders<Player>.Update
-				.Set(player => player.AppleAccount, model.AppleAccount)
-				.Set(player => player.GoogleAccount, model.GoogleAccount)
-				.Set(player => player.PlariumAccount, model.PlariumAccount)
-				.Set(player => player.RumbleAccount, model.RumbleAccount)
-				.Set(player => player.CreatedTimestamp, model.CreatedTimestamp)
-				.Set(player => player.LastLogin, model.LastLogin)
-				.Set(player => player.LinkCode, model.LinkCode)
-				.Set(player => player.LocationData, model.LocationData)
-				.Set(player => player.Device.ClientVersion, model.Device.ClientVersion)
-				.Set(player => player.Device.DataVersion, model.Device.DataVersion)
-				.Set(player => player.Device.Language, model.Device.Language)
-				.Set(player => player.Device.OperatingSystem, model.Device.OperatingSystem)
-				.Set(player => player.Device.Type, model.Device.Type)
-				.Set(player => player.LastLogin, Timestamp.UnixTime),
-			options: new UpdateOptions
-			{
-				IsUpsert = createIfNotFound
-			}
-		);
-		// base.Update(model, createIfNotFound);
-	}
+	public override void Update(Player model, bool createIfNotFound = false) => _collection.UpdateOne(
+		filter: Builders<Player>.Filter.Eq(player => player.Id, model.Id),
+		update: Builders<Player>.Update
+			.Set(player => player.AppleAccount, model.AppleAccount)
+			.Set(player => player.GoogleAccount, model.GoogleAccount)
+			.Set(player => player.PlariumAccount, model.PlariumAccount)
+			.Set(player => player.RumbleAccount, model.RumbleAccount)
+			.Set(player => player.CreatedTimestamp, model.CreatedTimestamp)
+			.Set(player => player.LastLogin, model.LastLogin)
+			.Set(player => player.LinkCode, model.LinkCode)
+			.Set(player => player.LocationData, model.LocationData)
+			.Set(player => player.Device.ClientVersion, model.Device.ClientVersion)
+			.Set(player => player.Device.DataVersion, model.Device.DataVersion)
+			.Set(player => player.Device.Language, model.Device.Language)
+			.Set(player => player.Device.OperatingSystem, model.Device.OperatingSystem)
+			.Set(player => player.Device.Type, model.Device.Type)
+			.Set(player => player.LastLogin, Timestamp.UnixTime),
+		options: new UpdateOptions
+		{
+			IsUpsert = createIfNotFound
+		}
+	);
+
+	public string GenerateToken(string accountId) => GenerateToken(Find(accountId));
+
+	public string GenerateToken(Player player) => _apiService.GenerateToken(
+		player.AccountId,
+		player.Screenname,
+		email: player.Email,
+		discriminator: _discriminatorService.Lookup(player),
+		audiences: AccountController.TOKEN_AUDIENCE
+	);
 }

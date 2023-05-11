@@ -114,7 +114,8 @@ public class DeviceInfo : PlatformDataModel
         DataVersion = DataVersion?.Limit(20);
         InstallId = InstallId.Limit(50);
         PrivateKey = PrivateKey?.Limit(50);
-        
 
+        if (PrivateKey != null)
+            PrivateKey = Crypto.Encode(PrivateKey);
     }
 }

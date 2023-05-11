@@ -193,11 +193,19 @@ When the stored device lacks a confirmed private key, Platform will suggest (but
 
 Note that if the device information changes in any way, has been locked down with a private key, and the private key is lost, the device will be inaccessible with the same `installId`.
 
+Private keys are also encrypted before they're stored in our database, so even in the event of a database breach, accounts remain secured.  Consequently, the value sent for the private key won't match if you're looking at the record in MongoDB.
+
 This is ultimately an optional security step.  It is not strictly necessary, and the service will operate as it has in the past without it, but adding a second string to validate against is helpful in preventing brute force attacks.  It may be required at a future date.
 
 When an account fails authentication via the private key, a `deviceMismatch` login diagnosis is returned.
 
 #### Important: Once confirmed, a private key cannot change!
+
+## Logging in as a Player (Admin feature)
+
+Occasionally it's sometimes necessary to access a player's account.  For security reasons, this should be an extremely rare use case, but especially for developers who need to hit endpoints to see the data a player is receiving, it can be a really important tool.
+
+Previously, when devices were only secured by an `installId`, you could hit `/login` with it and get the player's token.  Once devices have a confirmed private key, however, this approach will not work.  Instead, the proper route to go through is to use Portal.  Refer to Portal's documentation for more information on how to do this.
 
 ## Create Account
 
