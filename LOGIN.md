@@ -79,7 +79,8 @@ POST /player/v2/account/login
         "clientVersion": "0.1.432",
         "language": "English",
         "osVersion": "macOS 11.6",
-        "type": "Postman"
+        "type": "Postman",
+        "privateKey": "someRandomValueOrHash"     // See Device Security section for more details
     },
     "sso": {
         "appleToken": "eyJhb....ABSsQ",
