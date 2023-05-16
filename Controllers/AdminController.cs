@@ -320,9 +320,9 @@ public class AdminController : PlatformController
 					.Wait();
 
 			return Ok(new RumbleJson
-			          {
-				          { "affected", affected }
-			          });
+			{
+				{ "affected", affected }
+			});
 		}
 
 		// When using postman, '+' comes through as a space because it's not URL-encoded.

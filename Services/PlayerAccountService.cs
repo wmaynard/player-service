@@ -893,7 +893,8 @@ public class PlayerAccountService : PlatformMongoService<Player>
 			.Set(player => player.Device.Language, model.Device.Language)
 			.Set(player => player.Device.OperatingSystem, model.Device.OperatingSystem)
 			.Set(player => player.Device.Type, model.Device.Type)
-			.Set(player => player.LastLogin, Timestamp.UnixTime),
+			.Set(player => player.LastLogin, Timestamp.UnixTime)
+			.Set(player => player.Screenname, model.Screenname),
 		options: new UpdateOptions
 		{
 			IsUpsert = createIfNotFound
