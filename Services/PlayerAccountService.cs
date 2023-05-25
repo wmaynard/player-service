@@ -315,10 +315,14 @@ public class PlayerAccountService : PlatformMongoService<Player>
 				{ "code", rumble.ConfirmationCode },
 				{ "expiration", rumble.CodeExpiration }
 			})
-			.OnFailure(response => Log.Error(Owner.Will, "Unable to send Rumble account confirmation email.", new
+			.OnFailure(response =>
 			{
-				Response = response
-			}))
+				player.RumbleAccount.EmailBanned = true;
+				Log.Error(Owner.Will, "Unable to send Rumble account confirmation email.", new
+				{
+					Response = response
+				});
+			})
 			.Post();
 
 		return player;
