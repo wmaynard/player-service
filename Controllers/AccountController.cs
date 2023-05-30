@@ -499,10 +499,8 @@ public class AccountController : PlatformController
     public ActionResult GetSalt() => Ok(new RumbleJson
     {
         { Salt.FRIENDLY_KEY_SALT, _saltService
-            .Fetch(
-                username: Require<string>(RumbleAccount.FRIENDLY_KEY_USERNAME).ToLower(), 
-                fromWeb: Token.IsAdmin
-            )?.Value 
+            .Fetch(username: Require<string>(RumbleAccount.FRIENDLY_KEY_USERNAME).ToLower())
+            ?.Value 
         }
     });
 

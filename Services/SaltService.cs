@@ -16,7 +16,7 @@ public class SaltService : PlatformMongoService<Salt>
 {
     public SaltService() : base("salt") { }
 
-    public Salt Fetch(string username, bool fromWeb = false)
+    public Salt Fetch(string username)
     {
         Salt upsert = new Salt
         {
@@ -35,7 +35,7 @@ public class SaltService : PlatformMongoService<Salt>
                         .Set(salt => salt.Value, upsert.Value),
                     options: new FindOneAndUpdateOptions<Salt>
                     {
-                        IsUpsert = !fromWeb,
+                        IsUpsert = true,
                         ReturnDocument = ReturnDocument.After
                     }
                 )
