@@ -37,7 +37,8 @@ public class AccountController : PlatformController
         | Audience.NftService
         | Audience.PlayerService
         | Audience.PvpService
-        | Audience.ReceiptService;
+        | Audience.ReceiptService
+        | Audience.GameServer;
     
 #pragma warning disable
     private readonly PlayerAccountService _playerService;
@@ -188,9 +189,9 @@ public class AccountController : PlatformController
             // This is a quick kluge to enable debugging purposes without having to worry about URL-encoded params in Postman.
             if (_playerService.DeleteGoogleAccountById(playerId) == 0 && _playerService.DeleteGoogleAccountById(playerId.Trim().Replace(" ", "+")) == 0)
                 throw new RecordNotFoundException(_playerService.CollectionName, "Rumble account not found.", data: new RumbleJson
-                                                                                                                    {
-                                                                                                                        { "accountId", playerId }
-                                                                                                                    });
+                {
+                    { "accountId", playerId }
+                });
         }
         catch (Exception e)
         {
