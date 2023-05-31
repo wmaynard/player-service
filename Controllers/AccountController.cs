@@ -95,7 +95,7 @@ public class AccountController : PlatformController
                 {
                     body = Body
                 });
-            DeviceInfo device = Require<DeviceInfo>(Player.FRIENDLY_KEY_DEVICE);
+            DeviceInfo device = _playerService.Find(Token?.AccountId)?.Device ?? Require<DeviceInfo>(Player.FRIENDLY_KEY_DEVICE);
             AppleAccount apple = AppleAccount.ValidateToken(Require<string>(SsoData.FRIENDLY_KEY_APPLE_TOKEN), Require<string>(SsoData.FRIENDLY_KEY_APPLE_NONCE));
 
             Player fromDevice = _playerService.FromDevice(device, isUpsert: true);
@@ -155,7 +155,7 @@ public class AccountController : PlatformController
                 {
                     body = Body
                 });
-            DeviceInfo device = Require<DeviceInfo>(Player.FRIENDLY_KEY_DEVICE);
+            DeviceInfo device = _playerService.Find(Token?.AccountId)?.Device ?? Require<DeviceInfo>(Player.FRIENDLY_KEY_DEVICE);
             GoogleAccount google = GoogleAccount.ValidateToken(Require<string>(SsoData.FRIENDLY_KEY_GOOGLE_TOKEN));
         
             Player fromDevice = _playerService.FromDevice(device, isUpsert: true);
@@ -215,7 +215,7 @@ public class AccountController : PlatformController
                 {
                     body = Body
                 });
-            DeviceInfo device = Require<DeviceInfo>(Player.FRIENDLY_KEY_DEVICE);
+            DeviceInfo device = _playerService.Find(Token?.AccountId)?.Device ?? Require<DeviceInfo>(Player.FRIENDLY_KEY_DEVICE);
 
             PlariumAccount plarium;
             
@@ -384,7 +384,7 @@ public class AccountController : PlatformController
                 );
                 redirectUrl = failure.Replace("{reason}", "otpFailure");
             })
-            .Post(out RumbleJson json, out int rCode);
+            .Post();
 
         // e.g. https://eng.towersandtitans.com/email/failure/otpFailure
         if (player.RumbleAccount == null)
