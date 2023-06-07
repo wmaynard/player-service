@@ -1,20 +1,11 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Reflection;
-using System.Threading.Tasks;
 using Google.Apis.Auth.AspNetCore3;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.Extensions.DependencyInjection;
 using PlayerService.Filters;
 using RCL.Logging;
 using Rumble.Platform.Common.Enums;
-using Rumble.Platform.Common.Interop;
-using Rumble.Platform.Common.Models.Alerting;
-using Rumble.Platform.Common.Services;
 using Rumble.Platform.Common.Utilities;
 using Rumble.Platform.Common.Web;
-using Rumble.Platform.Data;
 
 namespace PlayerService;
 public class Startup : PlatformStartup

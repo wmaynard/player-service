@@ -14,6 +14,7 @@ public class LoginDiagnosis : PlatformDataModel
     public bool EmailNotConfirmed { get; set; }
     public bool EmailCodeExpired { get; set; }
     public bool EmailInUse { get; set; }
+    public bool EmailInvalid { get; set; }
     public bool PasswordInvalid { get; set; }
     public bool CodeInvalid { get; set; }
     public bool DuplicateAccount { get; set; }
@@ -37,8 +38,9 @@ public class LoginDiagnosis : PlatformDataModel
         CodeInvalid = ex.Code == ErrorCode.ConfirmationCodeInvalid;
         DuplicateAccount = ex.Code == ErrorCode.MongoUnexpectedFoundCount;
         DeviceMismatch = ex.Code == ErrorCode.DeviceMismatch;
+        EmailInvalid = ex.Code == ErrorCode.EmailInvalidOrBanned;
         
-        Other = !(Maintenance || EmailNotLinked || EmailNotConfirmed || EmailCodeExpired || PasswordInvalid || DuplicateAccount || CodeInvalid || DeviceMismatch);
+        Other = !(Maintenance || EmailNotLinked || EmailNotConfirmed || EmailCodeExpired || PasswordInvalid || DuplicateAccount || CodeInvalid || DeviceMismatch || EmailInvalid);
         Message = ex.Message;
         Code = ex.Code;
 

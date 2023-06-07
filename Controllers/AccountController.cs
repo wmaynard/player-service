@@ -503,13 +503,22 @@ public class AccountController : PlatformController
     public ActionResult Link() => Ok(_playerService.LinkAccounts(Token.AccountId));
 
     [HttpGet, Route("salt"), RequireAuth]
-    public ActionResult GetSalt() => Ok(new RumbleJson
+    public ActionResult GetSalt()
     {
-        { Salt.FRIENDLY_KEY_SALT, _saltService
-            .Fetch(username: Require<string>(RumbleAccount.FRIENDLY_KEY_USERNAME).ToLower())
-            ?.Value 
-        }
-    });
+        string username = Require<string>(RumbleAccount.FRIENDLY_KEY_USERNAME).ToLower();
+
+        if (!EmailRegex.IsValid(username))
+            return Problem(new LoginDiagnosis(new PlatformException($"Email address is invalid ({username}).", code: ErrorCode.EmailInvalidOrBanned)));
+
+        return Ok(new RumbleJson
+        {
+            {
+                Salt.FRIENDLY_KEY_SALT, _saltService
+                    .Fetch(username: Require<string>(RumbleAccount.FRIENDLY_KEY_USERNAME).ToLower())
+                    ?.Value
+            }
+        });
+    }
 
     [HttpGet, Route("refresh"), RequireAuth]
     public ActionResult RefreshToken()
