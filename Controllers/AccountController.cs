@@ -429,7 +429,10 @@ public class AccountController : PlatformController
     {
         try
         {
-            return Ok(_playerService.BeginReset(Require<string>(RumbleAccount.FRIENDLY_KEY_EMAIL)));
+            return Ok(_playerService
+                .BeginReset(Require<string>(RumbleAccount.FRIENDLY_KEY_EMAIL))
+                .Prune()
+            );
         }
         catch (PlatformException e)
         {
@@ -454,7 +457,10 @@ public class AccountController : PlatformController
 
             accountId?.MustBeMongoId();
 
-            return Ok(_playerService.CompleteReset(username, code)?.Prune());
+            return Ok(_playerService
+                .CompleteReset(username, code)
+                ?.Prune()
+            );
         }
         catch (PlatformException e)
         {
