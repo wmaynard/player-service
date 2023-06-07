@@ -508,7 +508,14 @@ public class AccountController : PlatformController
         string username = Require<string>(RumbleAccount.FRIENDLY_KEY_USERNAME).ToLower();
 
         if (!EmailRegex.IsValid(username))
+        {
+            Log.Error(Owner.Will, "Incoming request is using an invalid email address to generate a salt", data: new
+            {
+                Email = username,
+                Help = "This can frequently be an issue with the query string.  If not encoded, emails with a + in them don't come in to platform.  The + needs to be encoded for those situations."
+            });
             return Problem(new LoginDiagnosis(new PlatformException($"Email address is invalid ({username}).", code: ErrorCode.EmailInvalidOrBanned)));
+        }
 
         return Ok(new RumbleJson
         {
