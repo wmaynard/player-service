@@ -48,6 +48,7 @@ public class AccountController : PlatformController
     private readonly NameGeneratorService _nameGeneratorService;
     private readonly AuditService _auditService;
     private readonly SaltService _saltService;
+    private readonly LockoutService _lockoutService;
 	
     // Component Services
     private readonly AbTestService _abTestService;
@@ -544,15 +545,16 @@ public class AccountController : PlatformController
     [HttpPost, Route("login"), NoAuth, HealthMonitor(weight: 1)]
     public ActionResult Login()
     {
+        SsoData sso = null;
         try
         {
             // Device used to be a required field.  However, in order to support web logins for marketplace, it must now
             // be an optional field.  Websites can't possibly know the correct installId, and as such can only be used
             // to access existing linked accounts through SSO.
             DeviceInfo device = Optional<DeviceInfo>(Player.FRIENDLY_KEY_DEVICE);
-            SsoData sso = Optional<SsoData>("sso")?.ValidateTokens();
+            sso = Optional<SsoData>("sso")?.ValidateTokens();
             Player player;
-            Player[] others = _playerService.FromSso(sso);
+            Player[] others = _playerService.FromSso(sso, IpAddress);
             
             if (device != null) // The request originates from the game client since we have an installId.
             {
@@ -598,6 +600,11 @@ public class AccountController : PlatformController
         }
         catch (PlatformException e)
         {
+            LoginDiagnosis diagnosis = new LoginDiagnosis(e);
+
+            if (diagnosis.PasswordInvalid && !string.IsNullOrWhiteSpace(sso?.RumbleAccount?.Email))
+                _lockoutService.RegisterError(sso.RumbleAccount.Email, IpAddress);
+            
             return Problem(new LoginDiagnosis(e));
         }
     }

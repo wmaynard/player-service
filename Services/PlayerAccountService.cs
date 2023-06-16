@@ -30,13 +30,16 @@ public class PlayerAccountService : PlatformMongoService<Player>
 	private readonly DynamicConfig _config;
 	private readonly NameGeneratorService _nameGenerator;
 	private readonly DiscriminatorService _discriminatorService;
+	private readonly LockoutService _lockoutService;
 
-	public PlayerAccountService(ApiService api, DynamicConfig config, NameGeneratorService nameGenerator, AccountService account) : base("players")
+	public PlayerAccountService(ApiService api, DynamicConfig config, NameGeneratorService nameGenerator, AccountService account, DiscriminatorService discriminator, LockoutService lockout) : base("players")
 	{
 		_apiService = api;
 		_config = config;
 		_nameGenerator = nameGenerator;
 		_accountService = account;
+		_discriminatorService = discriminator;
+		_lockoutService = lockout;
 	}  
 
 	public Player Find(string accountId) => FindOne(player => player.Id == accountId);
@@ -143,7 +146,7 @@ public class PlayerAccountService : PlatformMongoService<Player>
 		return stored?.Parent ?? stored;
 	}
 
-	public Player[] FromSso(SsoData sso)
+	public Player[] FromSso(SsoData sso, string ipAddress)
 	{
 		if (sso == null)
 			return Array.Empty<Player>();
@@ -163,7 +166,7 @@ public class PlayerAccountService : PlatformMongoService<Player>
 			filters.Add(builder.Eq(player => player.AppleAccount.Id, sso.AppleAccount.Id));
 		if (usePlarium)
 			filters.Add(builder.Eq(player => player.PlariumAccount.Id, sso.PlariumAccount.Id));
-		if (useRumble)
+		if (useRumble && _lockoutService.EnsureNotLockedOut(sso.RumbleAccount.Username, ipAddress))
 			filters.Add(builder.And(
 				builder.Eq(player => player.RumbleAccount.Username, sso.RumbleAccount.Username),
 				builder.Eq(player => player.RumbleAccount.Hash, sso.RumbleAccount.Hash),

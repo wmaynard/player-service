@@ -1,0 +1,55 @@
+using System;
+using System.Linq;
+using PlayerService.Exceptions.Login;
+using PlayerService.Models.Login;
+using Rumble.Platform.Common.Minq;
+using Rumble.Platform.Common.Services;
+using Rumble.Platform.Common.Utilities;
+
+namespace PlayerService.Services;
+
+public class LockoutService : MinqService<IpAccessLog>
+{
+    public static int Threshold => DynamicConfig.Instance?.Optional<int?>("ipLockoutThreshold") ?? 5;
+    public static int Cooldown => DynamicConfig.Instance?.Optional<int?>("ipLockoutMinutes") ?? 5;
+    public static int AttemptsToKeep => Math.Min(100, Threshold * 5);
+
+    public LockoutService() : base("lockouts") { }
+
+    /// <summary>
+    /// Guarantees that the provided email / IP address are okay to continue with login.  Will throw an exception if not.
+    /// </summary>
+    /// <param name="email"></param>
+    /// <param name="ip"></param>
+    /// <returns></returns>
+    /// <exception cref="LockoutException"></exception>
+    public bool EnsureNotLockedOut(string email, string ip)
+    {
+        // This should be quite rare, but we can't enforce account locks without the IpAddress.
+        if (string.IsNullOrWhiteSpace(ip))
+            return true;
+
+        long[] attempts = mongo
+            .Where(query => query
+                .EqualTo(log => log.Email, email)
+                .EqualTo(log => log.IpAddress, ip)
+            )
+            .Project(log => log.Timestamps)
+            ?.FirstOrDefault()
+            ?.Where(val => val > Timestamp.UnixTime - Cooldown * 60)
+            .ToArray()
+            ?? Array.Empty<long>();
+
+        if (attempts.Length >= Threshold)
+            throw new LockoutException(email, ip, waitTime: attempts.OrderByDescending(_ => _).Take(Threshold).Last());
+
+        return true;
+    }
+
+    public IpAccessLog RegisterError(string email, string ip) => mongo
+        .Where(query => query
+            .EqualTo(log => log.Email, email)
+            .EqualTo(log => log.IpAddress, ip)
+        )
+        .Upsert(query => query.AddItems(log => log.Timestamps, limitToKeep: AttemptsToKeep, Timestamp.UnixTime));
+}

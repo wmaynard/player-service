@@ -550,3 +550,40 @@ GET /account/status
 ```
 
 Banned emails are a much larger topic; for more information, refer to [DMZ's documentation](https://gitlab.cdrentertainment.com/platform-services/dmz-service/-/blob/main/EMAIL_BOUNCE_PREVENTION.md).
+
+## The Login Diagnosis
+
+In order to improve client handling and communication, all login-adjacent endpoints will return a `LoginDiagnosis` when a request fails.  These necessarily will return a 400 error code, but they contain a helpful model with boolean values to indicate exactly what's wrong.
+
+The example below should be mostly self-evident of what was wrong with the request that generated it:
+
+```
+HTTP 400
+{
+    "loginDiagnosis": {
+        "accountLocked": true,
+        "emailNotLinked": false,
+        "emailNotConfirmed": false,
+        "emailCodeExpired": false,
+        "emailInUse": false,
+        "emailInvalid": false,
+        "passwordInvalid": false,
+        "codeInvalid": false,
+        "duplicateAccount": false,
+        "deviceMismatch": false,
+        "maintenance": false,
+        "other": false,
+        "message": "This account is locked.  Try again later.",
+        "code": 1112,
+        "stackTrace": "   at PlayerService.Services.LockoutService.EnsureNotLockedOut(String email, String ip) in /Users/Will/Dev/NET/Platform/player-service/Services/LockoutService.cs:line 42\n   at PlayerService.Services.PlayerAccountService.FromSso(SsoData sso, String ipAddress) in /Users/Will/Dev/NET/Platform/player-service/Services/PlayerAccountService.cs:line 169\n   at PlayerService.Controllers.AccountController.Login() in /Users/Will/Dev/NET/Platform/player-service/Controllers/AccountController.cs:line 557",
+        "data": {
+            "secondsRemaining": 294
+        }
+    }
+}
+```
+
+**Important Notes**
+* `stackTrace` will only show up in nonprod environments
+* `data` is a generic JSON object and can be used to attach any relevant information.  It's up to the client whether or not to use this.  At the time of this writing, it's only used for account lockouts.
+* `other` indicates an unknown or otherwise unhandled exception occurred; these need to be addressed.
