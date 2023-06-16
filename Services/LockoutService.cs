@@ -26,7 +26,8 @@ public class LockoutService : MinqService<IpAccessLog>
     public bool EnsureNotLockedOut(string email, string ip)
     {
         // This should be quite rare, but we can't enforce account locks without the IpAddress.
-        if (string.IsNullOrWhiteSpace(ip))
+        // If the threshold is not a positive number, the lockout is disabled.
+        if (string.IsNullOrWhiteSpace(ip) || Threshold <= 0)
             return true;
 
         long[] attempts = mongo

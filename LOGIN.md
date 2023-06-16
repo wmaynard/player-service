@@ -587,3 +587,27 @@ HTTP 400
 * `stackTrace` will only show up in nonprod environments
 * `data` is a generic JSON object and can be used to attach any relevant information.  It's up to the client whether or not to use this.  At the time of this writing, it's only used for account lockouts.
 * `other` indicates an unknown or otherwise unhandled exception occurred; these need to be addressed.
+
+## Account Lockouts
+
+We have some protection against login spam attacks.  This is based on IP address, not by Rumble email, and can be configured in Dynamic Config.
+
+There are two relevant values:
+
+* `ipLockoutThreshold` determines the number of failed attempts to trigger a lockout (this is capped in the code at a maximum of 100).
+* `ipLockoutMinutes` is the timespan for the lockout.
+
+For an example of how this works in practice, let’s say I have the values of:
+
+```
+ipLockoutThreshold: 10
+ipLockoutMinutes:   5
+```
+
+I try to log in with an incorrect password once every 10 seconds.  On the 11th attempt, instead of an invalid password error, I’ll see an account locked error.  11 attempts means it’s been 110 seconds, so I’m effectively locked out for 190 more seconds (3m10s).
+
+After the 3m10s, I can make a single attempt again, or if I wait 5 minutes, I can make 10 more attempts.  This is a rolling protection as opposed to a straight cooldown.
+
+Since this is based on IP address, it should be highly unlikely a user would be affected by it unless they lived in the same region.
+
+**To disable account lockouts, set `ipLockoutThreshold` to a value less than or equal to 0.**  (Blank values are considered 0)
