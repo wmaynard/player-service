@@ -10,8 +10,8 @@ namespace PlayerService.Services;
 
 public class LockoutService : MinqService<IpAccessLog>
 {
-    public static int Threshold => DynamicConfig.Instance?.Optional<int?>("ipLockoutThreshold") ?? 5;
-    public static int Cooldown => DynamicConfig.Instance?.Optional<int?>("ipLockoutMinutes") ?? 5;
+    public static int Threshold => DynamicConfig.Instance?.Optional<int>("ipLockoutThreshold") ?? 5;
+    public static int Cooldown => Math.Max(1, DynamicConfig.Instance?.Optional<int>("ipLockoutMinutes") ?? 5);
     public static int AttemptsToKeep => Math.Min(100, Threshold * 5);
 
     public LockoutService() : base("lockouts") { }
