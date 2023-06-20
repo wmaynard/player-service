@@ -95,7 +95,6 @@ stage-b:
 TT-production-a1:
   extends: .auto-deploy
   stage: production
-  needs: ["stage-a"]
   variables:
     KUBE_CONTEXT: "platform-services/platform-services-agent:prod-a1-platform-services"
     KUBE_INGRESS_BASE_DOMAIN: platform-a1.prod.tower.rumblegames.com
@@ -124,7 +123,6 @@ TT-production-a1:
 TT-production-a2:
   extends: .auto-deploy
   stage: production-2
-  needs: ["stage-a"]
   variables:
     KUBE_CONTEXT: "platform-services/platform-services-agent:prod-a2-platform-services"
     KUBE_INGRESS_BASE_DOMAIN: platform-a2.prod.tower.rumblegames.com
