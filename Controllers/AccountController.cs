@@ -375,13 +375,14 @@ public class AccountController : PlatformController
                     Response = response
                 });
                 _apiService.Alert(
-                    title: "OTP Generation Failure",
+                    title: "Account Confirmation OTP Generation Failure",
                     message: "One-time password generation is failing in player-service ",
                     countRequired: 15,
                     timeframe: 600,
                     owner: Owner.Will,
                     impact: ImpactType.ServicePartiallyUsable,
-                    data: response.AsRumbleJson
+                    data: response.AsRumbleJson,
+                    confluenceLink: "https://rumblegames.atlassian.net/wiki/spaces/TH/pages/3317497857/Account+Confirmation+OTP+Generation+Failure"
                 );
                 redirectUrl = failure.Replace("{reason}", "otpFailure");
             })
