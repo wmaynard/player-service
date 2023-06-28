@@ -70,7 +70,7 @@ public class MaintenanceFilter : PlatformFilter, IActionFilter
             return;
         }
 
-        if (context.TryGetToken(out TokenInfo token) && whitelist.Any(domain => token.Email.EndsWith(domain)))
+        if (context.TryGetToken(out TokenInfo token) && token != null && whitelist.Any(domain => token.Email.EndsWith(domain)))
             return;
 
         if (url.EndsWith("/login") && context.TryGetBody(out RumbleJson body))
