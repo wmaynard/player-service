@@ -44,6 +44,15 @@ public class PlayerAccountService : PlatformMongoService<Player>
 
 	public Player Find(string accountId) => FindOne(player => player.Id == accountId);
 
+	/// <summary>
+	/// Returns true if there are any documents in the database matching the provided device installId.  This is used to circumvent
+	/// the upsert behavior in FromDevice for maintenance mode.
+	/// </summary>
+	/// <param name="device">The device information to look up.</param>
+	/// <returns>True if the device already exists.</returns>
+	public bool InstallIdExists(DeviceInfo device) => device?.InstallId != null && _collection
+		.CountDocuments(Builders<Player>.Filter.Eq(player => player.Device.InstallId, device.InstallId)) > 0;
+
 	public List<Player> DirectoryLookup(params string[] accountIds) => _collection
 		.Find(Builders<Player>.Filter.In(player => player.Id, accountIds))
 		.ToList();
