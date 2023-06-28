@@ -70,7 +70,14 @@ public class MaintenanceFilter : PlatformFilter, IActionFilter
             return;
         }
 
-        if (context.TryGetToken(out TokenInfo token) && token != null && whitelist.Any(domain => token.Email.EndsWith(domain)))
+        bool hasToken = context.TryGetToken(out TokenInfo token) && token != null;
+
+        // This is necessary to get past /config and to generate the token when a whitelist exists.
+        if (whitelist.Any() && url.EndsWith("/config"))
+            return;
+
+        // If we have a token and it's whitelisted, let it through.
+        if (hasToken && whitelist.Any(entry => token.Email.EndsWith(entry)))
             return;
 
         if (url.EndsWith("/login") && context.TryGetBody(out RumbleJson body))
