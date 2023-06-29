@@ -78,7 +78,7 @@ public class MaintenanceFilter : PlatformFilter, IActionFilter
             return;
 
         // If we have a token and it's whitelisted, let it through.
-        if (hasToken && whitelist.Any(entry => token.Email.EndsWith(entry)))
+        if (hasToken && !string.IsNullOrWhiteSpace(token.Email) && whitelist.Any(entry => token.Email.EndsWith(entry)))
             return;
 
         if (url.EndsWith("/login") && context.TryGetBody(out RumbleJson body))
