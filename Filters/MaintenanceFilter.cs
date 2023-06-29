@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -103,6 +104,16 @@ public class MaintenanceFilter : PlatformFilter, IActionFilter
                 if (player?.Email != null && whitelist.Any(domain => player.Email.EndsWith(domain)))
                     return;
 
+                
+                SsoData ssoData = body.Optional<SsoData>("sso")?.ValidateTokens();
+                Player[] ssoPlayers = playerService.FromSso(ssoData, "0.0.0.0");
+
+                if (whitelist
+                    .Intersect(ssoPlayers
+                        .Where(sso => !string.IsNullOrWhiteSpace(sso?.Email))
+                        .Select(sso => sso.Email))
+                    .Any())
+                    return;
             }
             catch { }
         }
