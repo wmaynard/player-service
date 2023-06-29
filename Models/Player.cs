@@ -135,7 +135,8 @@ public class Player : PlatformCollectionDocument
 	[JsonIgnore]
 	public string Email => RumbleAccount?.Email
 		?? GoogleAccount?.Email
-		?? AppleAccount?.Email;
+		?? AppleAccount?.Email
+		?? PlariumAccount?.Email;
 	
 	/// <summary>
 	/// Uses arbitrary values to decide how relevant a search term is to this player.  Screennames are heavily favored over all other fields; consider a situation where we have 
@@ -181,7 +182,7 @@ public class Player : PlatformCollectionDocument
 		weigh(AppleAccount?.Email, WEIGHT_EMAIL);
 		weigh(GoogleAccount?.Email, WEIGHT_EMAIL);
 		weigh(GoogleAccount?.Name, WEIGHT_REAL_NAME);
-		weigh(PlariumAccount?.Login, WEIGHT_EMAIL);
+		weigh(PlariumAccount?.Email, WEIGHT_EMAIL);
 
 		output += termWeight;
 		

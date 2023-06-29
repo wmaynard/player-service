@@ -10,45 +10,37 @@ namespace PlayerService.Models.Login;
 public class PlariumAccount : PlatformDataModel
 {
 	private const string DB_KEY_PLARIUM_ID = "plid";
-	private const string DB_KEY_LOGIN     = "login";
+	private const string DB_KEY_EMAIL     = "email";
 
 	public const string FRIENDLY_KEY_PLARIUM_ID = "plariumId";
-	public const string FRIENDLY_KEY_LOGIN      = "login";
+	public const string FRIENDLY_KEY_EMAIL      = "email";
 	
 	[BsonElement(DB_KEY_PLARIUM_ID)]
 	[JsonInclude, JsonPropertyName(FRIENDLY_KEY_PLARIUM_ID)]
 	public string Id { get; set; }
 	
-	[BsonElement(DB_KEY_LOGIN)]
-	[JsonInclude, JsonPropertyName(FRIENDLY_KEY_LOGIN)]
+	[BsonElement(DB_KEY_EMAIL)]
+	[JsonInclude, JsonPropertyName(FRIENDLY_KEY_EMAIL)]
 	[CompoundIndex(group: Player.INDEX_KEY_SEARCH, priority: 8)]
+	public string Email { get; set; }
+	
+	// TODO: This is a backcompat field added on 6/27/23.  Remove it when no longer necessary.
+	[BsonElement("login")]
+	[JsonIgnore]
 	public string Login { get; set; }
 
-	public PlariumAccount(string plariumId, string login)
+	public PlariumAccount(string plariumId, string email)
 	{
 		Id = plariumId;
-		Login = login;
+		Email = email;
 	}
 
 	public static PlariumAccount ValidateCode(string code)
 	{
-		if (string.IsNullOrWhiteSpace(code))
-		{
-			return null;
-		}
-
 		string token = PlariumService.Instance.VerifyCode(code);
 
 		return PlariumService.Instance.VerifyToken(token);
 	}
 
-	public static PlariumAccount ValidateToken(string token)
-	{
-		if (string.IsNullOrWhiteSpace(token))
-		{
-			return null;
-		}
-
-		return PlariumService.Instance.VerifyToken(token);
-	}
+	public static PlariumAccount ValidateToken(string token) => PlariumService.Instance.VerifyToken(token);
 }

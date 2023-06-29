@@ -711,7 +711,7 @@ public class PlayerAccountService : PlatformMongoService<Player>
 						|| player.GoogleAccount.Email.Contains(term)
 						|| player.GoogleAccount.Name.Contains(term)
 						|| player.AppleAccount.Email.Contains(term)
-						|| player.PlariumAccount.Login.Contains(term)
+						|| player.PlariumAccount.Email.Contains(term)
 				)
 				.Limit(100)
 				.ToList()
@@ -795,7 +795,7 @@ public class PlayerAccountService : PlatformMongoService<Player>
 	
 	public long DeletePlariumAccount(string email) => _collection
         .UpdateMany(
-            filter: Builders<Player>.Filter.Eq(player => player.PlariumAccount.Login, email),
+            filter: Builders<Player>.Filter.Eq(player => player.PlariumAccount.Email, email),
             update: Builders<Player>.Update.Unset(player => player.PlariumAccount)
         ).ModifiedCount;
 	
@@ -926,4 +926,20 @@ public class PlayerAccountService : PlatformMongoService<Player>
 		discriminator: _discriminatorService.Lookup(player),
 		audiences: AccountController.TOKEN_AUDIENCE
 	);
+
+	public long RenamePlariumAccountLogins()
+	{
+		List<Player> players = _collection.Find(Builders<Player>.Filter.And(
+			Builders<Player>.Filter.Exists(player => player.PlariumAccount.Email, false),
+			Builders<Player>.Filter.Exists(player => player.PlariumAccount.Login)
+		)).ToList();
+
+		foreach (Player player in players)
+		{
+			player.PlariumAccount.Email = player.PlariumAccount.Login;
+			Update(player);
+		}
+
+		return players.Count;
+	}
 }

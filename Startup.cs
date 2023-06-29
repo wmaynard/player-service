@@ -2,8 +2,10 @@ using Google.Apis.Auth.AspNetCore3;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.Extensions.DependencyInjection;
 using PlayerService.Filters;
+using PlayerService.Services;
 using RCL.Logging;
 using Rumble.Platform.Common.Enums;
+using Rumble.Platform.Common.Services;
 using Rumble.Platform.Common.Utilities;
 using Rumble.Platform.Common.Web;
 
@@ -36,5 +38,14 @@ public class Startup : PlatformStartup
 		.DisableFeatures(CommonFeature.ConsoleObjectPrinting)
 		.SetLogglyThrottleThreshold(suppressAfter: 100, period: 1800)
 		.AddFilter<MaintenanceFilter>()
-		.AddFilter<PruneFilter>();
+		.AddFilter<PruneFilter>()
+		.OnReady(_ =>
+		{
+			long affected = PlatformService
+				.Optional<PlayerAccountService>()
+				?.RenamePlariumAccountLogins()
+				?? 0;
+			
+			Log.Info(Owner.Will, $"Renamed Plarium DB keys for {affected} accounts");
+		});
 }

@@ -18,13 +18,12 @@ namespace PlayerService.Services
 		
 		internal static PlariumService Instance { get; private set; }
 
-		public PlariumService()
-		{
-			Instance = this;
-		}
+		public PlariumService() => Instance = this;
 		
 		public string VerifyCode(string plariumCode)
 		{
+			if (string.IsNullOrWhiteSpace(plariumCode))
+				return null;
 			string authToken = null;
 			
 			string tokenUrl = _dynamicConfig.Require<string>(key: "plariumTokenUrl");
@@ -59,6 +58,8 @@ namespace PlayerService.Services
 
 		public PlariumAccount VerifyToken(string plariumToken)
 		{
+			if (string.IsNullOrWhiteSpace(plariumToken))
+				return null;
 			string url = _dynamicConfig.Require<string>(key: "plariumAuthUrl");
 			_apiService
 				.Request(url)
@@ -74,13 +75,13 @@ namespace PlayerService.Services
 			
 			try
 			{
-				PlariumAccount plariumAccount = new PlariumAccount(plariumId: response["plid"].ToString(), login: response["login"].ToString());
-	            
-				return new PlariumAccount(plariumId: response["plid"].ToString(), login: response["login"].ToString());
+				return new PlariumAccount(
+					plariumId: response.Require<string>("plid"), 
+					email: response.Require<string>("login")
+				);
 			}
 			catch (Exception e)
 			{
-				Log.Error(owner: Owner.Nathan, message: "Error occurred when validating Plarium token.", data: $"Response: {response}.", exception: e);
 				throw new PlatformException(message: "Error occurred when validating Plarium token.", inner: e);
 			}
 		}

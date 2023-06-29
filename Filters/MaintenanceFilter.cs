@@ -104,7 +104,6 @@ public class MaintenanceFilter : PlatformFilter, IActionFilter
                 if (player?.Email != null && whitelist.Any(domain => player.Email.EndsWith(domain)))
                     return;
 
-                
                 SsoData ssoData = body.Optional<SsoData>("sso")?.ValidateTokens();
                 Player[] ssoPlayers = playerService.FromSso(ssoData, "0.0.0.0");
 
