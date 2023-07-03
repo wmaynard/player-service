@@ -111,7 +111,13 @@ namespace PlayerService.Services
 			{
 				Log.Error(owner: Owner.Nathan, message: "Apple SSO token validation failed.", data: $"Apple Token: {appleToken}.");
 
-				throw new PlatformException(message: "Apple SSO token validation failed.", inner: e);
+				throw new AppleValidationException(token: appleToken, inner: e);
+			}
+			catch (Exception e)
+			{
+				Log.Error(owner: Owner.Nathan, message: "Apple SSO token validation failed.", data: $"Exception: {e}.");
+				
+				throw new AppleValidationException(token: appleToken, inner: e);
 			}
 			JwtSecurityToken validatedJwt = validatedSecurityToken as JwtSecurityToken;
 
