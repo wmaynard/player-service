@@ -88,19 +88,23 @@ namespace PlayerService.Services
 			using RSACryptoServiceProvider rsa = new RSACryptoServiceProvider();
 			rsa.ImportParameters(_rsaKeyInfo);
 
+			List<string> validAudiences = new List<string>();
+			validAudiences.Add("com.rumbleentertainment.towersandtitans");
+			validAudiences.Add("com.towersandtitans.eng.dev");
+
 			TokenValidationParameters validationParameters = new TokenValidationParameters
-             {
-                 RequireExpirationTime = true,
-                 RequireSignedTokens = true,
-                 ValidateAudience = true,
-                 ValidateIssuer = true,
-                 ValidateLifetime = true,
-                 ValidIssuer = "https://appleid.apple.com",
-                 ValidAudience = "com.rumbleentertainment.towersandtitans",
-                 TryAllIssuerSigningKeys = true,
-                 IssuerSigningKey = new RsaSecurityKey(rsa),
-                 IssuerSigningKeys = new List<SecurityKey>() { new RsaSecurityKey(rsa) }
-             };
+			                                                 {
+				                                                 RequireExpirationTime = true,
+				                                                 RequireSignedTokens = true,
+				                                                 ValidateAudience = true,
+				                                                 ValidateIssuer = true,
+				                                                 ValidateLifetime = true,
+				                                                 ValidIssuer = "https://appleid.apple.com",
+				                                                 ValidAudiences = validAudiences,
+				                                                 TryAllIssuerSigningKeys = true,
+				                                                 IssuerSigningKey = new RsaSecurityKey(rsa),
+				                                                 IssuerSigningKeys = new List<SecurityKey>() { new RsaSecurityKey(rsa) }
+			                                                 };
 
 			SecurityToken validatedSecurityToken = null;
 			try
@@ -121,7 +125,7 @@ namespace PlayerService.Services
 			}
 			JwtSecurityToken validatedJwt = validatedSecurityToken as JwtSecurityToken;
 
-			if (validatedJwt.Claims.First(claim => claim.Type == "nonce").Value == appleNonce)
+			if (validatedJwt?.Claims.First(claim => claim.Type == "nonce").Value == appleNonce)
 			{
 				try
 				{
