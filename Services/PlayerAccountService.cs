@@ -805,22 +805,42 @@ public class PlayerAccountService : PlatformMongoService<Player>
 			update: Builders<Player>.Update.Unset(player => player.PlariumAccount)
 		).ModifiedCount;
 
-	public long DeleteAllPlariumAccounts(params string[] installIds) => PlatformEnvironment.IsProd
-		? _collection
+	public long DeleteAllPlariumAccounts(params string[] installIds)
+	{
+		if (PlatformEnvironment.IsProd)
+			return _collection
+				.UpdateMany(
+					filter: player => true,
+					update: Builders<Player>.Update.Unset(player => player.PlariumAccount)
+				).ModifiedCount;
+
+		FilterDefinition<Player> filter = Builders<Player>.Filter.Or(
+			Builders<Player>.Filter.Exists(player => player.PlariumAccount.Email, true),
+			Builders<Player>.Filter.In(player => player.Device.InstallId, installIds)
+		);
+
+		string[] matches = _collection
+			.Find(filter)
+			.Project(player => player.Id)
+			.ToList()
+			.ToArray();
+
+		
+		long output = _collection
 			.UpdateMany(
-				filter: player => true,
-				update: Builders<Player>.Update.Unset(player => player.PlariumAccount)
-			).ModifiedCount
-		: _collection
-			.UpdateMany(
-				filter: Builders<Player>.Filter.Or( 
-					Builders<Player>.Filter.Exists(player => player.PlariumAccount.Email, true),
-					Builders<Player>.Filter.In(player => player.Device.InstallId, installIds)
-				),
+				filter: filter,
 				update: Builders<Player>.Update
 					.Unset(player => player.PlariumAccount)
 					.Set(player => player.Device.InstallId, $"plariumDeleted_{Guid.NewGuid().ToString()}")
 			).ModifiedCount;
+
+		_collection.UpdateMany(
+			filter: Builders<Player>.Filter.In(player => player.ParentId, matches),
+			update: Builders<Player>.Update.Unset(player => player.ParentId)
+		);
+
+		return output;
+	}
 
 	private PlatformException DiagnoseEmailPasswordLogin(string email, string hash, string code = null)
 	{

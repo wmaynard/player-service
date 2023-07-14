@@ -48,7 +48,7 @@ public class LoginDiagnosis : PlatformDataModel
         EmailInvalid = ex.Code == ErrorCode.EmailInvalidOrBanned;
         AccountLocked = ex.Code == ErrorCode.Locked;
         
-        Other = !(Maintenance || EmailNotLinked || EmailNotConfirmed || EmailCodeExpired || PasswordInvalid || DuplicateAccount || CodeInvalid || DeviceMismatch || EmailInvalid || AccountLocked);
+        Other = !(Maintenance || EmailNotLinked || EmailNotConfirmed || EmailCodeExpired || EmailInUse || PasswordInvalid || DuplicateAccount || CodeInvalid || DeviceMismatch || EmailInvalid || AccountLocked);
         Message = ex.Message;
         Code = ex.Code;
 
