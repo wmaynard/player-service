@@ -804,13 +804,23 @@ public class PlayerAccountService : PlatformMongoService<Player>
 			filter: Builders<Player>.Filter.Eq(player => player.Id, playerId),
 			update: Builders<Player>.Update.Unset(player => player.PlariumAccount)
 		).ModifiedCount;
-	
-	public long DeleteAllPlariumAccounts() => _collection
-        .UpdateMany(
-            filter: player => true,
-            update: Builders<Player>.Update.Unset(player => player.PlariumAccount)
-        ).ModifiedCount;
-	
+
+	public long DeleteAllPlariumAccounts(params string[] installIds) => PlatformEnvironment.IsProd
+		? _collection
+			.UpdateMany(
+				filter: player => true,
+				update: Builders<Player>.Update.Unset(player => player.PlariumAccount)
+			).ModifiedCount
+		: _collection
+			.UpdateMany(
+				filter: Builders<Player>.Filter.Or( 
+					Builders<Player>.Filter.Exists(player => player.PlariumAccount.Email, true),
+					Builders<Player>.Filter.In(player => player.Device.InstallId, installIds)
+				),
+				update: Builders<Player>.Update
+					.Unset(player => player.PlariumAccount)
+					.Set(player => player.Device.InstallId, $"plariumDeleted_{Guid.NewGuid().ToString()}")
+			).ModifiedCount;
 
 	private PlatformException DiagnoseEmailPasswordLogin(string email, string hash, string code = null)
 	{

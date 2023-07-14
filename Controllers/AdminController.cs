@@ -307,10 +307,11 @@ public class AdminController : PlatformController
 		PlatformEnvironment.EnforceNonprod();
 
 		string email = Optional<string>("email");
+		string[] installIds = Optional<string[]>("installIds") ?? Array.Empty<string>();
 		
 		if (email == null)
 		{
-			long affected = _playerService.DeleteAllPlariumAccounts();
+			long affected = _playerService.DeleteAllPlariumAccounts(installIds);
 			
 			if (affected > 0)
 				SlackDiagnostics
