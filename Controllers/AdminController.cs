@@ -307,7 +307,11 @@ public class AdminController : PlatformController
 		PlatformEnvironment.EnforceNonprod();
 
 		string email = Optional<string>("email");
-		string[] installIds = Optional<string[]>("installIds") ?? Array.Empty<string>();
+		string[] installIds = (Optional<string>("installIds") ?? "")
+			.Split(",")
+			.Where(id => !string.IsNullOrWhiteSpace(id))
+			.Select(id => id.Trim())
+			.ToArray();
 		
 		if (email == null)
 		{
