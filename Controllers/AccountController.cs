@@ -296,7 +296,7 @@ public class AccountController : PlatformController
             _playerService.AttachRumble(fromDevice, rumble);
 
             if (fromDevice.RumbleAccount.EmailBanned)
-                throw new PlatformException($"That address has been rejected.", code: ErrorCode.ApiFailure);
+                throw new PlatformException($"That address has been rejected.", code: ErrorCode.EmailInvalidOrBanned);
             return Ok(fromDevice.Prune());
         }
         catch (PlatformException e)
