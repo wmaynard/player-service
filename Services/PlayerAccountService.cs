@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text.RegularExpressions;
 using Microsoft.Extensions.Options;
+using MongoDB.Bson;
 using MongoDB.Driver;
 using PlayerService.Controllers;
 using PlayerService.Exceptions;
@@ -700,19 +701,19 @@ public class PlayerAccountService : PlatformMongoService<Player>
 					return output.ToArray();
 			}
 
-			output.AddRange(_collection.Find(
-					filter: player =>
-						player.Id.ToLower().Contains(term)
-						|| player.Screenname.ToLower().Contains(term)
-						|| player.Device.InstallId.ToLower().Contains(term)
-						|| player.ParentId.ToLower().Contains(term)
-						|| player.RumbleAccount.Email.Contains(term)
-						|| player.RumbleAccount.Username.Contains(term)
-						|| player.GoogleAccount.Email.Contains(term)
-						|| player.GoogleAccount.Name.Contains(term)
-						|| player.AppleAccount.Email.Contains(term)
-						|| player.PlariumAccount.Email.Contains(term)
-				)
+			BsonRegularExpression regex = new BsonRegularExpression(new Regex(term, RegexOptions.IgnoreCase));
+			output.AddRange(_collection.Find(Builders<Player>.Filter.Or(
+					Builders<Player>.Filter.Regex(player => player.Id, regex),
+					Builders<Player>.Filter.Regex(player => player.Device.InstallId, regex),
+					Builders<Player>.Filter.Regex(player => player.ParentId, regex),
+					Builders<Player>.Filter.Regex(player => player.RumbleAccount.Email, regex),
+					Builders<Player>.Filter.Regex(player => player.RumbleAccount.Username, regex),
+					Builders<Player>.Filter.Regex(player => player.GoogleAccount.Email, regex),
+					Builders<Player>.Filter.Regex(player => player.GoogleAccount.Name, regex),
+					Builders<Player>.Filter.Regex(player => player.AppleAccount.Email, regex),
+					Builders<Player>.Filter.Regex(player => player.PlariumAccount.Email, regex),
+					Builders<Player>.Filter.Regex(player => player.Screenname, regex)
+				))
 				.Limit(100)
 				.ToList()
 			);
