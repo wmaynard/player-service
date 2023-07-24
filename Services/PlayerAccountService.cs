@@ -100,7 +100,8 @@ public class PlayerAccountService : PlatformMongoService<Player>
 			.Set(player => player.Device.Language, device.Language)
 			.Set(player => player.Device.OperatingSystem, device.OperatingSystem)
 			.Set(player => player.Device.Type, device.Type)
-			.Set(player => player.LastLogin, Timestamp.UnixTime);
+			.Set(player => player.LastLogin, Timestamp.UnixTime)
+			.SetOnInsert(player => player.Screenname, _nameGenerator.Next);
 
 		stored = _collection
 			.Find(Builders<Player>.Filter.Eq(player => player.Device.InstallId, device.InstallId))
@@ -338,8 +339,7 @@ public class PlayerAccountService : PlatformMongoService<Player>
 			})
 			.Post();
 
-		GenerateTokenIfNotPresent(player);
-
+		GenerateToken(player);
 		return player;
 	}
 
@@ -361,7 +361,7 @@ public class PlayerAccountService : PlatformMongoService<Player>
 	{
 		player.AppleAccount = apple;
 		Update(player);
-		GenerateTokenIfNotPresent(player);
+		GenerateToken(player);
 		return player;
 	}
 
@@ -369,7 +369,7 @@ public class PlayerAccountService : PlatformMongoService<Player>
 	{
 		player.GoogleAccount = google;
 		Update(player);
-		GenerateTokenIfNotPresent(player);
+		GenerateToken(player);
 		return player;
 	}
 
@@ -377,7 +377,7 @@ public class PlayerAccountService : PlatformMongoService<Player>
 	{
 		player.PlariumAccount = plarium;
 		Update(player);
-		GenerateTokenIfNotPresent(player);
+		GenerateToken(player);
 		return player;
 	}
 
@@ -955,18 +955,13 @@ public class PlayerAccountService : PlatformMongoService<Player>
 
 	public string GenerateToken(string accountId) => GenerateToken(Find(accountId));
 
-	public string GenerateToken(Player player) => _apiService.GenerateToken(
+	public string GenerateToken(Player player) => player.Token ??= _apiService.GenerateToken(
 		player.AccountId,
 		player.Screenname,
 		email: player.Email,
 		discriminator: _discriminatorService.Lookup(player),
 		audiences: AccountController.TOKEN_AUDIENCE
 	);
-
-	public string GenerateTokenIfNotPresent(Player player) => string.IsNullOrWhiteSpace(player.Token)
-		? GenerateToken(player)
-		: player.Token;
-
 	public long RenamePlariumAccountLogins()
 	{
 		List<Player> players = _collection.Find(Builders<Player>.Filter.And(
