@@ -338,6 +338,8 @@ public class PlayerAccountService : PlatformMongoService<Player>
 			})
 			.Post();
 
+		GenerateTokenIfNotPresent(player);
+
 		return player;
 	}
 
@@ -359,6 +361,7 @@ public class PlayerAccountService : PlatformMongoService<Player>
 	{
 		player.AppleAccount = apple;
 		Update(player);
+		GenerateTokenIfNotPresent(player);
 		return player;
 	}
 
@@ -366,6 +369,7 @@ public class PlayerAccountService : PlatformMongoService<Player>
 	{
 		player.GoogleAccount = google;
 		Update(player);
+		GenerateTokenIfNotPresent(player);
 		return player;
 	}
 
@@ -373,6 +377,7 @@ public class PlayerAccountService : PlatformMongoService<Player>
 	{
 		player.PlariumAccount = plarium;
 		Update(player);
+		GenerateTokenIfNotPresent(player);
 		return player;
 	}
 
@@ -957,6 +962,10 @@ public class PlayerAccountService : PlatformMongoService<Player>
 		discriminator: _discriminatorService.Lookup(player),
 		audiences: AccountController.TOKEN_AUDIENCE
 	);
+
+	public string GenerateTokenIfNotPresent(Player player) => string.IsNullOrWhiteSpace(player.Token)
+		? GenerateToken(player)
+		: player.Token;
 
 	public long RenamePlariumAccountLogins()
 	{
