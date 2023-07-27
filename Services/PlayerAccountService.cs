@@ -731,10 +731,10 @@ public class PlayerAccountService : PlatformMongoService<Player>
 				.ToList();
 
 		output = output
+			.Where(player => string.IsNullOrWhiteSpace(player.ParentId))
 			.DistinctBy(player => player.AccountId)
 			.ToList();
-		
-		
+
 		Player.WeighSearchResults(terms, ref output);
 		
 		return output.ToArray();
