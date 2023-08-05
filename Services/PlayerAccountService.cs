@@ -15,6 +15,7 @@ using RCL.Logging;
 using Rumble.Platform.Common.Exceptions;
 using Rumble.Platform.Common.Exceptions.Mongo;
 using Rumble.Platform.Common.Extensions;
+using Rumble.Platform.Common.Minq;
 using Rumble.Platform.Common.Models;
 using Rumble.Platform.Common.Services;
 using Rumble.Platform.Common.Utilities;
@@ -974,7 +975,35 @@ public class PlayerAccountService : PlatformMongoService<Player>
 			player.PlariumAccount.Email = player.PlariumAccount.Login;
 			Update(player);
 		}
-
+		
 		return players.Count;
+	}
+
+	// Context: https://rumblegames.slack.com/archives/C05B8SDC8DV/p1691102158578829
+	// This fully severs account access when a GDPR request 
+	public override long ProcessGdprRequest(TokenInfo token, string dummyText)
+	{
+		long ct = _collection.CountDocuments(Builders<Player>.Filter.Or(
+			Builders<Player>.Filter.Eq(player => player.Id, token.AccountId),
+			Builders<Player>.Filter.Eq(player => player.ParentId, token.AccountId)
+		));
+		long output = _collection
+			.UpdateMany(filter: Builders<Player>.Filter.Or(
+					Builders<Player>.Filter.Eq(player => player.Id, token.AccountId),
+					Builders<Player>.Filter.Eq(player => player.ParentId, token.AccountId)
+				),
+				update: Builders<Player>.Update
+					.Set(player => player.AppleAccount, null)
+					.Set(player => player.GoogleAccount, null)
+					.Set(player => player.RumbleAccount, null)
+					.Set(player => player.PlariumAccount, null)
+					.Set(player => player.LocationData, null)
+					.Set(player => player.Screenname, dummyText)
+					.Set(player => player.Device.Language, dummyText)
+					.Set(player => player.Device.OperatingSystem, dummyText)
+					.Set(player => player.Device.InstallId, dummyText)
+					.Set(player => player.ParentId, null)
+			).ModifiedCount;
+		return output;
 	}
 }

@@ -20,7 +20,7 @@ public class DiscriminatorGroup : PlatformCollectionDocument
 	[BsonElement(DB_KEY_MEMBERS)]
 	[JsonInclude, JsonPropertyName(FRIENDLY_KEY_MEMBERS), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
 	[SimpleIndex]
-	public List<DiscriminatorMember> Members { get; private set; }
+	public List<DiscriminatorMember> Members { get; set; }
 	
 	[BsonElement(DB_KEY_NUMBER)]
 	[JsonInclude, JsonPropertyName(FRIENDLY_KEY_NUMBER)]

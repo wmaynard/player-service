@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Http;
 using MongoDB.Driver;
 using PlayerService.Models;
 using RCL.Logging;
+using Rumble.Platform.Common.Models;
 using Rumble.Platform.Common.Utilities;
 
 namespace PlayerService.Services.ComponentServices;
@@ -35,5 +36,22 @@ public class AccountService : ComponentService
 			}, exception: e);
 			return 0;
 		}
+	}
+
+	public override long ProcessGdprRequest(TokenInfo token, string dummyText)
+	{
+		if (string.IsNullOrWhiteSpace(token.AccountId))
+			return 0;
+		Component account = Find(new[] { token.AccountId }).FirstOrDefault();
+
+		if (account == null)
+			return 0;
+
+		account.Data["deviceInfo"] = null;
+		account.Data["accountName"] = dummyText;
+		
+		Update(account);
+
+		return 1;
 	}
 }

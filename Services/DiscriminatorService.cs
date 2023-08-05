@@ -2,10 +2,12 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using MongoDB.Driver;
+using MongoDB.Driver.Linq;
 using PlayerService.Exceptions;
 using PlayerService.Models;
 using PlayerService.Services.ComponentServices;
 using RCL.Logging;
+using Rumble.Platform.Common.Models;
 using Rumble.Platform.Common.Services;
 using Rumble.Platform.Common.Utilities;
 using Rumble.Platform.Common.Web;
@@ -122,4 +124,18 @@ public class DiscriminatorService : PlatformMongoService<DiscriminatorGroup>
 	public List<DiscriminatorGroup> Find(IEnumerable<string> accountIds) => _collection
 		.Find(Builders<DiscriminatorGroup>.Filter.In("members.aid", accountIds))
 		.ToList();
+
+	public override long ProcessGdprRequest(TokenInfo token, string dummyText)
+	{
+		if (string.IsNullOrWhiteSpace(token?.AccountId))
+			return 0;
+		DiscriminatorGroup group = Find(new[] { token.AccountId }).FirstOrDefault();
+
+		if (group == null)
+			return 0;
+		
+		group.Members = group.Members.Where(member => member.AccountId != token.AccountId).ToList();
+		Update(group);
+		return 1;
+	}
 }

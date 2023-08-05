@@ -6,6 +6,7 @@ using MongoDB.Driver;
 using PlayerService.Models.Login;
 using Rumble.Platform.Common.Attributes;
 using Rumble.Platform.Common.Exceptions.Mongo;
+using Rumble.Platform.Common.Models;
 using Rumble.Platform.Common.Services;
 using Rumble.Platform.Common.Utilities;
 using Rumble.Platform.Data;
@@ -44,4 +45,10 @@ public class SaltService : PlatformMongoService<Salt>
                 { "username", username }
             });
     }
+
+    public override long ProcessGdprRequest(TokenInfo token, string dummyText) => _collection
+        .UpdateMany(
+            filter: Builders<Salt>.Filter.Eq(salt => salt.Username, token?.Email),
+            update: Builders<Salt>.Update.Set(salt => salt.Username, dummyText)
+        ).ModifiedCount;
 }

@@ -3,6 +3,7 @@ using System.Linq;
 using PlayerService.Exceptions.Login;
 using PlayerService.Models.Login;
 using Rumble.Platform.Common.Minq;
+using Rumble.Platform.Common.Models;
 using Rumble.Platform.Common.Services;
 using Rumble.Platform.Common.Utilities;
 
@@ -53,4 +54,11 @@ public class LockoutService : MinqService<IpAccessLog>
             .EqualTo(log => log.IpAddress, ip)
         )
         .Upsert(query => query.AddItems(log => log.Timestamps, limitToKeep: AttemptsToKeep, Timestamp.UnixTime));
+
+    public override long ProcessGdprRequest(TokenInfo token, string dummyText) => mongo
+        .Where(query => query.EqualTo(log => log.Email, token.Email))
+        .Update(query => query
+            .Set(log => log.Email, dummyText)
+            .Set(log => log.IpAddress, "0.0.0.0")
+        );
 }
