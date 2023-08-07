@@ -69,7 +69,7 @@ public class LoginDiagnosis : PlatformDataModel
         if (AccountLocked)
             Data["secondsRemaining"] = ((LockoutException)ex).SecondsRemaining;
         if (Other)
-            Log.Warn(Owner.Will, "Unable to provide a detailed login diagnosis.  Investigation needed.", exception: ex);
+            Log.Warn(Owner.Will, $"Unable to provide a detailed login diagnosis.  {ex.Message}.", exception: ex);
     }
 
     private void EvaluateOther()
