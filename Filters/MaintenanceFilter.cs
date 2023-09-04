@@ -117,6 +117,7 @@ public class MaintenanceFilter : PlatformFilter, IActionFilter
             catch { }
         }
 
+        Log.Info(Owner.Will, "System is down for maintenance; request rejected");
         context.Result = denial;
     }
 
