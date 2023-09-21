@@ -48,6 +48,7 @@ public class MaintenanceFilter : PlatformFilter, IActionFilter
         long? end = config.Optional<long?>(KEY_MAINTENANCE_END);
         bool maintenanceMode = !string.IsNullOrWhiteSpace(maintenancePartialUrl) && PlatformEnvironment.Url().Contains(maintenancePartialUrl);
         long now = Timestamp.UnixTime;
+        
 
         if (!maintenanceMode || now < start || now >= end)
             return;
@@ -65,10 +66,19 @@ public class MaintenanceFilter : PlatformFilter, IActionFilter
             .Select(address => address.Trim())
             .Where(address => !string.IsNullOrWhiteSpace(address))
             .ToArray();
+        object logData = new
+        {
+            MaintenanceTrigger = maintenancePartialUrl,
+            StartTimestamp = start,
+            StopTimestamp = end,
+            CurrentTimestamp = now,
+            WhitelistArray = whitelist
+        };
 
         if (!whitelist.Any())
         {
             context.Result = denial;
+            Log.Info(Owner.Will, "System is down for maintenance; request rejected", logData);
             return;
         }
 
@@ -117,14 +127,7 @@ public class MaintenanceFilter : PlatformFilter, IActionFilter
             catch { }
         }
 
-        Log.Info(Owner.Will, "System is down for maintenance; request rejected", data: new
-        {
-            MaintenanceTrigger = maintenancePartialUrl,
-            StartTimestamp = start,
-            StopTimestamp = end,
-            CurrentTimestamp = now,
-            WhitelistArray = whitelist
-        });
+        Log.Info(Owner.Will, "System is down for maintenance; request rejected", logData);
         context.Result = denial;
     }
 
