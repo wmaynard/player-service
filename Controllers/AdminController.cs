@@ -354,7 +354,4 @@ public class AdminController : PlatformController
 
 		return Ok(result);
 	}
-	
-	[HttpGet, Route("maintenanceMessage")]
-	public ActionResult ReturnMaintenanceMessage() => MaintenanceHelper.CreateMessage(Optional<string>("origin"));
 }
