@@ -10,6 +10,7 @@ using PlayerService.Exceptions.Login;
 using PlayerService.Models;
 using PlayerService.Services;
 using PlayerService.Services.ComponentServices;
+using PlayerService.Utilities;
 using RCL.Logging;
 using Rumble.Platform.Common.Attributes;
 using Rumble.Platform.Common.Enums;
@@ -353,4 +354,7 @@ public class AdminController : PlatformController
 
 		return Ok(result);
 	}
+	
+	[HttpGet, Route("maintenanceMessage")]
+	public ActionResult ReturnMaintenanceMessage() => MaintenanceHelper.CreateMessage(Optional<string>("origin"));
 }

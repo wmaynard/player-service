@@ -8,6 +8,7 @@ using MongoDB.Driver;
 using PlayerService.Models;
 using PlayerService.Models.Login;
 using PlayerService.Services;
+using PlayerService.Utilities;
 using RCL.Logging;
 using Rumble.Platform.Common.Exceptions;
 using Rumble.Platform.Common.Extensions;
@@ -48,7 +49,6 @@ public class MaintenanceFilter : PlatformFilter, IActionFilter
         long? end = config.Optional<long?>(KEY_MAINTENANCE_END);
         bool maintenanceMode = !string.IsNullOrWhiteSpace(maintenancePartialUrl) && PlatformEnvironment.Url().Contains(maintenancePartialUrl);
         long now = Timestamp.UnixTime;
-        
 
         if (!maintenanceMode || now < start || now >= end)
             return;
@@ -56,10 +56,7 @@ public class MaintenanceFilter : PlatformFilter, IActionFilter
         // TD-16915: Add whitelist support for maintenance bypass
         // If dynamic config has values specified for whitelisted domains or exact email addresses, those players should be able to enter
         // the game even if maintenance mode is switched on.
-        BadRequestObjectResult denial = new BadRequestObjectResult(new LoginDiagnosis(new MaintenanceException()))
-        {
-            StatusCode = StatusCodes.Status423Locked
-        };
+        BadRequestObjectResult denial = MaintenanceHelper.CreateMessage();
 
         string[] whitelist = (config.Optional<string>("maintenanceWhitelist") ?? "")
             .Split(',')
