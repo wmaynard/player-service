@@ -4,6 +4,7 @@ using System.Linq;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Filters;
+using Microsoft.Extensions.Primitives;
 using MongoDB.Driver;
 using PlayerService.Models;
 using PlayerService.Models.Login;
@@ -44,10 +45,17 @@ public class MaintenanceFilter : PlatformFilter, IActionFilter
             return;
         }
 
-        string maintenancePartialUrl = config.Optional<string>(KEY_MAINTENANCE);
+        context.HttpContext.Request.Query.TryGetValue("origin", out StringValues paramOrigin);
+            
+        string maintenanceFieldValue = config.Optional<string>(KEY_MAINTENANCE);
         long? start = config.Optional<long?>(KEY_MAINTENANCE_START);
         long? end = config.Optional<long?>(KEY_MAINTENANCE_END);
-        bool maintenanceMode = !string.IsNullOrWhiteSpace(maintenancePartialUrl) && PlatformEnvironment.Url().Contains(maintenancePartialUrl);
+        string origin = paramOrigin.ToString();
+
+        bool maintenanceSpecified = !string.IsNullOrWhiteSpace(maintenanceFieldValue);
+        bool envContainsMaintenance = maintenanceSpecified && PlatformEnvironment.Url().Contains(maintenanceFieldValue);
+        bool originContainsMaintenance = maintenanceSpecified && !string.IsNullOrWhiteSpace(origin) && origin.Contains(maintenanceFieldValue);
+        bool maintenanceMode = envContainsMaintenance || originContainsMaintenance;
         long now = Timestamp.UnixTime;
 
         if (!maintenanceMode || now < start || now >= end)
@@ -65,11 +73,12 @@ public class MaintenanceFilter : PlatformFilter, IActionFilter
             .ToArray();
         object logData = new
         {
-            MaintenanceTrigger = maintenancePartialUrl,
+            MaintenanceTrigger = maintenanceFieldValue,
             StartTimestamp = start,
             StopTimestamp = end,
             CurrentTimestamp = now,
-            WhitelistArray = whitelist
+            WhitelistArray = whitelist,
+            Origin = origin
         };
 
         if (!whitelist.Any())

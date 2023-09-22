@@ -33,7 +33,16 @@ https://portal.dev.nonprod.tower.cdrentertainment.com/config/player-service
 
 Player Service uses a partial match here to satisfy the requirement of being able to bring down prod A1 independently from A2, or vice versa.  Since the database is shared between both, we can't simply use a boolean value.
 
-Example values:
+### Excluding Only Web Traffic While Allowing Game Client
+
+Sometimes a need may arise to only block player activity for the website only, as opposed to both website and game client.  We can use the same maintenance field in Dynamic Config to achieve this.
+
+As of platform-common-1.3.87, all internal traffic includes an `origin` query parameter on its requests.  The maintenance filter here looks at this field and performs the same partial match to choose whether or not to honor the request.
+
+Since all web traffic is directed at DMZ-Service before coming to player-service, we can effectively block web traffic - and only web traffic - with `maintenance` set to `dmz-service`, or `dmz`.
+
+### Examples
+
 
 | `maintenance` Value                             | Effect                                |
 |:------------------------------------------------|:--------------------------------------|
@@ -42,6 +51,7 @@ Example values:
 | rumblegames                                     | Brings down a prod environment        |
 | https://platform-a2.prod.tower.rumblegames.com/ | Brings down A2 only                   |
 | e                                               | Brings down virtually any environment |
+| dmz-service                                     | Blocks all incoming web traffic       |
 
 Ultimately, the core logic for checking for maintenance mode is simply:
 

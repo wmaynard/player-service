@@ -39,13 +39,5 @@ public class Startup : PlatformStartup
 		.SetLogglyThrottleThreshold(suppressAfter: 100, period: 1800)
 		.AddFilter<MaintenanceFilter>()
 		.AddFilter<PruneFilter>()
-		.OnReady(_ =>
-		{
-			long affected = PlatformService
-				.Optional<PlayerAccountService>()
-				?.RenamePlariumAccountLogins()
-				?? 0;
-			
-			Log.Info(Owner.Will, $"Renamed Plarium DB keys for {affected} accounts");
-		});
+		.OnReady(_ => { });
 }
