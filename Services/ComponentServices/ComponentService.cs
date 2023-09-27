@@ -84,7 +84,7 @@ public abstract class ComponentService : PlatformMongoService<Component>
 				return await UpdateAsync(accountId, data, session, version, retries: --retries);
 			Log.Error(Owner.Will, $"Could not update component {Name}.", data: new
 			{
-				Detail = $"Session state invalid, even after retrying {retries} times with exponential backoff."
+				Detail = $"Session state invalid, even after retrying with exponential backoff."
 			}, exception: e);
 			_apiService.Alert(
 				title: "Player Component Update Failure",
