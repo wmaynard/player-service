@@ -937,7 +937,7 @@ public class PlayerAccountService : PlatformMongoService<Player>
 			.Set(player => player.GoogleAccount, model.GoogleAccount)
 			.Set(player => player.PlariumAccount, model.PlariumAccount)
 			.Set(player => player.RumbleAccount, model.RumbleAccount)
-			.Set(player => player.CreatedTimestamp, model.CreatedTimestamp)
+			.Set(player => player.CreatedOn, model.CreatedOn)
 			.Set(player => player.LastLogin, model.LastLogin)
 			.Set(player => player.LinkCode, model.LinkCode)
 			.Set(player => player.LocationData, model.LocationData)

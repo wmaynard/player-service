@@ -123,8 +123,8 @@ public class TopController : PlatformController
 		foreach (Item item in itemCreations)
 			item.AccountId = Token.AccountId;
 
-		long totalMS = Timestamp.UnixTimeMS;
-		long componentMS = Timestamp.UnixTimeMS;
+		long totalMS = Timestamp.UnixTimeMs;
+		long componentMS = Timestamp.UnixTimeMs;
 
 		string aid = Token.AccountId;
 		foreach (Component component in components)
@@ -140,9 +140,9 @@ public class TopController : PlatformController
 			)
 		).ToList();
 
-		componentMS = Timestamp.UnixTimeMS - componentMS;
+		componentMS = Timestamp.UnixTimeMs - componentMS;
 
-		long itemMS = Timestamp.UnixTimeMS;
+		long itemMS = Timestamp.UnixTimeMs;
 
 #region Deprecated Item Code
 		Item[] toSave = items.Where(item => !item.MarkedForDeletion).ToArray();
@@ -161,7 +161,7 @@ public class TopController : PlatformController
 		if (itemDeletions.Any())
 			tasks.Add(_itemService.BulkDeleteAsync(itemDeletions, session));
 
-		itemMS = Timestamp.UnixTimeMS - itemMS;
+		itemMS = Timestamp.UnixTimeMs - itemMS;
 
 		try
 		{
@@ -181,7 +181,7 @@ public class TopController : PlatformController
 		
 		session.CommitTransaction();
 
-		totalMS = Timestamp.UnixTimeMS - totalMS;
+		totalMS = Timestamp.UnixTimeMs - totalMS;
 
 		return Ok(new
 		{
@@ -314,9 +314,9 @@ public class TopController : PlatformController
 		string[] ids = Optional<string>("ids")?.Split(',');
 		string[] types = Optional<string>("types")?.Split(',');
 
-		long itemMS = Timestamp.UnixTimeMS;
+		long itemMS = Timestamp.UnixTimeMs;
 		List<Item> output = _itemService.GetItemsFor(Token.AccountId, ids, types);
-		itemMS = Timestamp.UnixTimeMS - itemMS;
+		itemMS = Timestamp.UnixTimeMs - itemMS;
 		
 		return Ok(new { Items = output, itemMS = itemMS });
 	}

@@ -24,7 +24,7 @@ public class Player : PlatformCollectionDocument
 	public const string INDEX_KEY_SEARCH = "search"; 
 
 	private const string DB_KEY_APPLE_ACCOUNT        = "apple";
-	private const string DB_KEY_CREATED              = "created";
+	// private const string DB_KEY_CREATED              = "created";
 	private const string DB_KEY_DEVICE               = "device";
 	private const string DB_KEY_GOOGLE_ACCOUNT       = "google";
 	private const string DB_KEY_LAST_LOGIN           = "login";
@@ -57,9 +57,9 @@ public class Player : PlatformCollectionDocument
 	[JsonPropertyName(FRIENDLY_KEY_APPLE_ACCOUNT)]
 	public AppleAccount AppleAccount { get; set; }
 	
-	[BsonElement(DB_KEY_CREATED)]
-	[JsonPropertyName(FRIENDLY_KEY_CREATED)]
-	public long CreatedTimestamp { get; set; }
+	// [BsonElement(DB_KEY_CREATED)]
+	// [JsonPropertyName(FRIENDLY_KEY_CREATED)]
+	// public long CreatedOn { get; set; }
 	
 	[BsonElement(DB_KEY_DEVICE)]
 	[JsonPropertyName(FRIENDLY_KEY_DEVICE)]

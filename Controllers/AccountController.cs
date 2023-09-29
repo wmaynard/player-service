@@ -573,8 +573,8 @@ public class AccountController : PlatformController
             player.LastLogin = Timestamp.UnixTime;
             player.LocationData = GeoIPData;
             
-            if (player.CreatedTimestamp == default)
-                player.CreatedTimestamp = player.LastLogin;
+            if (player.CreatedOn == default)
+                player.CreatedOn = player.LastLogin;
 
             ValidatePlayerScreenname(ref player);
             sso?.ValidatePlayers(others.Union(new[] { player }).ToArray());

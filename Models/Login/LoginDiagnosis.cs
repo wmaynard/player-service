@@ -42,6 +42,9 @@ public class LoginDiagnosis : PlatformDataModel
     public LoginDiagnosis(PlatformException ex)
     {
         Data = new RumbleJson();
+
+        if (ex == null)
+            return;
         
         Maintenance = ex.Code == ErrorCode.DownForMaintenance;
         EmailNotLinked = ex.Code == ErrorCode.RumbleAccountMissing;
@@ -67,7 +70,12 @@ public class LoginDiagnosis : PlatformDataModel
         if (!PlatformEnvironment.IsProd)
             StackTrace = ex.StackTrace;
         if (AccountLocked)
-            Data["secondsRemaining"] = ((LockoutException)ex).SecondsRemaining;
+            Data["secondsRemaining"] = ex switch
+            {
+                LockoutException lockEx => lockEx.SecondsRemaining,
+                TokenBannedException tokenEx when tokenEx.BannedUntil != null => tokenEx.BannedUntil - Timestamp.UnixTime,
+                _ => null
+            };
         if (Other)
             Log.Warn(Owner.Will, $"Unable to provide a detailed login diagnosis.  {ex.Message}.", exception: ex);
     }
