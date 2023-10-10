@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net;
 using System.Text.RegularExpressions;
 using Microsoft.Extensions.Options;
 using MongoDB.Bson;
@@ -284,14 +285,14 @@ public class PlayerAccountService : PlatformMongoService<Player>
 		// The previous hash is known; the filter can use the old hash and we don't need to worry about account status.
 		if (!string.IsNullOrWhiteSpace(oldHash))
 			filter = Builders<Player>.Filter.And(
-				Builders<Player>.Filter.Eq(player => player.RumbleAccount.Username, username),
+				Builders<Player>.Filter.Regex(player => player.RumbleAccount.Username, new BsonRegularExpression($"^{username}$", "i")),
 				Builders<Player>.Filter.Eq(player => player.RumbleAccount.Hash, oldHash)
 			);
 		else
 		{
 			// Since the previous hash is unknown, our filter must be primed to accept the new hash.
 			filter = Builders<Player>.Filter.And(
-				Builders<Player>.Filter.Eq(player => player.RumbleAccount.Username, username),
+				Builders<Player>.Filter.Regex(player => player.RumbleAccount.Username, new BsonRegularExpression($"^{username}$", "i")),
 				Builders<Player>.Filter.Eq(player => player.RumbleAccount.Status, RumbleAccount.AccountStatus.ResetPrimed)
 			);
 			// If we the incoming account ID is specified, we can add it here to the confirmed IDs.
