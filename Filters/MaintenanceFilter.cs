@@ -104,21 +104,25 @@ public class MaintenanceFilter : PlatformFilter, IActionFilter
             {
                 GetService(out PlayerAccountService playerService);
             
-                DeviceInfo device = body.Require<DeviceInfo>(Player.FRIENDLY_KEY_DEVICE);
-            
-                // Early out for brand new accounts; per a conversation with Austin on 2023.06.28, changing the client's call
-                // stack is a significant amount of work.  Allowing novel accounts through will cause maintenance mode errors
-                // later on in the pipeline, but is safer for the client's flow.  With the current client architecture,
-                // we need to hit login first as an anonymous user before we can log in to a known account.
-                // Conversation link: https://rumblegames.slack.com/archives/C043FPR7U68/p1687977566099639
-                if (!playerService.InstallIdExists(device))
-                    return;
+                DeviceInfo device = body.Optional<DeviceInfo>(Player.FRIENDLY_KEY_DEVICE);
 
-                // For existing installs, use the device info to look up their email address.  If the email is whitelisted,
-                // let them through.
-                Player player = playerService.FromDevice(device);
-                if (player?.Email != null && whitelist.Any(domain => player.Email.EndsWith(domain)))
-                    return;
+                // Web logins from DMZ don't necessarily contain device information, typically just SSO.
+                if (device != null)
+                {
+                    // Early out for brand new accounts; per a conversation with Austin on 2023.06.28, changing the client's call
+                    // stack is a significant amount of work.  Allowing novel accounts through will cause maintenance mode errors
+                    // later on in the pipeline, but is safer for the client's flow.  With the current client architecture,
+                    // we need to hit login first as an anonymous user before we can log in to a known account.
+                    // Conversation link: https://rumblegames.slack.com/archives/C043FPR7U68/p1687977566099639
+                    if (!playerService.InstallIdExists(device))
+                        return;
+
+                    // For existing installs, use the device info to look up their email address.  If the email is whitelisted,
+                    // let them through.
+                    Player player = playerService.FromDevice(device);
+                    if (player?.Email != null && whitelist.Any(domain => player.Email.EndsWith(domain)))
+                        return;
+                }
 
                 SsoData ssoData = body.Optional<SsoData>("sso")?.ValidateTokens();
                 Player[] ssoPlayers = playerService.FromSso(ssoData, "0.0.0.0");
