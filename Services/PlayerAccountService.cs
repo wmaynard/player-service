@@ -282,17 +282,19 @@ public class PlayerAccountService : PlatformMongoService<Player>
 		UpdateDefinition<Player> update = Builders<Player>.Update.Set(player => player.RumbleAccount.Hash, newHash);
 		FilterDefinition<Player> filter;
 
+		FilterDefinition<Player> regex = Builders<Player>.Filter.Regex(player => player.RumbleAccount.Username, new BsonRegularExpression($"^{Regex.Escape(username)}$", "i"));
+
 		// The previous hash is known; the filter can use the old hash and we don't need to worry about account status.
 		if (!string.IsNullOrWhiteSpace(oldHash))
 			filter = Builders<Player>.Filter.And(
-				Builders<Player>.Filter.Regex(player => player.RumbleAccount.Username, new BsonRegularExpression($"^{username}$", "i")),
+				regex,
 				Builders<Player>.Filter.Eq(player => player.RumbleAccount.Hash, oldHash)
 			);
 		else
 		{
 			// Since the previous hash is unknown, our filter must be primed to accept the new hash.
 			filter = Builders<Player>.Filter.And(
-				Builders<Player>.Filter.Regex(player => player.RumbleAccount.Username, new BsonRegularExpression($"^{username}$", "i")),
+				regex,
 				Builders<Player>.Filter.Eq(player => player.RumbleAccount.Status, RumbleAccount.AccountStatus.ResetPrimed)
 			);
 			// If we the incoming account ID is specified, we can add it here to the confirmed IDs.
@@ -301,7 +303,7 @@ public class PlayerAccountService : PlatformMongoService<Player>
 				update = update.AddToSet(player => player.RumbleAccount.ConfirmedIds, callingAccountId);
 			update = update.Set(player => player.RumbleAccount.Status, RumbleAccount.AccountStatus.Confirmed);
 		}
-
+		
 		return _collection.FindOneAndUpdate(
 			filter: filter,
 			update: update,
