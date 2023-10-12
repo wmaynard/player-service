@@ -125,13 +125,22 @@ public class MaintenanceFilter : PlatformFilter, IActionFilter
                 }
 
                 SsoData ssoData = body.Optional<SsoData>("sso")?.ValidateTokens();
-                Player[] ssoPlayers = playerService.FromSso(ssoData, "0.0.0.0");
+                
+                // Can't do a Rumble Account; Rumble Accounts need to be checked against the DB since anyone can enter
+                // anything as a login.
+                string email = ssoData?.AppleAccount?.Email
+                   ?? ssoData?.GoogleAccount?.Email
+                   ?? ssoData?.PlariumAccount?.Email;
 
-                if (whitelist
-                    .Intersect(ssoPlayers
-                        .Where(sso => !string.IsNullOrWhiteSpace(sso?.Email))
-                        .Select(sso => sso.Email))
-                    .Any())
+                if (!string.IsNullOrWhiteSpace(email) && whitelist.Any(entry => email.Contains(entry)))
+                    return;
+                
+                Player[] ssoPlayers = playerService.FromSso(ssoData, "0.0.0.0");
+                
+                if (ssoPlayers
+                    .Where(p => !string.IsNullOrWhiteSpace(p.Email))
+                    .Any(player => whitelist.Any(entry => player.Email.Contains(entry)))
+                )
                     return;
             }
             catch { }
