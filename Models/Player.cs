@@ -79,10 +79,12 @@ public class Player : PlatformCollectionDocument
 	
 	[BsonElement(DB_KEY_LINK_CODE)]
 	[JsonIgnore]
+	[SimpleIndex]
 	public string LinkCode { get; set; }
 	
 	[BsonElement(DB_KEY_LINK_CODE_EXPIRATION), BsonIgnoreIfDefault]
 	[JsonIgnore]
+	[SimpleIndex]
 	public long LinkExpiration { get; set; }
 	
 	[BsonIgnore]
@@ -99,7 +101,7 @@ public class Player : PlatformCollectionDocument
 	
 	[BsonElement(DB_KEY_PARENT_ID), BsonIgnoreIfNull]
 	[JsonPropertyName(FRIENDLY_KEY_PARENT_ID), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-	// [TextIndex]
+	[SimpleIndex]
 	public string ParentId { get; set; }
 	
 	[BsonElement(DB_KEY_PLARIUM_ACCOUNT)]

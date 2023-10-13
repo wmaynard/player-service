@@ -38,6 +38,7 @@ public class AppleAccount : PlatformDataModel
     
     [BsonElement(DB_KEY_SUB)]
     [JsonInclude, JsonPropertyName(FRIENDLY_KEY_SUB)]
+    [SimpleIndex]
     public string Id { get; set; }
 
     [BsonElement(DB_KEY_EMAIL)]

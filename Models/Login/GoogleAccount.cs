@@ -26,6 +26,7 @@ public class GoogleAccount : PlatformDataModel
     [BsonElement(DB_KEY_EMAIL)]
     [JsonPropertyName(FRIENDLY_KEY_EMAIL)]
     [CompoundIndex(group: Player.INDEX_KEY_SEARCH, priority: 6)]
+    [SimpleIndex]
     public string Email { get; set; }
     
     [BsonElement(DB_KEY_EMAIL_VERIFIED)]
@@ -38,6 +39,7 @@ public class GoogleAccount : PlatformDataModel
     
     [BsonElement(DB_KEY_ID)]
     [JsonPropertyName(FRIENDLY_KEY_ID)]
+    [SimpleIndex]
     public string Id { get; set; }
     
     [BsonElement(DB_KEY_NAME)]

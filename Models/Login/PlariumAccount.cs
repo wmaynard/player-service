@@ -17,6 +17,7 @@ public class PlariumAccount : PlatformDataModel
 	
 	[BsonElement(DB_KEY_PLARIUM_ID)]
 	[JsonInclude, JsonPropertyName(FRIENDLY_KEY_PLARIUM_ID)]
+	[SimpleIndex]
 	public string Id { get; set; }
 	
 	[BsonElement(DB_KEY_EMAIL)]
