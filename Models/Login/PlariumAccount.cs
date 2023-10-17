@@ -7,7 +7,7 @@ using Rumble.Platform.Data;
 namespace PlayerService.Models.Login;
 
 [BsonIgnoreExtraElements]
-public class PlariumAccount : PlatformDataModel
+public class PlariumAccount : PlatformDataModel, ISsoAccount
 {
 	private const string DB_KEY_PLARIUM_ID = "plid";
 	private const string DB_KEY_EMAIL     = "email";

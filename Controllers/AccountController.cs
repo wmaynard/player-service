@@ -287,6 +287,8 @@ public class AccountController : PlatformController
 
             Player fromDevice = _playerService.FromDevice(device, isUpsert: true);
             Player fromRumble = _playerService.FromRumble(rumble, mustExist: false, mustNotExist: true);
+            
+            // EnforceNoRumbleAccountExists(rumble, Token.AccountId);
         
             if (fromRumble != null)
                 throw fromDevice.Id == fromRumble.Id

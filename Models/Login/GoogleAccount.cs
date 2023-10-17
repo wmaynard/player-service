@@ -2,12 +2,13 @@ using System.Text.Json.Serialization;
 using System.Threading.Tasks;
 using Google.Apis.Auth;
 using MongoDB.Bson.Serialization.Attributes;
+using PlayerService.Services;
 using Rumble.Platform.Common.Attributes;
 using Rumble.Platform.Data;
 
 namespace PlayerService.Models.Login;
 
-public class GoogleAccount : PlatformDataModel
+public class GoogleAccount : PlatformDataModel, ISsoAccount
 {
     private const string DB_KEY_EMAIL = "email";
     private const string DB_KEY_EMAIL_VERIFIED = "verified";

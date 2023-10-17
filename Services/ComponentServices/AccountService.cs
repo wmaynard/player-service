@@ -14,6 +14,8 @@ public class AccountService : ComponentService
 	public const string DB_KEY_SCREENNAME = "accountName";
 	public AccountService() : base(Component.ACCOUNT) { }
 
+	// NOTE: This is a kluge; the game server may overwrite this component if their session is active.
+	// TD-14516: Screenname changes from Portal do not affect the account screen in-game.
 	public int SetScreenname(string accountId, string screenname, bool fromAdmin)
 	{
 		try

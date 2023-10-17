@@ -10,7 +10,7 @@ using Rumble.Platform.Data;
 
 namespace PlayerService.Models.Login;
 
-public class AppleAccount : PlatformDataModel
+public class AppleAccount : PlatformDataModel, ISsoAccount
 {
     private const string DB_KEY_ISSUER           = "iss";
     private const string DB_KEY_AUD              = "aud";

@@ -132,7 +132,7 @@ public class MaintenanceFilter : PlatformFilter, IActionFilter
                    ?? ssoData?.GoogleAccount?.Email
                    ?? ssoData?.PlariumAccount?.Email;
 
-                if (!string.IsNullOrWhiteSpace(email) && whitelist.Any(entry => email.Contains(entry)))
+                if (!string.IsNullOrWhiteSpace(email) && whitelist.Any(entry => email.EndsWith(entry)))
                     return;
                 
                 Player[] ssoPlayers = playerService.FromSso(ssoData, "0.0.0.0");

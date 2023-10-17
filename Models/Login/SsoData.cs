@@ -142,4 +142,9 @@ public class SsoData : PlatformDataModel
         if (RumbleAccount != null && !players.Any(player => player.RumbleAccount != null))
             throw new RumbleUnlinkedException(RumbleAccount);
     }
+
+    public bool HasAtLeastOneAccount() => GoogleAccount != null
+        || AppleAccount != null
+        || PlariumAccount != null
+        || RumbleAccount != null;
 }
