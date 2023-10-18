@@ -2,12 +2,13 @@ using System;
 using System.Collections.Generic;
 using System.Text.Json.Serialization;
 using MongoDB.Bson.Serialization.Attributes;
+using PlayerService.Services;
 using Rumble.Platform.Common.Attributes;
 using Rumble.Platform.Data;
 
 namespace PlayerService.Models.Login;
 
-public class RumbleAccount : PlatformDataModel
+public class RumbleAccount : PlatformDataModel, ISsoAccount
 {
     private const string DB_KEY_ASSOCIATIONS = "verified";
     private const string DB_KEY_CODE = "code";

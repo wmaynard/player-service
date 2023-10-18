@@ -14,3 +14,4 @@ out/
 *obj/
 environment.json
 nuget.config
+GeoIP2-Country.mmdb

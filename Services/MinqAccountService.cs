@@ -740,7 +740,7 @@ public class MinqAccountService : MinqTimerService<Player>
         );
 }
 
-public interface ISsoAccount { }
+
 
 
 

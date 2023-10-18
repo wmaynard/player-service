@@ -34,13 +34,14 @@ namespace PlayerService.Services
 
 		public AppleAccount Verify(string appleToken, string appleNonce)
 		{
+			// TODO: The API calls here are WET
 			if (!_cache.HasValue("AppleAuth", out AppleResponse cacheValue))
 			{
 				string url = _dynamicConfig.Require<string>(key: "appleAuthKeysUrl");
 				_apiService
 					.Request(url)
-					.OnSuccess(_ => Log.Local(Owner.Nathan, "New Apple auth keys fetched."))
-					.OnFailure(_ => Log.Error(Owner.Nathan, "Unable to fetch new Apple auth keys."))
+					.OnSuccess(_ => Log.Local(Owner.Will, "New Apple auth keys fetched."))
+					.OnFailure(_ => Log.Error(Owner.Will, "Unable to fetch new Apple auth keys."))
 					.Get(out AppleResponse response, out int code);
 				
 				cacheValue = response;
@@ -56,14 +57,18 @@ namespace PlayerService.Services
 
 			if (authKey == null)
 			{
-				Log.Warn(owner: Owner.Nathan, message: "No valid Apple auth key was found for Apple SSO attempt. Attempting to fetch new auth keys.", data: $"Token: {appleToken}. Apple Keys: {cacheValue}.");
-				_cache.Clear("AppleAuth");
+				Log.Warn(Owner.Will, message: "No valid Apple auth key was found for Apple SSO attempt. Attempting to fetch new auth keys.", data: new
+				{
+					AppleToken = appleToken,
+					AppleKeys = cacheValue
+				});
+				_cache.Clear("AppleAuth"); // TODO: No magic value here
 				
 				string url = _dynamicConfig.Require<string>(key: "appleAuthKeysUrl");
 				_apiService
 					.Request(url)
-					.OnSuccess(_ => Log.Local(Owner.Nathan, "New Apple auth keys fetched."))
-					.OnFailure(_ => Log.Error(Owner.Nathan, "Unable to fetch new Apple auth keys."))
+					.OnSuccess(_ => Log.Local(Owner.Will, "New Apple auth keys fetched."))
+					.OnFailure(_ => Log.Error(Owner.Will, "Unable to fetch new Apple auth keys."))
 					.Get(out AppleResponse response, out int code);
 				
 				cacheValue = response;
@@ -73,10 +78,7 @@ namespace PlayerService.Services
 				authKey = cacheValue.Keys.Find(key => key.Kid == kid);
 
 				if (authKey == null)
-				{
-					Log.Error(owner: Owner.Nathan, message: "No valid Apple auth key was found for Apple SSO attempt.", data: $"Token: {appleToken}. Apple Keys: {cacheValue}.");
 					throw new PlatformException(message: "Apple SSO attempt failed due to no matching Apple auth key being found.");
-				}
 			}
 
 			_rsaKeyInfo = new RSAParameters()
@@ -113,15 +115,11 @@ namespace PlayerService.Services
 			}
 			catch (SecurityTokenSignatureKeyNotFoundException e)
 			{
-				Log.Error(owner: Owner.Nathan, message: "Apple SSO token validation failed.", data: $"Apple Token: {appleToken}.");
-
-				throw new AppleValidationException(token: appleToken, inner: e);
+				throw new AppleValidationException(appleToken, inner: e);
 			}
 			catch (Exception e)
 			{
-				Log.Error(owner: Owner.Nathan, message: "Apple SSO token validation failed.", data: $"Exception: {e}.");
-				
-				throw new AppleValidationException(token: appleToken, inner: e);
+				throw new AppleValidationException(appleToken, inner: e);
 			}
 			JwtSecurityToken validatedJwt = validatedSecurityToken as JwtSecurityToken;
 

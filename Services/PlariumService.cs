@@ -42,11 +42,6 @@ namespace PlayerService.Services
 		            {"privateKey", PlatformEnvironment.Require<string>(key: "PLARIUM_PRIVATE_KEY")},
 		            {"grantType", "authorization_code"}
 	            })
-				.OnSuccess(res =>
-				{
-				   authToken = res.AsString;
-				   Log.Local(owner: Owner.Nathan, message: "Successfully fetched Plarium code.");
-				})
 				.OnFailure(response => failure = $"Failed to fetch Plarium token; {response?.Optional<string>("message")}")
 				.Post();
 
@@ -69,8 +64,8 @@ namespace PlayerService.Services
 				{
 					{ "auth_token", plariumToken }
 				})
-				.OnSuccess(_ => Log.Local(owner: Owner.Nathan, message: "Successfully validated Plarium token."))
-				.OnFailure(_ => Log.Error(owner: Owner.Nathan, message: "Failed to validate Plarium token."))
+				.OnSuccess(_ => Log.Local(Owner.Will, message: "Successfully validated Plarium token."))
+				.OnFailure(_ => Log.Error(Owner.Will, message: "Failed to validate Plarium token."))
 				.Post(out RumbleJson response, out int code);
 			
 			try

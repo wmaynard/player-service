@@ -91,11 +91,6 @@ public class AccountController : PlatformController
     {
         try
         {
-            if (PlatformEnvironment.IsDev)
-                Log.Info(owner: Owner.Nathan, "PATCH /apple body received.", data: new
-                {
-                    body = Body
-                });
             DeviceInfo device = _playerService.Find(Token?.AccountId)?.Device ?? Require<DeviceInfo>(Player.FRIENDLY_KEY_DEVICE);
             AppleAccount apple = AppleAccount.ValidateToken(Require<string>(SsoData.FRIENDLY_KEY_APPLE_TOKEN), Require<string>(SsoData.FRIENDLY_KEY_APPLE_NONCE));
 
@@ -129,14 +124,13 @@ public class AccountController : PlatformController
             // When using postman, '+' comes through as a space because it's not URL-encoded.
             // This is a quick kluge to enable debugging purposes without having to worry about URL-encoded params in Postman.
             if (_playerService.DeleteAppleAccountById(playerId) == 0 && _playerService.DeleteAppleAccountById(playerId.Trim().Replace(" ", "+")) == 0)
-                throw new RecordNotFoundException(_playerService.CollectionName, "Rumble account not found.", data: new RumbleJson
+                throw new RecordNotFoundException(_playerService.CollectionName, "Apple account not found.", data: new RumbleJson
                 {
                     { "accountId", playerId }
                 });
         }
         catch (Exception e)
         {
-            Log.Error(owner: Owner.Nathan, message: "Error occurred while trying to delete Apple account from player.", data: $"PlayerId: {playerId}. Error: {e}.");
             throw new PlatformException(message: "Error occurred while trying to delete Apple account from player.", inner: e);
         }
 		
@@ -189,14 +183,13 @@ public class AccountController : PlatformController
             // When using postman, '+' comes through as a space because it's not URL-encoded.
             // This is a quick kluge to enable debugging purposes without having to worry about URL-encoded params in Postman.
             if (_playerService.DeleteGoogleAccountById(playerId) == 0 && _playerService.DeleteGoogleAccountById(playerId.Trim().Replace(" ", "+")) == 0)
-                throw new RecordNotFoundException(_playerService.CollectionName, "Rumble account not found.", data: new RumbleJson
+                throw new RecordNotFoundException(_playerService.CollectionName, "Google account not found.", data: new RumbleJson
                 {
                     { "accountId", playerId }
                 });
         }
         catch (Exception e)
         {
-            Log.Error(owner: Owner.Nathan, message: "Error occurred while trying to delete Plarium account from player.", data: $"PlayerId: {playerId}. Error: {e}.");
             throw new PlatformException(message: "Error occurred while trying to delete Plarium account from player.", inner: e);
         }
 		
@@ -211,11 +204,6 @@ public class AccountController : PlatformController
     {
         try
         {
-            if (PlatformEnvironment.IsDev)
-                Log.Info(owner: Owner.Nathan, "PATCH /plarium body received.", data: new
-                {
-                    body = Body
-                });
             DeviceInfo device = _playerService.Find(Token?.AccountId)?.Device ?? Require<DeviceInfo>(Player.FRIENDLY_KEY_DEVICE);
 
             PlariumAccount plarium;
@@ -257,14 +245,13 @@ public class AccountController : PlatformController
             // When using postman, '+' comes through as a space because it's not URL-encoded.
             // This is a quick kluge to enable debugging purposes without having to worry about URL-encoded params in Postman.
             if (_playerService.DeletePlariumAccountById(playerId) == 0 && _playerService.DeletePlariumAccountById(playerId.Trim().Replace(" ", "+")) == 0)
-                throw new RecordNotFoundException(_playerService.CollectionName, "Rumble account not found.", data: new RumbleJson
+                throw new RecordNotFoundException(_playerService.CollectionName, "Plarium account not found.", data: new RumbleJson
                 {
                     { "accountId", playerId }
                 });
         }
         catch (Exception e)
         {
-            Log.Error(owner: Owner.Nathan, message: "Error occurred while trying to delete Plarium account from player.", data: $"PlayerId: {playerId}. Error: {e}.");
             throw new PlatformException(message: "Error occurred while trying to delete Plarium account from player.", inner: e);
         }
 		
@@ -322,13 +309,12 @@ public class AccountController : PlatformController
             // This is a quick kluge to enable debugging purposes without having to worry about URL-encoded params in Postman.
             if (_playerService.DeleteRumbleAccountById(playerId) == 0 && _playerService.DeleteRumbleAccountById(playerId.Trim().Replace(" ", "+")) == 0)
                 throw new RecordNotFoundException(_playerService.CollectionName, "Rumble account not found.", data: new RumbleJson
-                                                                                                                    {
-                                                                                                                        { "accountId", playerId }
-                                                                                                                    });
+                {
+                    { "accountId", playerId }
+                });
         }
         catch (Exception e)
         {
-            Log.Error(owner: Owner.Nathan, message: "Error occurred while trying to delete Rumble account from player.", data: $"PlayerId: {playerId}. Error: {e}.");
             throw new PlatformException(message: "Error occurred while trying to delete Rumble account from player.", inner: e);
         }
 		
