@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Microsoft.AspNetCore.Http;
+using PlayerService.Controllers;
 using PlayerService.Exceptions;
 using PlayerService.Exceptions.Login;
 using PlayerService.Models;
@@ -12,9 +13,11 @@ using Rumble.Platform.Common.Exceptions;
 using Rumble.Platform.Common.Exceptions.Mongo;
 using Rumble.Platform.Common.Extensions;
 using Rumble.Platform.Common.Minq;
+using Rumble.Platform.Common.Models;
 using Rumble.Platform.Common.Services;
 using Rumble.Platform.Common.Utilities;
 using Rumble.Platform.Data;
+using StackExchange.Redis;
 
 namespace PlayerService.Services;
 
@@ -22,14 +25,18 @@ public class MinqAccountService : MinqTimerService<Player>
 {
     private readonly DynamicConfig _config;
     private readonly ApiService _api;
+    private readonly DiscriminatorService _discriminators;
     
-    public MinqAccountService(ApiService api, DynamicConfig config) : base("players", interval: TimeSpan.FromDays(1).TotalMilliseconds)
+    public MinqAccountService(ApiService api, DynamicConfig config, DiscriminatorService discriminators) : base("players", interval: TimeSpan.FromDays(1).TotalMilliseconds)
     {
         _api = api;
         _config = config;
+        _discriminators = discriminators;
     }
     
     public Player Find(string accountId) => mongo.FirstOrDefault(query => query.EqualTo(player => player.Id, accountId));
+    public Player FromToken(TokenInfo token) => Find(token.AccountId)
+        ?? throw new RecordNotFoundException(mongo.CollectionName, "Account not found.");
 
     public bool InstallIdExists(DeviceInfo device) => !string.IsNullOrWhiteSpace(device?.InstallId)
         && mongo.Count(query => query.EqualTo(player => player.Device.InstallId, device.InstallId)) > 0;
@@ -550,6 +557,44 @@ public class MinqAccountService : MinqTimerService<Player>
         return output.ToArray();
     }
 
+    // TODO: Remove all this code smell
+    public long DeleteRumbleAccount(string email) => mongo
+        .Where(query => query.EqualTo(player => player.RumbleAccount.Email, email))
+        .Update(query => query.Set(player => player.RumbleAccount, null));
+    public long DeleteRumbleAccountById(string accountId) => mongo
+        .Where(query => query.EqualTo(player => player.Id, accountId))
+        .Update(query => query.Set(player => player.RumbleAccount, null));
+    public long DeleteAllRumbleAccounts() => mongo
+        .All()
+        .Update(query => query.Set(player => player.RumbleAccount, null));
+    public long DeleteAppleAccount(string email) => mongo
+        .Where(query => query.EqualTo(player => player.AppleAccount.Email, email))
+        .Update(query => query.Set(player => player.AppleAccount, null));
+    public long DeleteAppleAccountById(string accountId) => mongo
+        .Where(query => query.EqualTo(player => player.Id, accountId))
+        .Update(query => query.Set(player => player.AppleAccount, null));
+    public long DeleteAllAppleAccounts() => mongo
+        .All()
+        .Update(query => query.Set(player => player.AppleAccount, null));
+    public long DeleteGoogleAccount(string email) => mongo
+        .Where(query => query.EqualTo(player => player.GoogleAccount.Email, email))
+        .Update(query => query.Set(player => player.GoogleAccount, null));
+    public long DeleteGoogleAccountById(string accountId) => mongo
+        .Where(query => query.EqualTo(player => player.Id, accountId))
+        .Update(query => query.Set(player => player.GoogleAccount, null));
+    public long DeleteAllGoogleAccounts() => mongo
+        .All()
+        .Update(query => query.Set(player => player.GoogleAccount, null));
+    public long DeletePlariumAccount(string email) => mongo
+        .Where(query => query.EqualTo(player => player.PlariumAccount.Email, email))
+        .Update(query => query.Set(player => player.PlariumAccount, null));
+    public long DeletePlariumAccountById(string accountId) => mongo
+        .Where(query => query.EqualTo(player => player.Id, accountId))
+        .Update(query => query.Set(player => player.PlariumAccount, null));
+    public long DeleteAllPlariumAccounts() => mongo
+        .All()
+        .Update(query => query.Set(player => player.PlariumAccount, null));
+
     protected override void OnElapsed()
     {
         long affected = mongo
@@ -577,6 +622,122 @@ public class MinqAccountService : MinqTimerService<Player>
                 Affected = affected
             });
     }
+    
+    private PlatformException DiagnoseEmailPasswordLogin(string email, string hash, string code = null)
+    {
+        RumbleAccount[] accounts = mongo
+            .Where(query => query.EqualTo(player => player.RumbleAccount.Email, email))
+            .Limit(1_000)
+            .Sort(sort => sort
+                .OrderByDescending(player => player.RumbleAccount.Status)
+                .ThenByDescending(player => player.RumbleAccount.CodeExpiration)
+            )
+            .Project(player => player.RumbleAccount);
+
+        int confirmed = accounts.Count(rumble => rumble.Status == RumbleAccount.AccountStatus.Confirmed);
+
+        bool waitingOnConfirmation = confirmed == 0 && accounts.Any(rumble => rumble.Status == RumbleAccount.AccountStatus.NeedsConfirmation && rumble.CodeExpiration > Timestamp.UnixTime);
+        bool allExpired = confirmed == 0 && !accounts.Any(rumble => rumble.Status == RumbleAccount.AccountStatus.NeedsConfirmation && rumble.CodeExpiration > Timestamp.UnixTime);
+        bool codeInvalid = !allExpired && !string.IsNullOrWhiteSpace(code) && accounts.All(rumble => rumble.ConfirmationCode != code);
+
+        PlatformException output = confirmed switch
+        {
+            0 when accounts.Length == 0 => new RumbleUnlinkedException(email),
+            0 when waitingOnConfirmation => new RumbleNotConfirmedException(email),
+            0 when allExpired => new ConfirmationCodeExpiredException(email),
+            0 => new RumbleUnlinkedException(email),
+            1 when codeInvalid => new CodeInvalidException(email),
+            1 => new InvalidPasswordException(email),
+            _ => new RecordsFoundException(0, 1, confirmed, "Found more than one confirmed Rumble account for an email address!")
+        };
+
+        return output;
+    }
+
+    public Player LinkPlayerAccounts(string childId, string parentId, bool force, TokenInfo token)
+    {
+        Player child = Find(childId);
+        Player parent = Find(parentId);
+
+        if (!string.IsNullOrWhiteSpace(child.ParentId))
+            if (!force)
+                throw new PlatformException("Account is already linked to another account.");
+            else
+                Log.Warn(Owner.Will, "Account was previously linked to another account, but the force flag allows a link override.", data: new
+                {
+                    Child = child,
+                    Parent = parent,
+                    Token = token
+                });
+
+        if (parent.GoogleAccount != null || parent.RumbleAccount != null || parent.AppleAccount != null)
+            if (!force)
+                throw new PlatformException("Parent account has SSO; no link can be made without the force flag.");
+            else
+                Log.Warn(Owner.Will, "Parent account has SSO, but the force flag allows a link override.", data: new
+                {
+                    Child = child,
+                    Parent = parent,
+                    Token = token
+                });
+
+        // Link the two accounts together.
+        parent.Children ??= new List<string>();
+        parent.Children.Add(child.Id);
+        child.ParentId = parent.AccountId;
+		
+        Update(parent);
+        Update(child);
+        
+        // TODO: Transaction
+		
+        return child;
+    }
+
+    public new void Update(Player model) => mongo
+        .Where(query => query.EqualTo(player => player.AccountId, model.Id))
+        .Update(query => query
+            .Set(player => player.AppleAccount, model.AppleAccount)
+            .Set(player => player.GoogleAccount, model.GoogleAccount)
+            .Set(player => player.PlariumAccount, model.PlariumAccount)
+            .Set(player => player.RumbleAccount, model.RumbleAccount)
+            .Set(player => player.CreatedOn, model.CreatedOn)
+            .Set(player => player.LinkCode, model.LinkCode)
+            .Set(player => player.LocationData, model.LocationData)
+            .Set(player => player.Device.ClientVersion, model.Device.ClientVersion)
+            .Set(player => player.Device.DataVersion, model.Device.DataVersion)
+            .Set(player => player.Device.Language, model.Device.Language)
+            .Set(player => player.Device.OperatingSystem, model.Device.OperatingSystem)
+            .Set(player => player.Device.Type, model.Device.Type) // Update everything except Device.InstallId / PK
+            .Set(player => player.Screenname, model.Screenname)
+            .SetToCurrentTimestamp(player => player.LastLogin)
+        );
+
+    public string GenerateToken(string accountId) => GenerateToken(Find(accountId));
+
+    public string GenerateToken(Player player) => player.Token ??= _api.GenerateToken(
+        player.AccountId,
+        player.Screenname,
+        player.Email,
+        _discriminators.Lookup(player),
+        audiences: AccountController.TOKEN_AUDIENCE
+    );
+
+    public override long ProcessGdprRequest(TokenInfo token, string dummyText) => mongo
+        .Where(query => query.EqualTo(player => player.Id, token.AccountId))
+        .Or(query => query.EqualTo(player => player.ParentId, token.AccountId))
+        .Update(query => query
+            .Set(player => player.AppleAccount, null)
+            .Set(player => player.GoogleAccount, null)
+            .Set(player => player.RumbleAccount, null)
+            .Set(player => player.PlariumAccount, null)
+            .Set(player => player.LocationData, null)
+            .Set(player => player.Screenname, dummyText)
+            .Set(player => player.Device.Language, dummyText)
+            .Set(player => player.Device.OperatingSystem, dummyText)
+            .Set(player => player.Device.InstallId, dummyText)
+            .Set(player => player.ParentId, null)
+        );
 }
 
 public interface ISsoAccount { }
