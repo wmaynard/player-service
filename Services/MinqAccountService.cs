@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Runtime.InteropServices.JavaScript;
 using Microsoft.AspNetCore.Http;
 using PlayerService.Controllers;
 using PlayerService.Exceptions;
@@ -248,7 +249,23 @@ public class PlayerAccountService : MinqTimerService<Player>
         }
 
         Update(player);
-        GenerateToken(player);
+
+        try
+        {
+            GenerateToken(player);
+        }
+        catch (TokenBannedException e)
+        {
+            // PLATF-6466: Add info log for attempted account links that are banned
+            Log.Warn(Owner.Will, "A token generation was attempted when signing into an SSO account but was banned", data: new
+            {
+                AccountId = player.AccountId,
+                Screenname = player.Screenname,
+                Help = "This may present itself as an account ID being banned when it isn't, but rather because the account it's trying to access with SSO is."
+            }, exception: e);
+
+            throw;
+        }
         return player;
     }
 
