@@ -1,7 +1,11 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
+using System.IO;
 using System.Linq;
+using System.Runtime.Serialization.Formatters.Binary;
+using System.Text;
+using System.Text.Json;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Configuration;
@@ -18,6 +22,7 @@ using RCL.Logging;
 using Rumble.Platform.Common.Attributes;
 using Rumble.Platform.Common.Enums;
 using Rumble.Platform.Common.Exceptions;
+using Rumble.Platform.Common.Extensions;
 using Rumble.Platform.Common.Models;
 using Rumble.Platform.Common.Utilities;
 using Rumble.Platform.Common.Services;
@@ -317,7 +322,21 @@ public class TopController : PlatformController
 		long itemMS = Timestamp.UnixTimeMs;
 		List<Item> output = _itemService.GetItemsFor(Token.AccountId, ids, types);
 		itemMS = Timestamp.UnixTimeMs - itemMS;
-		
+
+		if (itemMS > 10_000)
+			Log.Warn(Owner.Will, "Took a long time to retrieve items from MongoDB", data: new
+			{
+				itemCount = output.Count,
+				TypeBreakdown = output
+					.GroupBy(item => item.Type)
+					.Select(group => new
+					{
+						Type = group.Key,
+						Count = group.Count()
+					}),
+				DurationMs = itemMS
+			});
+
 		return Ok(new { Items = output, itemMS = itemMS });
 	}
 
@@ -430,26 +449,5 @@ public class TopController : PlatformController
 			{ "warning", "This endpoint is deprecated!  It will be leaving player-service once the new login flows have been adopted." }
 		};
 		return Ok(output);
-	}
-
-	[HttpDelete, Route("pesticide"), NoAuth]
-	public ActionResult KillAllLocusts()
-	{
-		// TODO: This should require admin, and optimize queries
-
-		Player[] locusts = _playerService.Find(filter: player => player.Device.InstallId.StartsWith("locust-"));
-
-		foreach (Player locust in locusts)
-		{
-			foreach (ComponentService componentService in ComponentServices.Values)
-				componentService.Delete(locust);
-			_itemService.Delete(locust);
-			_playerService.Delete(locust.Id);
-		}
-
-		return Ok(new
-		{
-			LocustsKilled = locusts.Length
-		});
 	}
 }

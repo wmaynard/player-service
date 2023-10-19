@@ -273,14 +273,16 @@ public class AccountController : PlatformController
                 throw new RecordNotFoundException(_playerService.CollectionName, "No device found for an account.", data: Token?.ToJson());
 
             Player fromDevice = _playerService.FromDevice(device, isUpsert: true);
-            Player fromRumble = _playerService.FromRumble(rumble, mustExist: false, mustNotExist: true);
+            // Player fromRumble = _playerService.FromRumble(rumble, mustExist: false, mustNotExist: true);
+
+            _playerService.EnforceNoRumbleAccountExists(rumble, Token?.AccountId);
             
             // EnforceNoRumbleAccountExists(rumble, Token.AccountId);
         
-            if (fromRumble != null)
-                throw fromDevice.Id == fromRumble.Id
-                    ? new AlreadyLinkedAccountException("Rumble")
-                    : new AccountOwnershipException("Rumble", fromDevice.Id, fromRumble.Id);
+            // if (fromRumble != null)
+            //     throw fromDevice.Id == fromRumble.Id
+            //         ? new AlreadyLinkedAccountException("Rumble")
+            //         : new AccountOwnershipException("Rumble", fromDevice.Id, fromRumble.Id);
 
             _playerService.AttachRumble(fromDevice, rumble);
 
@@ -375,20 +377,7 @@ public class AccountController : PlatformController
                 redirectUrl = failure.Replace("{reason}", "otpFailure");
             })
             .Post();
-
-        // e.g. https://eng.towersandtitans.com/email/failure/otpFailure
-        if (player.RumbleAccount == null)
-            return Ok(new LoginRedirect(redirectUrl));
-
-        long affected = _playerService.ClearUnconfirmedAccounts(player.RumbleAccount);
-        if (affected > 0)
-            Log.Warn(Owner.Will, "Account confirmation cleared other unconfirmed accounts.", data: new
-            {
-                Affected = affected,
-                Detail = "The player likely had other attempts on other devices when trying to link their account.",
-                Player = player.RumbleAccount.Email
-            });
-
+        
         // e.g. https://eng.towersandtitans.com/email/dev.nonprod.cdrentertainment.com/success/deadbeefdeadbeefdeadbeef
         return Ok(new LoginRedirect(redirectUrl));
     }
@@ -575,9 +564,6 @@ public class AccountController : PlatformController
 
             player.GoogleAccount ??= sso?.GoogleAccount;
             player.AppleAccount ??= sso?.AppleAccount;
-
-            if (player.LinkExpiration > 0 && player.LinkExpiration <= Timestamp.UnixTime)
-                _playerService.RemoveExpiredLinkCodes();
 
             _playerService.Update(player);
             return Ok(new RumbleJson

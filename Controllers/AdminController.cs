@@ -316,7 +316,7 @@ public class AdminController : PlatformController
 		
 		if (email == null)
 		{
-			long affected = _playerService.DeleteAllPlariumAccounts(installIds);
+			long affected = _playerService.DeleteAllPlariumAccounts();
 			
 			if (affected > 0)
 				SlackDiagnostics

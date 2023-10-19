@@ -21,13 +21,15 @@ using StackExchange.Redis;
 
 namespace PlayerService.Services;
 
-public class MinqAccountService : MinqTimerService<Player>
+public class PlayerAccountService : MinqTimerService<Player>
 {
     private readonly DynamicConfig _config;
     private readonly ApiService _api;
     private readonly DiscriminatorService _discriminators;
+
+    public string CollectionName => mongo.CollectionName;
     
-    public MinqAccountService(ApiService api, DynamicConfig config, DiscriminatorService discriminators) : base("players", interval: TimeSpan.FromDays(1).TotalMilliseconds)
+    public PlayerAccountService(ApiService api, DynamicConfig config, DiscriminatorService discriminators) : base("players", interval: TimeSpan.FromDays(1).TotalMilliseconds)
     {
         _api = api;
         _config = config;
@@ -90,7 +92,7 @@ public class MinqAccountService : MinqTimerService<Player>
 
     public Player[] FromSso(SsoData sso, string ipAddress)
     {
-        if (!sso.HasAtLeastOneAccount())
+        if (sso == null || !sso.HasAtLeastOneAccount())
             return Array.Empty<Player>();
         
         RequestChain<Player> request = mongo.CreateRequestChain();
@@ -549,7 +551,7 @@ public class MinqAccountService : MinqTimerService<Player>
             
         output = output
             .Where(player => string.IsNullOrWhiteSpace(player.ParentId))
-            .DistinctBy(player => player.AccountId)
+            .DistinctBy(player => player.Id)
             .ToList();
 
         Player.WeighSearchResults(terms, ref output);
@@ -695,7 +697,7 @@ public class MinqAccountService : MinqTimerService<Player>
     }
 
     public new void Update(Player model) => mongo
-        .Where(query => query.EqualTo(player => player.AccountId, model.Id))
+        .Where(query => query.EqualTo(player => player.Id, model.Id))
         .Update(query => query
             .Set(player => player.AppleAccount, model.AppleAccount)
             .Set(player => player.GoogleAccount, model.GoogleAccount)

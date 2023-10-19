@@ -24,7 +24,7 @@ using Rumble.Platform.Data;
 
 namespace PlayerService.Services;
 
-public class PlayerAccountService : PlatformMongoService<Player>
+public class PlayerAccountService_Legacy : PlatformMongoService<Player>
 {
 	public const long CODE_EXPIRATION = 15 * 60; // 15 minutes
 
@@ -35,7 +35,7 @@ public class PlayerAccountService : PlatformMongoService<Player>
 	private readonly DiscriminatorService _discriminatorService;
 	private readonly LockoutService _lockoutService;
 
-	public PlayerAccountService(ApiService api, DynamicConfig config, NameGeneratorService nameGenerator, AccountService account, DiscriminatorService discriminator, LockoutService lockout) : base("players")
+	public PlayerAccountService_Legacy(ApiService api, DynamicConfig config, NameGeneratorService nameGenerator, AccountService account, DiscriminatorService discriminator, LockoutService lockout) : base("players")
 	{
 		_apiService = api;
 		_config = config;
