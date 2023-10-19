@@ -336,6 +336,19 @@ public class TopController : PlatformController
 					}),
 				DurationMs = itemMS
 			});
+		else if (output.Count > 100)
+			Log.Warn(Owner.Will, "A lot of items were returned at once.  Consider refining the query to return fewer items.", data: new
+			{
+				itemCount = output.Count,
+				TypeBreakdown = output
+					.GroupBy(item => item.Type)
+					.Select(group => new
+					{
+						Type = group.Key,
+						Count = group.Count()
+					}),
+				DurationMs = itemMS
+			});
 
 		return Ok(new { Items = output, itemMS = itemMS });
 	}
