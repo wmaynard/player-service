@@ -42,6 +42,7 @@ namespace PlayerService.Services
 		            {"privateKey", PlatformEnvironment.Require<string>(key: "PLARIUM_PRIVATE_KEY")},
 		            {"grantType", "authorization_code"}
 	            })
+				.OnSuccess(response => authToken = response.AsString)
 				.OnFailure(response => failure = $"Failed to fetch Plarium token; {response?.Optional<string>("message")}")
 				.Post();
 
