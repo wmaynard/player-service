@@ -144,7 +144,7 @@ public class PlayerAccountService : MinqTimerService<Player>
     {
         long usernameCount = mongo
             .Where(query => query
-                .EqualTo(player => player.Email, rumble.Email)
+                .EqualTo(player => player.RumbleAccount.Email, rumble.Email)
                 .GreaterThanOrEqualTo(player => player.RumbleAccount.Status, RumbleAccount.AccountStatus.Confirmed)
             )
             .Count();
@@ -154,7 +154,7 @@ public class PlayerAccountService : MinqTimerService<Player>
 
         Player[] results = mongo
             .Where(query => query
-                .EqualTo(player => player.Email, rumble.Email)
+                .EqualTo(player => player.RumbleAccount.Email, rumble.Email)
                 .EqualTo(player => player.RumbleAccount.Hash, rumble.Hash)
                 .GreaterThanOrEqualTo(player => player.RumbleAccount.Status, RumbleAccount.AccountStatus.Confirmed)
             )
@@ -171,7 +171,7 @@ public class PlayerAccountService : MinqTimerService<Player>
     {
         Player[] results = mongo
             .Where(query => query
-                .EqualTo(player => player.Email, rumble.Email)
+                .EqualTo(player => player.RumbleAccount.Email, rumble.Email)
                 .GreaterThanOrEqualTo(player => player.RumbleAccount.Status, RumbleAccount.AccountStatus.Confirmed)
             )
             .ToArray();
