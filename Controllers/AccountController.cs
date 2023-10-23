@@ -100,6 +100,15 @@ public class AccountController : PlatformController
             if (fromApple == null)
                 return Ok(_playerService.AttachApple(fromDevice, apple)?.Prune());
             
+            if (!PlatformEnvironment.IsProd)
+                Log.Info(Owner.Will, "Apple account conflict encountered", data: new
+                {
+                    Expected = fromDevice.Id == fromApple.Id,
+                    Help = "If expected is true result of someone trying to attach an Apple account when it already exists",
+                    AppleId = apple?.Id,
+                    Email = apple?.Email
+                });
+            
             throw fromDevice.Id == fromApple.Id
                 ? new AlreadyLinkedAccountException("Apple")
                 : new AccountOwnershipException("Apple", fromDevice.Id, fromApple.Id);
