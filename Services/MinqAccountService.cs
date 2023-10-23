@@ -123,19 +123,19 @@ public class PlayerAccountService : MinqTimerService<Player>
         return output;
     }
 
-    private Player EnsureOneResult(Player[] results) => results?.Length == 1
-        ? results.First()
+    private static Player EnsureZeroOrOneResult(Player[] results) => results?.Length <= 1
+        ? results.FirstOrDefault()
         : throw new RecordsFoundException(1, results?.Length ?? 0);
 
-    public Player FromApple(AppleAccount apple) => EnsureOneResult(mongo
+    public Player FromApple(AppleAccount apple) => EnsureZeroOrOneResult(mongo
         .Where(query => query.EqualTo(player => player.AppleAccount.Id, apple.Id))
         .ToArray()
     );
-    public Player FromGoogle(GoogleAccount google) => EnsureOneResult(mongo
+    public Player FromGoogle(GoogleAccount google) => EnsureZeroOrOneResult(mongo
         .Where(query => query.EqualTo(player => player.GoogleAccount.Id, google.Id))
         .ToArray()
     );
-    public Player FromPlarium(PlariumAccount plarium) => EnsureOneResult(mongo
+    public Player FromPlarium(PlariumAccount plarium) => EnsureZeroOrOneResult(mongo
         .Where(query => query.EqualTo(player => player.PlariumAccount.Id, plarium.Id))
         .ToArray()
     );
