@@ -39,7 +39,6 @@ public class TopController : PlatformController
 #pragma warning disable
 	private readonly PlayerAccountService _playerService;
 	private readonly DynamicConfig _dynamicConfig;
-	private readonly DiscriminatorService _discriminatorService;
 	private readonly ItemService _itemService;
 	private readonly NameGeneratorService _nameGeneratorService;
 	private readonly AuditService _auditService;
@@ -128,8 +127,8 @@ public class TopController : PlatformController
 		foreach (Item item in itemCreations)
 			item.AccountId = Token.AccountId;
 
-		long totalMS = Timestamp.UnixTimeMs;
-		long componentMS = Timestamp.UnixTimeMs;
+		long totalMS = TimestampMs.Now;
+		long componentMS = TimestampMs.Now;
 
 		string aid = Token.AccountId;
 		foreach (Component component in components)
@@ -145,9 +144,9 @@ public class TopController : PlatformController
 			)
 		).ToList();
 
-		componentMS = Timestamp.UnixTimeMs - componentMS;
+		componentMS = TimestampMs.Now - componentMS;
 
-		long itemMS = Timestamp.UnixTimeMs;
+		long itemMS = TimestampMs.Now;
 
 #region Deprecated Item Code
 		Item[] toSave = items.Where(item => !item.MarkedForDeletion).ToArray();
@@ -166,7 +165,7 @@ public class TopController : PlatformController
 		if (itemDeletions.Any())
 			tasks.Add(_itemService.BulkDeleteAsync(itemDeletions, session));
 
-		itemMS = Timestamp.UnixTimeMs - itemMS;
+		itemMS = TimestampMs.Now - itemMS;
 
 		try
 		{
@@ -186,7 +185,7 @@ public class TopController : PlatformController
 		
 		session.CommitTransaction();
 
-		totalMS = Timestamp.UnixTimeMs - totalMS;
+		totalMS = TimestampMs.Now - totalMS;
 
 		return Ok(new
 		{
@@ -319,9 +318,9 @@ public class TopController : PlatformController
 		string[] ids = Optional<string>("ids")?.Split(',');
 		string[] types = Optional<string>("types")?.Split(',');
 
-		long itemMS = Timestamp.UnixTimeMs;
+		long itemMS = TimestampMs.Now;
 		List<Item> output = _itemService.GetItemsFor(Token.AccountId, ids, types);
-		itemMS = Timestamp.UnixTimeMs - itemMS;
+		itemMS = TimestampMs.Now - itemMS;
 
 		if (itemMS > 10_000)
 			Log.Warn(Owner.Will, "Took a long time to retrieve items from MongoDB", data: new
@@ -357,19 +356,13 @@ public class TopController : PlatformController
 	public ActionResult ChangeName()
 	{
 		string sn = Require<string>("screenname");
-		
-		_playerService.SyncScreenname(sn, Token.AccountId);
-		Player player = _playerService.Find(Token.AccountId);
-
-		int discriminator = _discriminatorService.Update(player);
-		
-		string token = _apiService.GenerateToken(player.AccountId, player.Screenname, Token.Email, discriminator, AccountController.TOKEN_AUDIENCE);
+		Player player = _playerService.ChangeScreenname(Token.AccountId, sn);
 
 		return Ok(new
 		{
 			Player = player,
-			AccessToken = token,
-			Discriminator = discriminator
+			AccessToken = player.Token,
+			Discriminator = player.Discriminator
 		});
 	}
 
@@ -378,11 +371,9 @@ public class TopController : PlatformController
 	{
 		// TODO: This is a little janky, and once the SummaryComponent is implemented, this should just return those entries.
 		string[] accountIds = Require<string>("accountIds")?.Split(",");
-		
-		List<DiscriminatorGroup> discriminators = _discriminatorService.Find(accountIds);
 
-		Dictionary<string, string> avatars = new Dictionary<string, string>();
-		Dictionary<string, int> accountLevels = new Dictionary<string, int>();
+		Dictionary<string, string> avatars = new();
+		Dictionary<string, int> accountLevels = new();
 		foreach (Component component in ComponentServices[Component.ACCOUNT].Find(accountIds))
 		{
 			if (!avatars.ContainsKey(component.AccountId) || avatars[component.AccountId] == null)
@@ -390,77 +381,22 @@ public class TopController : PlatformController
 			accountLevels[component.AccountId] = component.Data.Optional<int?>("accountLevel") ?? -1;
 		}
 
-		List<RumbleJson> output = new List<RumbleJson>();
-		
-		// TODO: Add borders to lookup data.
+		RumbleJson[] output = _playerService.CreateLookupResults(accountIds, avatars, accountLevels);
 
-		foreach (DiscriminatorGroup group in discriminators)
-			foreach (DiscriminatorMember member in group.Members.Where(member => accountIds.Contains(member.AccountId)))
-				output.Add(new RumbleJson
-				{
-					{ Player.FRIENDLY_KEY_ACCOUNT_ID, member.AccountId },
-					{ Player.FRIENDLY_KEY_SCREENNAME, member.ScreenName },
-					{ Player.FRIENDLY_KEY_DISCRIMINATOR, group.Number.ToString().PadLeft(4, '0') },
-					{ "accountAvatar", avatars.ContainsKey(member.AccountId) ? avatars[member.AccountId] : null },
-					{ "accountLevel", accountLevels.ContainsKey(member.AccountId) ? accountLevels[member.AccountId] : null }
-				});
+		// foreach (DiscriminatorGroup group in discriminators)
+		// 	foreach (DiscriminatorMember member in group.Members.Where(member => accountIds.Contains(member.AccountId)))
+		// 		output.Add(new RumbleJson
+		// 		{
+		// 			{ TokenInfo.FRIENDLY_KEY_ACCOUNT_ID, member.AccountId },
+		// 			{ Player.FRIENDLY_KEY_SCREENNAME, member.ScreenName },
+		// 			{ Player.FRIENDLY_KEY_DISCRIMINATOR, group.Number.ToString().PadLeft(4, '0') },
+		// 			{ "accountAvatar", avatars.ContainsKey(member.AccountId) ? avatars[member.AccountId] : null },
+		// 			{ "accountLevel", accountLevels.ContainsKey(member.AccountId) ? accountLevels[member.AccountId] : null }
+		// 		});
 
 		return Ok(new
 		{
 			Results = output
 		});
-	}
-
-	// TODO: Remove /launch permanently once we've switched over to it.
-	[HttpPost, Route("launch"), NoAuth]
-	public ActionResult Launch()
-	{
-		_apiService
-			.Request("/player/v2/account/login")
-			.SetPayload(new RumbleJson
-			{
-				{
-					Player.FRIENDLY_KEY_DEVICE, new RumbleJson
-					{
-						{ DeviceInfo.FRIENDLY_KEY_INSTALL_ID, Require<string>("installId") },
-						{ DeviceInfo.FRIENDLY_KEY_CLIENT_VERSION, Optional<string>("clientVersion") },
-						{ DeviceInfo.FRIENDLY_KEY_DATA_VERSION, Optional<string>("dataVersion") },
-						{ DeviceInfo.FRIENDLY_KEY_LANGUAGE, Optional<string>("systemLanguage") },
-						{ DeviceInfo.FRIENDLY_KEY_OS_VERSION, Optional<string>("osVersion") },
-						{ DeviceInfo.FRIENDLY_KEY_TYPE, Optional<string>("deviceType") }
-					}
-				},
-				{
-					"sso", new RumbleJson
-					{
-						{ SsoData.FRIENDLY_KEY_GOOGLE_TOKEN, Optional<RumbleJson>("sso")?.Optional<string>("googleToken") }
-					}
-				}
-			})
-			.Post(out RumbleJson json, out int code);
-
-		RumbleJson output = new RumbleJson
-		{
-			{ "success", true },
-			{ "remoteAddr", GeoIPData?.IPAddress },
-			{ "geoipAddr", GeoIPData?.IPAddress },
-			{ "country", GeoIPData?.CountryCode },
-			{ "serverTime", Timestamp.UnixTime },
-			{ "requestId", json?.Optional<string>("requestId") },
-			{ "accessToken", json?.Optional<Player>("player")?.Token },
-			{ "player", new RumbleJson
-			{
-				{ "clientVersion", json?.Optional<Player>("player")?.Device?.ClientVersion },
-				{ "dateCreated", 0 },
-				{ "lastSavedInstallId", json?.Optional<Player>("player")?.Device?.InstallId },
-				{ "screenname", json?.Optional<Player>("player")?.Screenname },
-				{ "username", json?.Optional<Player>("player")?.Screenname },
-				{ "id", json?.Optional<Player>("player")?.Id }
-			}},
-			{ "discriminator", json?.Optional<Player>("player")?.Discriminator },
-			{ "ssoData", Array.Empty<string>() },
-			{ "warning", "This endpoint is deprecated!  It will be leaving player-service once the new login flows have been adopted." }
-		};
-		return Ok(output);
 	}
 }

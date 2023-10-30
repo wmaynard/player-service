@@ -56,7 +56,7 @@ public class MaintenanceFilter : PlatformFilter, IActionFilter
         bool envContainsMaintenance = maintenanceSpecified && PlatformEnvironment.Url().Contains(maintenanceFieldValue);
         bool originContainsMaintenance = maintenanceSpecified && !string.IsNullOrWhiteSpace(origin) && origin.Contains(maintenanceFieldValue);
         bool maintenanceMode = envContainsMaintenance || originContainsMaintenance;
-        long now = Timestamp.UnixTime;
+        long now = Timestamp.Now;
 
         if (!maintenanceMode || now < start || now >= end)
             return;
@@ -119,7 +119,7 @@ public class MaintenanceFilter : PlatformFilter, IActionFilter
 
                     // For existing installs, use the device info to look up their email address.  If the email is whitelisted,
                     // let them through.
-                    Player player = playerService.FromDevice(device);
+                    Player player = playerService.FromDevice(device, null);
                     if (player?.Email != null && whitelist.Any(domain => player.Email.EndsWith(domain)))
                         return;
                 }

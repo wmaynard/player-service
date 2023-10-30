@@ -8,6 +8,7 @@ using PlayerService.Models;
 using PlayerService.Models.Login;
 using PlayerService.Services.ComponentServices;
 using RCL.Logging;
+using Rumble.Platform.Common.Enums;
 using Rumble.Platform.Common.Exceptions;
 using Rumble.Platform.Common.Exceptions.Mongo;
 using Rumble.Platform.Common.Extensions;
@@ -22,17 +23,30 @@ namespace PlayerService.Services;
 
 public class PlayerAccountService : MinqTimerService<Player>
 {
+    public const Audience TOKEN_AUDIENCE = 
+        Audience.ChatService
+        | Audience.DmzService
+        | Audience.LeaderboardService
+        | Audience.MailService
+        | Audience.MatchmakingService
+        | Audience.MultiplayerService
+        | Audience.NftService
+        | Audience.PlayerService
+        | Audience.PvpService
+        | Audience.ReceiptService
+        | Audience.GameServer;
+    
     private readonly DynamicConfig _config;
     private readonly ApiService _api;
-    private readonly DiscriminatorService _discriminators;
+    private readonly Random _rando;
 
     public string CollectionName => mongo.CollectionName;
     
-    public PlayerAccountService(ApiService api, DynamicConfig config, DiscriminatorService discriminators) : base("players", interval: TimeSpan.FromDays(1).TotalMilliseconds)
+    public PlayerAccountService(ApiService api, DynamicConfig config) : base("players", interval: TimeSpan.FromDays(1).TotalMilliseconds)
     {
         _api = api;
         _config = config;
-        _discriminators = discriminators;
+        _rando = new Random();
     }
     
     public Player Find(string accountId) => mongo.FirstOrDefault(query => query.EqualTo(player => player.Id, accountId));
@@ -44,7 +58,6 @@ public class PlayerAccountService : MinqTimerService<Player>
 
     public int SyncScreenname(string screenname, string accountId, bool fromAdmin = false)
     {
-        Require<DiscriminatorService>().Assign(accountId, screenname);
         Require<AccountService>().SetScreenname(accountId, screenname, fromAdmin);
         return (int)mongo
             .Where(query => query.EqualTo(player => player.Id, accountId))
@@ -52,7 +65,7 @@ public class PlayerAccountService : MinqTimerService<Player>
             .Update(query => query.Set(player => player.Screenname, screenname));
     }
 
-    public Player FromDevice(DeviceInfo device, bool isUpsert = false)
+    public Player FromDevice(DeviceInfo device, GeoIPData geoIpData)
     {
         Player stored = mongo
             .FirstOrDefault(query => query.EqualTo(player => player.Device.InstallId, device.InstallId));
@@ -69,25 +82,84 @@ public class PlayerAccountService : MinqTimerService<Player>
 
         stored = mongo
             .Where(query => query.EqualTo(player => player.Device.InstallId, device.InstallId))
-            .Upsert(query => query
-                .Set(player => player.Device.ClientVersion, device.ClientVersion)
-                .Set(player => player.Device.DataVersion, device.DataVersion)
-                .Set(player => player.Device.Language, device.Language)
-                .Set(player => player.Device.OperatingSystem, device.OperatingSystem)
-                .Set(player => player.Device.Type, device.Type)
-                .Set(player => player.LastLogin, Timestamp.UnixTime)
-                .Set(player => player.Device.ConfirmedPrivateKey, device.PrivateKey)
-                .SetOnInsert(player => player.Screenname, Require<NameGeneratorService>().Next)
-            );
-        
-        stored?.Device?.CalculatePrivateKey();
+            .Upsert(query =>
+            {
+                query
+                    .Set(player => player.Device.ClientVersion, device.ClientVersion)
+                    .Set(player => player.Device.DataVersion, device.DataVersion)
+                    .Set(player => player.Device.Language, device.Language)
+                    .Set(player => player.Device.OperatingSystem, device.OperatingSystem)
+                    .Set(player => player.Device.Type, device.Type)
+                    .Set(player => player.LastLogin, Timestamp.Now)
+                    .Set(player => player.Device.ConfirmedPrivateKey, device.PrivateKey)
+                    .SetOnInsert(player => player.Screenname, Require<NameGeneratorService>().Next);
+
+                if (geoIpData != null)
+                    query.Set(player => player.LocationData, geoIpData);
+            });
+
+        if (stored.Discriminator == null)
+            AssignDiscriminator(stored);
+
+        stored.Device?.CalculatePrivateKey();
 
         // Look for a parent account, if necessary.
-        if (!string.IsNullOrWhiteSpace(stored?.ParentId))
-            stored.Parent = mongo.FirstOrDefault(query => query.EqualTo(player => player.Id, stored.ParentId));
+        if (!string.IsNullOrWhiteSpace(stored.ParentId))
+            stored.Parent = mongo.ExactId(stored.ParentId).FirstOrDefault();
         
-        return stored?.Parent ?? stored;
+        return stored.Parent ?? stored;
     }
+
+    /// <summary>
+    /// Attempts to assign a discriminator to a player account.  If this fails, the player's discriminator will be 0.
+    /// Discriminators of 0 are not guaranteed to be unique.
+    /// </summary>
+    /// <param name="account">The account to assign a discriminator to.</param>
+    /// <param name="desired">The desired discriminator, if any.  If null, a random number will be assigned.</param>
+    /// <returns></returns>
+    private int AssignDiscriminator(Player account, int? desired = null)
+    {
+        int attempts = 0;
+        string sn = account.Screenname;
+        while (attempts++ < 50)
+        {
+            desired ??= _rando.Next(1, 9_999);
+            bool exists = mongo
+                .Where(query => query
+                    .EqualTo(player => player.Screenname, sn)
+                    .EqualTo(player => player.Discriminator, desired)
+                )
+                .Count() > 0;
+
+            if (exists)
+                continue;
+            
+            mongo
+                .ExactId(account.Id)
+                .Limit(1)
+                .Update(query => query.Set(player => player.Discriminator, desired));
+            
+            account.Discriminator = desired;
+            return (int)desired;
+        }
+
+        desired = 0;
+        
+        mongo
+            .ExactId(account.Id)
+            .Limit(1)
+            .Update(query => query.Set(player => player.Discriminator, desired));
+        
+        Log.Error(Owner.Will, "Unable to generate a discriminator for an account.", data: new
+        {
+            Attempts = attempts,
+            Help = "A discriminator was not available after multiple attempts.  It will be 0 for this account, and may not be unique.",
+            AccountId = account.Id
+        });
+        account.Discriminator = desired;
+        return (int)desired;
+    }
+
 
     public Player[] FromSso(SsoData sso, string ipAddress)
     {
@@ -189,20 +261,26 @@ public class PlayerAccountService : MinqTimerService<Player>
         }
     }
 
-    public Player UpdateHash(string username, string oldHash, string newHash, string callingAccountId) => mongo
-        .Where(query =>
-        {
-            FilterChain<Player> filter = query.EqualTo(player => player.RumbleAccount.Username, username);
-            if (!string.IsNullOrWhiteSpace(oldHash))
-                filter.EqualTo(player => player.RumbleAccount.Hash, oldHash);
-        })
-        .Limit(1)
-        .UpdateAndReturnOne(query =>
-        {
-            UpdateChain<Player> update = query.Set(player => player.RumbleAccount.Hash, newHash);
-            if (!string.IsNullOrWhiteSpace(callingAccountId))
-                update.AddItems(player => player.RumbleAccount.ConfirmedIds, limitToKeep: 20, callingAccountId);
-        }) ?? throw new RecordNotFoundException(mongo.CollectionName, "Account not found.");
+    public Player UpdateHash(string username, string oldHash, string newHash, string callingAccountId)
+    {
+        Player output = mongo
+            .Where(query =>
+            {
+                FilterChain<Player> filter = query.EqualTo(player => player.RumbleAccount.Username, username);
+                if (!string.IsNullOrWhiteSpace(oldHash))
+                    filter.EqualTo(player => player.RumbleAccount.Hash, oldHash);
+            })
+            .Limit(1)
+            .UpdateAndReturnOne(query =>
+            {
+                UpdateChain<Player> update = query.Set(player => player.RumbleAccount.Hash, newHash);
+                if (!string.IsNullOrWhiteSpace(callingAccountId))
+                    update.AddItems(player => player.RumbleAccount.ConfirmedIds, limitToKeep: 20, callingAccountId);
+            }) ?? throw new RecordNotFoundException(mongo.CollectionName, "Account not found.");
+
+        GenerateToken(output);
+        return output;
+    }
 
     public Player AttachSsoAccount(Player player, ISsoAccount account)
     {
@@ -276,7 +354,7 @@ public class PlayerAccountService : MinqTimerService<Player>
     public long DeleteUnconfirmedAccounts() => mongo
         .Where(query => query
             .EqualTo(player => player.RumbleAccount.Status, RumbleAccount.AccountStatus.NeedsConfirmation)
-            .LessThanOrEqualTo(player => player.RumbleAccount.CodeExpiration, Timestamp.UnixTime)
+            .LessThanOrEqualTo(player => player.RumbleAccount.CodeExpiration, Timestamp.Now)
         )
         .Update(query => query.Set(player => player.RumbleAccount, null));
 
@@ -287,7 +365,7 @@ public class PlayerAccountService : MinqTimerService<Player>
                 .EqualTo(player => player.Id, id)
                 .EqualTo(player => player.RumbleAccount.ConfirmationCode, code)
                 .LessThanOrEqualTo(player => player.RumbleAccount.Status, RumbleAccount.AccountStatus.NeedsConfirmation)
-                .GreaterThan(player => player.RumbleAccount.CodeExpiration, Timestamp.UnixTime)
+                .GreaterThan(player => player.RumbleAccount.CodeExpiration, Timestamp.Now)
             )
             .UpdateAndReturnOne(query => query
                 .Set(player => player.RumbleAccount.CodeExpiration, default)
@@ -327,7 +405,7 @@ public class PlayerAccountService : MinqTimerService<Player>
                 .EqualTo(player => player.LinkCode, linkCode)
                 .NotEqualTo(player => player.RumbleAccount, null)
                 .EqualTo(player => player.RumbleAccount.ConfirmationCode, code)
-                .GreaterThan(player => player.RumbleAccount.CodeExpiration, Timestamp.UnixTime)
+                .GreaterThan(player => player.RumbleAccount.CodeExpiration, Timestamp.Now)
             )
             .UpdateAndReturnOne(query => query
                 .AddItems(player => player.RumbleAccount.ConfirmedIds, limitToKeep: 20, id)
@@ -406,7 +484,7 @@ public class PlayerAccountService : MinqTimerService<Player>
         .Where(query => query
             .EqualTo(player => player.RumbleAccount.Username, username)
             .EqualTo(player => player.RumbleAccount.ConfirmationCode, code)
-            .GreaterThan(player => player.RumbleAccount.CodeExpiration, Timestamp.UnixTime)
+            .GreaterThan(player => player.RumbleAccount.CodeExpiration, Timestamp.Now)
         )
         .UpdateAndReturnOne(query =>
         {
@@ -447,7 +525,7 @@ public class PlayerAccountService : MinqTimerService<Player>
                 { "accountId", accountId }
             });
         
-        if (output.LinkExpiration <= Timestamp.UnixTime)
+        if (output.LinkExpiration <= Timestamp.Now)
             throw new WindowExpiredException("Link code is expired.");
 
         Player[] others = mongo
@@ -617,7 +695,7 @@ public class PlayerAccountService : MinqTimerService<Player>
         long affected = mongo
             .Where(query => query
                 .EqualTo(player => player.RumbleAccount.Status, RumbleAccount.AccountStatus.NeedsConfirmation)
-                .LessThanOrEqualTo(player => player.RumbleAccount.CodeExpiration, Timestamp.UnixTime)
+                .LessThanOrEqualTo(player => player.RumbleAccount.CodeExpiration, Timestamp.Now)
             )
             .Update(query => query.Set(player => player.RumbleAccount, null));
         
@@ -628,7 +706,7 @@ public class PlayerAccountService : MinqTimerService<Player>
             });
 
         affected = mongo
-            .Where(query => query.LessThanOrEqualTo(player => player.LinkExpiration, Timestamp.UnixTime))
+            .Where(query => query.LessThanOrEqualTo(player => player.LinkExpiration, Timestamp.Now))
             .Update(query => query
                 .Set(player => player.LinkCode, null)
                 .Set(player => player.LinkExpiration, default)
@@ -653,8 +731,8 @@ public class PlayerAccountService : MinqTimerService<Player>
 
         int confirmed = accounts.Count(rumble => rumble.Status == RumbleAccount.AccountStatus.Confirmed);
 
-        bool waitingOnConfirmation = confirmed == 0 && accounts.Any(rumble => rumble.Status == RumbleAccount.AccountStatus.NeedsConfirmation && rumble.CodeExpiration > Timestamp.UnixTime);
-        bool allExpired = confirmed == 0 && !accounts.Any(rumble => rumble.Status == RumbleAccount.AccountStatus.NeedsConfirmation && rumble.CodeExpiration > Timestamp.UnixTime);
+        bool waitingOnConfirmation = confirmed == 0 && accounts.Any(rumble => rumble.Status == RumbleAccount.AccountStatus.NeedsConfirmation && rumble.CodeExpiration > Timestamp.Now);
+        bool allExpired = confirmed == 0 && !accounts.Any(rumble => rumble.Status == RumbleAccount.AccountStatus.NeedsConfirmation && rumble.CodeExpiration > Timestamp.Now);
         bool codeInvalid = !allExpired && !string.IsNullOrWhiteSpace(code) && accounts.All(rumble => rumble.ConfirmationCode != code);
 
         PlatformException output = confirmed switch
@@ -732,13 +810,14 @@ public class PlayerAccountService : MinqTimerService<Player>
 
     public string GenerateToken(string accountId) => GenerateToken(Find(accountId));
 
-    public string GenerateToken(Player player) => player.Token ??= _api.GenerateToken(
-        player.AccountId,
-        player.Screenname,
-        player.Email,
-        _discriminators.Lookup(player),
-        audiences: AccountController.TOKEN_AUDIENCE
-    );
+    public string GenerateToken(Player player) => player.Token ??= _api
+        .GenerateToken(
+            accountId: player.AccountId,
+            screenname: player.Screenname,
+            email: player.Email, 
+            discriminator: player.Discriminator ?? 0,
+            audiences: TOKEN_AUDIENCE
+        );
 
     public override long ProcessGdprRequest(TokenInfo token, string dummyText) => mongo
         .Where(query => query.EqualTo(player => player.Id, token.AccountId))
@@ -755,6 +834,44 @@ public class PlayerAccountService : MinqTimerService<Player>
             .Set(player => player.Device.InstallId, dummyText)
             .Set(player => player.ParentId, null)
         );
+
+    public Player ChangeScreenname(string accountId, string newName)
+    {
+        Player player = Find(accountId) ?? throw new PlatformException("Account not found");
+        if (player.Screenname != newName)
+        {
+            int oldDiscriminator = player.Discriminator ?? 0;
+
+            player = mongo
+                .ExactId(player.Id)
+                .UpdateAndReturnOne(query => query
+                    .Set(db => db.Screenname, newName)
+                    .Set(db => db.Discriminator, 0)
+                );
+            SyncScreenname(newName, player.Id);
+            AssignDiscriminator(player, oldDiscriminator);
+        }
+        
+        GenerateToken(player);
+
+        return player;
+    }
+
+    public RumbleJson[] CreateLookupResults(string[] accountIds, Dictionary<string, string> avatars, Dictionary<string, int> levels)
+    {
+        return mongo
+            .Where(query => query.ContainedIn(player => player.Id, accountIds))
+            .Project(player => new RumbleJson
+            {
+                { TokenInfo.FRIENDLY_KEY_ACCOUNT_ID, player.Id },
+                { Player.FRIENDLY_KEY_SCREENNAME, player.Screenname },
+                { Player.FRIENDLY_KEY_DISCRIMINATOR, player.Discriminator.ToString().PadLeft(4, '0') },
+                { "accountAvatar", avatars.ContainsKey(player.Id) ? avatars[player.Id] : null },
+                { "accountLevel", levels.ContainsKey(player.Id) ? levels[player.Id] : null }
+            });
+    }
+    
+    
 }
 
 

@@ -30,7 +30,6 @@ public class AdminController : PlatformController
 {
 #pragma warning disable
 	private readonly PlayerAccountService _playerService;
-	private readonly DiscriminatorService _discriminatorService;
 	private readonly NameGeneratorService _nameGeneratorService;
 	private readonly ItemService _itemService;
 
@@ -113,7 +112,6 @@ public class AdminController : PlatformController
 			{
 				{ "accountId", accountId }
 			});
-		player.Discriminator = _discriminatorService.Lookup(player);
 
 		output["player"] = player;
 		output["components"] = components;
@@ -147,9 +145,9 @@ public class AdminController : PlatformController
 			throw new InvalidFieldException("terms", "Search terms must contain at least 3 characters each.");
 
 		Player[] results = _playerService.Search(terms);
-		RumbleJson discs = _discriminatorService.Search(results.Select(player => player.AccountId).ToArray());
-		foreach (Player player in results)
-			player.Discriminator = discs.Optional<int?>(player.AccountId);
+		// RumbleJson discs = _discriminatorService.Search(results.Select(player => player.AccountId).ToArray());
+		// foreach (Player player in results)
+		// 	player.Discriminator = discs.Optional<int?>(player.AccountId);
 
 		return Ok(new RumbleJson
 		{

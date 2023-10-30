@@ -15,6 +15,6 @@ public class LockoutException : PlatformException
     {
         Email = email;
         IpAddress = ip;
-        SecondsRemaining = LockoutService.Cooldown * 60 - (Timestamp.UnixTime - waitTime);
+        SecondsRemaining = LockoutService.Cooldown * 60 - (Timestamp.Now - waitTime);
     }
 }

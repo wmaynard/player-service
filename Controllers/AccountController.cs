@@ -17,6 +17,7 @@ using Rumble.Platform.Common.Enums;
 using Rumble.Platform.Common.Exceptions;
 using Rumble.Platform.Common.Exceptions.Mongo;
 using Rumble.Platform.Common.Extensions;
+using Rumble.Platform.Common.Models;
 using Rumble.Platform.Common.Services;
 using Rumble.Platform.Common.Utilities;
 using Rumble.Platform.Common.Web;
@@ -27,23 +28,22 @@ namespace PlayerService.Controllers;
 [ApiController, Route("player/v2/account")]
 public class AccountController : PlatformController
 {
-    public const Audience TOKEN_AUDIENCE = 
-        Audience.ChatService
-        | Audience.DmzService
-        | Audience.LeaderboardService
-        | Audience.MailService
-        | Audience.MatchmakingService
-        | Audience.MultiplayerService
-        | Audience.NftService
-        | Audience.PlayerService
-        | Audience.PvpService
-        | Audience.ReceiptService
-        | Audience.GameServer;
+    // public const Audience TOKEN_AUDIENCE = 
+    //     Audience.ChatService
+    //     | Audience.DmzService
+    //     | Audience.LeaderboardService
+    //     | Audience.MailService
+    //     | Audience.MatchmakingService
+    //     | Audience.MultiplayerService
+    //     | Audience.NftService
+    //     | Audience.PlayerService
+    //     | Audience.PvpService
+    //     | Audience.ReceiptService
+    //     | Audience.GameServer;
     
 #pragma warning disable
     private readonly PlayerAccountService _playerService;
     private readonly DynamicConfig _dynamicConfig;
-    private readonly DiscriminatorService _discriminatorService;
     private readonly ItemService _itemService;
     private readonly NameGeneratorService _nameGeneratorService;
     private readonly AuditService _auditService;
@@ -94,7 +94,7 @@ public class AccountController : PlatformController
             DeviceInfo device = _playerService.Find(Token?.AccountId)?.Device ?? Require<DeviceInfo>(Player.FRIENDLY_KEY_DEVICE);
             AppleAccount apple = AppleAccount.ValidateToken(Require<string>(SsoData.FRIENDLY_KEY_APPLE_TOKEN), Require<string>(SsoData.FRIENDLY_KEY_APPLE_NONCE));
 
-            Player fromDevice = _playerService.FromDevice(device, isUpsert: true);
+            Player fromDevice = _playerService.FromDevice(device, GeoIPData);
             Player fromApple = _playerService.FromApple(apple);
 
             if (fromApple == null)
@@ -162,7 +162,7 @@ public class AccountController : PlatformController
             DeviceInfo device = _playerService.Find(Token?.AccountId)?.Device ?? Require<DeviceInfo>(Player.FRIENDLY_KEY_DEVICE);
             GoogleAccount google = GoogleAccount.ValidateToken(Require<string>(SsoData.FRIENDLY_KEY_GOOGLE_TOKEN));
         
-            Player fromDevice = _playerService.FromDevice(device, isUpsert: true);
+            Player fromDevice = _playerService.FromDevice(device, GeoIPData);
             Player fromGoogle = _playerService.FromGoogle(google);
 
             if (fromGoogle != null)
@@ -224,7 +224,7 @@ public class AccountController : PlatformController
             else
                 throw new PlatformException(message: $"Request did not contain one of two required fields: {SsoData.FRIENDLY_KEY_PLARIUM_CODE} or {SsoData.FRIENDLY_KEY_PLARIUM_TOKEN}.");
 
-            Player fromDevice = _playerService.FromDevice(device, isUpsert: true);
+            Player fromDevice = _playerService.FromDevice(device, GeoIPData);
             Player fromPlarium = _playerService.FromPlarium(plarium);
 
             if (fromPlarium == null)
@@ -281,18 +281,10 @@ public class AccountController : PlatformController
             if (device == null)
                 throw new RecordNotFoundException(_playerService.CollectionName, "No device found for an account.", data: Token?.ToJson());
 
-            Player fromDevice = _playerService.FromDevice(device, isUpsert: true);
-            // Player fromRumble = _playerService.FromRumble(rumble, mustExist: false, mustNotExist: true);
+            Player fromDevice = _playerService.FromDevice(device, GeoIPData);
 
             _playerService.EnforceNoRumbleAccountExists(rumble, Token?.AccountId);
             
-            // EnforceNoRumbleAccountExists(rumble, Token.AccountId);
-        
-            // if (fromRumble != null)
-            //     throw fromDevice.Id == fromRumble.Id
-            //         ? new AlreadyLinkedAccountException("Rumble")
-            //         : new AccountOwnershipException("Rumble", fromDevice.Id, fromRumble.Id);
-
             _playerService.AttachRumble(fromDevice, rumble);
 
             if (fromDevice.RumbleAccount.EmailBanned)
@@ -364,7 +356,7 @@ public class AccountController : PlatformController
 
         _apiService
             .Request("/dmz/otp/token")
-            .AddAuthorization(GenerateToken(player))
+            .AddAuthorization(_playerService.GenerateToken(player))
             .OnSuccess(response => redirectUrl = success.Replace("{otp}", response.Require<string>("otp")))
             .OnFailure(response =>
             {
@@ -438,7 +430,7 @@ public class AccountController : PlatformController
         {
             string username = Require<string>(RumbleAccount.FRIENDLY_KEY_USERNAME);
             string code = Require<string>(RumbleAccount.FRIENDLY_KEY_CODE);
-            string accountId = Token?.AccountId ?? Optional<string>(Player.FRIENDLY_KEY_ACCOUNT_ID);
+            string accountId = Token?.AccountId ?? Optional<string>(TokenInfo.FRIENDLY_KEY_ACCOUNT_ID);
 
             if (string.IsNullOrWhiteSpace(accountId))
                 accountId = null;
@@ -474,7 +466,6 @@ public class AccountController : PlatformController
                 throw new InvalidPasswordException(username, "Passwords cannot be the same.");
 
             Player output = _playerService.UpdateHash(username, oldHash, newHash, Token?.AccountId);
-            output.Token = GenerateToken(output);
 
             return Ok(output.Prune());
         }
@@ -519,7 +510,7 @@ public class AccountController : PlatformController
     public ActionResult RefreshToken()
     {
         Player player = _playerService.Find(Token.AccountId);
-        GenerateToken(player);
+        _playerService.GenerateToken(player);
 
         return Ok(player?.Prune());
     }
@@ -542,39 +533,40 @@ public class AccountController : PlatformController
             sso = Optional<SsoData>("sso")?.ValidateTokens();
             Player player;
             Player[] others = _playerService.FromSso(sso, IpAddress);
+            Log.Local(Owner.Will, others.FirstOrDefault()?.PlariumAccount?.Id);
             
             if (device != null) // The request originates from the game client since we have an installId.
             {
-                Player fromDevice = _playerService.FromDevice(device, isUpsert: true);
+                Player fromDevice = _playerService.FromDevice(device, GeoIPData);
                 player = fromDevice.Parent ?? fromDevice;
             }
             else // The request originates from a web client trying to log in to an existing account.
             {
-                if (!others.Any(other => other != null))
+                if (others.All(other => other == null))
                     throw new RecordsFoundException(expected: 1, found: 0, reason: "No player exists with provided SSO.");
                 player = others.First();
             }
 
-            player.Discriminator = _discriminatorService.Lookup(player);
-            player.LastLogin = Timestamp.UnixTime;
-            player.LocationData = GeoIPData;
-            
-            if (player.CreatedOn == default)
-                player.CreatedOn = player.LastLogin;
-
-            ValidatePlayerScreenname(ref player);
             sso?.ValidatePlayers(others.Union(new[] { player }).ToArray());
 
-            GenerateToken(player);
+            _playerService.GenerateToken(player);
 
             bool twoFactorEnabled = !(sso?.SkipTwoFactor ?? false);
             if (AccountConflictExists(player, others, twoFactorEnabled, out ActionResult conflictResult))
                 return conflictResult;
 
+            // Limit the hits to our DB.  This is the only assignment happening
+            bool updateRequired = 
+                player.GoogleAccount == null && sso?.GoogleAccount != null
+                || player.AppleAccount == null && sso?.AppleAccount != null
+                || player.PlariumAccount == null && sso?.PlariumAccount != null;
+            
             player.GoogleAccount ??= sso?.GoogleAccount;
             player.AppleAccount ??= sso?.AppleAccount;
+            player.PlariumAccount ??= sso?.PlariumAccount;
 
-            _playerService.Update(player);
+            if (updateRequired)
+                _playerService.Update(player);
             return Ok(new RumbleJson
             {
                 { "geoData", GeoIPData },
@@ -584,7 +576,7 @@ public class AccountController : PlatformController
         }
         catch (PlatformException e)
         {
-            LoginDiagnosis diagnosis = new LoginDiagnosis(e);
+            LoginDiagnosis diagnosis = new(e);
 
             if (diagnosis.PasswordInvalid && !string.IsNullOrWhiteSpace(sso?.RumbleAccount?.Email))
                 _lockoutService.RegisterError(sso.RumbleAccount.Email, IpAddress);
@@ -619,52 +611,14 @@ public class AccountController : PlatformController
     }
 
     #region Utilities
-    private string GenerateToken(Player player)
-    {
-        int discriminator = _discriminatorService.Lookup(player);
-        player.Token = _apiService
-            .GenerateToken(
-                player.AccountId,
-                player.Screenname,
-                email: player.Email, 
-                discriminator, 
-                audiences: TOKEN_AUDIENCE
-            );
-        return player.Token;
-    }
-    
-    // Will on 2022.07.15 | In rare situations an account can come through that does not have a screenname.
-    // The cause of these edge cases is currently unknown.  However, we can still add an insurance policy here.
-    /// <summary>
-    /// If a Player object does not have a screenname, this method looks up the screenname from their account component.
-    /// If one is not found, a new screenname is generated.
-    /// </summary>
-    /// <param name="player">The player object to validate.</param>
-    /// <returns>The found or generated screenname.</returns>
-    private string ValidatePlayerScreenname(ref Player player)
-    {
-        if (!string.IsNullOrWhiteSpace(player.Screenname))
-            return player.Screenname;
-		
-        Log.Warn(Owner.Default, "Player screenname is invalid.  Looking up account component's data to set it.");
-        player.Screenname = _accountService
-            .Lookup(player.AccountId)
-            ?.Data
-            ?.Optional<string>("accountName");
-		
-        if (string.IsNullOrWhiteSpace(player.Screenname))
-        {
-            player.Screenname = _nameGeneratorService.Next;
-            Log.Warn(Owner.Default, "Player component screenname was also null; player has been assigned a new name.");
-        }
-		
-        int count = _playerService.SyncScreenname(player.Screenname, player.AccountId);
-        Log.Info(Owner.Default, "Screenname has been updated.", data: new
-        {
-            LinkedAccountsAffected = count
-        });
-        return player.Screenname;
-    }
+    // private string GenerateToken(Player player) => player.Token = _apiService
+    //     .GenerateToken(
+    //         accountId: player.AccountId,
+    //         screenname: player.Screenname,
+    //         email: player.Email, 
+    //         discriminator: player.Discriminator ?? 0, 
+    //         audiences: TOKEN_AUDIENCE
+    //     );
 
     private string[] GetEmailAddresses(IEnumerable<Player> players)
     {
@@ -729,10 +683,7 @@ public class AccountController : PlatformController
 
         _playerService.Update(player);
         foreach (Player conflict in conflicts)
-        {
-            conflict.Discriminator = _discriminatorService.Lookup(conflict);
-            GenerateToken(conflict);
-        }
+            _playerService.GenerateToken(conflict);
 
         string[] emails = GetEmailAddresses(conflicts.Union(new[] { player }));
         string[] ids = others

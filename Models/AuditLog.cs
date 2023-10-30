@@ -70,7 +70,7 @@ public class AuditLog : PlatformCollectionDocument
 
 		public Entry()
 		{
-			Timestamp = Rumble.Platform.Common.Utilities.Timestamp.UnixTime;
+			Timestamp = Rumble.Platform.Common.Utilities.Timestamp.Now;
 			CurrentVersion = 0;
 			NextVersion = 0;
 		}

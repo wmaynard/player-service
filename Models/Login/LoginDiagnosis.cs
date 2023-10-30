@@ -73,7 +73,7 @@ public class LoginDiagnosis : PlatformDataModel
             Data["secondsRemaining"] = ex switch
             {
                 LockoutException lockEx => lockEx.SecondsRemaining,
-                TokenBannedException tokenEx when tokenEx.BannedUntil != null => tokenEx.BannedUntil - Timestamp.UnixTime,
+                TokenBannedException tokenEx when tokenEx.BannedUntil != null => tokenEx.BannedUntil - Timestamp.Now,
                 _ => null
             };
         if (Other)

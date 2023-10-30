@@ -133,13 +133,13 @@ public class SsoData : PlatformDataModel
             return;
         if (players == null || players.Length == 0)
             throw new RecordNotFoundException("players", "No players found for SSO.");
-        if (GoogleAccount != null && !players.Any(player => player.GoogleAccount != null))
+        if (GoogleAccount != null && players.All(player => player.GoogleAccount == null))
             throw new GoogleUnlinkedException(GoogleAccount);
-        if (AppleAccount != null && !players.Any(player => player.AppleAccount != null))
+        if (AppleAccount != null && players.All(player => player.AppleAccount == null))
             throw new AppleUnlinkedException(AppleAccount);
-        if (PlariumAccount != null && !players.Any(player => player.PlariumAccount != null))
+        if (PlariumAccount != null && players.All(player => player.PlariumAccount == null))
             throw new PlariumUnlinkedException(PlariumAccount);
-        if (RumbleAccount != null && !players.Any(player => player.RumbleAccount != null))
+        if (RumbleAccount != null && players.All(player => player.RumbleAccount == null))
             throw new RumbleUnlinkedException(RumbleAccount);
     }
 

@@ -32,7 +32,7 @@ public class AccountService : ComponentService
 		}
 		catch (Exception e)
 		{
-			Log.Warn(Owner.Will, "Unable to change screenname.", data: new
+			Log.Warn(Owner.Will, "Unable to change screenname in account component", data: new
 			{
 				AccountId = accountId
 			}, exception: e);

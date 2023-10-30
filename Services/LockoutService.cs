@@ -38,7 +38,7 @@ public class LockoutService : MinqService<IpAccessLog>
             )
             .Project(log => log.Timestamps)
             ?.FirstOrDefault()
-            ?.Where(val => val > Timestamp.UnixTime - Cooldown * 60)
+            ?.Where(val => val > Timestamp.Now - Cooldown * 60)
             .ToArray()
             ?? Array.Empty<long>();
 
@@ -53,7 +53,7 @@ public class LockoutService : MinqService<IpAccessLog>
             .EqualTo(log => log.Email, email)
             .EqualTo(log => log.IpAddress, ip)
         )
-        .Upsert(query => query.AddItems(log => log.Timestamps, limitToKeep: AttemptsToKeep, Timestamp.UnixTime));
+        .Upsert(query => query.AddItems(log => log.Timestamps, limitToKeep: AttemptsToKeep, Timestamp.Now));
 
     public override long ProcessGdprRequest(TokenInfo token, string dummyText) => mongo
         .Where(query => query.EqualTo(log => log.Email, token.Email))

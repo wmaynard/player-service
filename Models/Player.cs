@@ -26,6 +26,7 @@ public class Player : PlatformCollectionDocument
 	private const string DB_KEY_APPLE_ACCOUNT        = "apple";
 	// private const string DB_KEY_CREATED              = "created";
 	private const string DB_KEY_DEVICE               = "device";
+	private const string DB_KEY_DISCRIMINATOR        = "disc";
 	private const string DB_KEY_GOOGLE_ACCOUNT       = "google";
 	private const string DB_KEY_LAST_LOGIN           = "login";
 	private const string DB_KEY_LINK_CODE            = "linkCode";
@@ -51,7 +52,7 @@ public class Player : PlatformCollectionDocument
 	public const string FRIENDLY_KEY_SEARCH_WEIGHT   = "weight";
 	public const string FRIENDLY_KEY_TOKEN           = "token";
 
-	internal const string FRIENDLY_KEY_ACCOUNT_ID = "accountId";
+	// internal const string FRIENDLY_KEY_ACCOUNT_ID = "accountId";
 	
 	[BsonElement(DB_KEY_APPLE_ACCOUNT)]
 	[JsonPropertyName(FRIENDLY_KEY_APPLE_ACCOUNT)]
@@ -65,7 +66,7 @@ public class Player : PlatformCollectionDocument
 	[JsonPropertyName(FRIENDLY_KEY_DEVICE)]
 	public DeviceInfo Device { get; set; }
 	
-	[BsonIgnore]
+	[BsonElement(DB_KEY_DISCRIMINATOR), BsonIgnoreIfDefault]
 	[JsonInclude, JsonPropertyName(FRIENDLY_KEY_DISCRIMINATOR)]
 	public int? Discriminator { get; internal set; }
 	
