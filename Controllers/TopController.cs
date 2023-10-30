@@ -41,7 +41,6 @@ public class TopController : PlatformController
 	private readonly DynamicConfig _dynamicConfig;
 	private readonly ItemService _itemService;
 	private readonly NameGeneratorService _nameGeneratorService;
-	private readonly AuditService _auditService;
 	
 	// Component Services
 	private readonly AbTestService _abTestService;
@@ -129,10 +128,6 @@ public class TopController : PlatformController
 
 		long totalMS = TimestampMs.Now;
 		long componentMS = TimestampMs.Now;
-
-		string aid = Token.AccountId;
-		foreach (Component component in components)
-			Task.Run(() => _auditService.Record(aid, component.Name, updateVersion: component.Version));
 
 		List<Task<bool>> tasks = components.Select(data => ComponentServices[data.Name]
 			.UpdateAsync(

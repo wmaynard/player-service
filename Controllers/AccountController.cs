@@ -46,7 +46,6 @@ public class AccountController : PlatformController
     private readonly DynamicConfig _dynamicConfig;
     private readonly ItemService _itemService;
     private readonly NameGeneratorService _nameGeneratorService;
-    private readonly AuditService _auditService;
     private readonly SaltService _saltService;
     private readonly LockoutService _lockoutService;
 	
