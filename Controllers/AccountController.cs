@@ -28,19 +28,6 @@ namespace PlayerService.Controllers;
 [ApiController, Route("player/v2/account")]
 public class AccountController : PlatformController
 {
-    // public const Audience TOKEN_AUDIENCE = 
-    //     Audience.ChatService
-    //     | Audience.DmzService
-    //     | Audience.LeaderboardService
-    //     | Audience.MailService
-    //     | Audience.MatchmakingService
-    //     | Audience.MultiplayerService
-    //     | Audience.NftService
-    //     | Audience.PlayerService
-    //     | Audience.PvpService
-    //     | Audience.ReceiptService
-    //     | Audience.GameServer;
-    
 #pragma warning disable
     private readonly PlayerAccountService _playerService;
     private readonly DynamicConfig _dynamicConfig;
@@ -90,27 +77,16 @@ public class AccountController : PlatformController
     {
         try
         {
-            DeviceInfo device = _playerService.Find(Token?.AccountId)?.Device ?? Require<DeviceInfo>(Player.FRIENDLY_KEY_DEVICE);
-            AppleAccount apple = AppleAccount.ValidateToken(Require<string>(SsoData.FRIENDLY_KEY_APPLE_TOKEN), Require<string>(SsoData.FRIENDLY_KEY_APPLE_NONCE));
-
-            Player fromDevice = _playerService.FromDevice(device, GeoIPData);
-            Player fromApple = _playerService.FromApple(apple);
-
-            if (fromApple == null)
-                return Ok(_playerService.AttachApple(fromDevice, apple)?.Prune());
+            // TODO: Require<AppleAccount>() / Validate()?
+            AppleAccount apple = AppleAccount.ValidateToken(
+                token: Require<string>(SsoData.FRIENDLY_KEY_APPLE_TOKEN), 
+                nonce: Require<string>(SsoData.FRIENDLY_KEY_APPLE_NONCE)
+            );
+            Player player = _playerService.Find(Token.AccountId);
             
-            if (!PlatformEnvironment.IsProd)
-                Log.Info(Owner.Will, "Apple account conflict encountered", data: new
-                {
-                    Expected = fromDevice.Id == fromApple.Id,
-                    Help = "If expected is true result of someone trying to attach an Apple account when it already exists",
-                    AppleId = apple?.Id,
-                    Email = apple?.Email
-                });
-            
-            throw fromDevice.Id == fromApple.Id
-                ? new AlreadyLinkedAccountException("Apple")
-                : new AccountOwnershipException("Apple", fromDevice.Id, fromApple.Id);
+            _playerService.EnsureSsoAccountDoesNotExist(Token.AccountId, apple);
+
+            return Ok(_playerService.AttachSsoAccount(player, apple)?.Prune());
         }
         catch (PlatformException e)
         {
@@ -153,23 +129,12 @@ public class AccountController : PlatformController
     {
         try
         {
-            if (PlatformEnvironment.IsDev)
-                Log.Info(Owner.Austin, "PATCH /google body received.", data: new
-                {
-                    body = Body
-                });
-            DeviceInfo device = _playerService.Find(Token?.AccountId)?.Device ?? Require<DeviceInfo>(Player.FRIENDLY_KEY_DEVICE);
             GoogleAccount google = GoogleAccount.ValidateToken(Require<string>(SsoData.FRIENDLY_KEY_GOOGLE_TOKEN));
+            Player player = _playerService.Find(Token.AccountId);
+            
+            _playerService.EnsureSsoAccountDoesNotExist(Token.AccountId, google);
         
-            Player fromDevice = _playerService.FromDevice(device, GeoIPData);
-            Player fromGoogle = _playerService.FromGoogle(google);
-
-            if (fromGoogle != null)
-                throw fromDevice.Id == fromGoogle.Id
-                    ? new AlreadyLinkedAccountException("Google")
-                    : new AccountOwnershipException("Google", fromDevice.Id, fromGoogle.Id);
-        
-            return Ok(_playerService.AttachGoogle(fromDevice, google)?.Prune());
+            return Ok(_playerService.AttachSsoAccount(player, google)?.Prune());
         }
         catch (PlatformException e)
         {
@@ -212,26 +177,13 @@ public class AccountController : PlatformController
     {
         try
         {
-            DeviceInfo device = _playerService.Find(Token?.AccountId)?.Device ?? Require<DeviceInfo>(Player.FRIENDLY_KEY_DEVICE);
-
-            PlariumAccount plarium;
+            // TODO: Require<PlariumAccount>() / Validate()?
+            PlariumAccount plarium = PlariumAccount.FromRequest(Body);
+            Player player = _playerService.Find(Token.AccountId);
             
-            if (!string.IsNullOrWhiteSpace(Optional<string>(SsoData.FRIENDLY_KEY_PLARIUM_TOKEN)))
-                plarium = PlariumAccount.ValidateToken(Require<string>(SsoData.FRIENDLY_KEY_PLARIUM_TOKEN));
-            else if (!string.IsNullOrWhiteSpace(Optional<string>(SsoData.FRIENDLY_KEY_PLARIUM_CODE)))
-                plarium = PlariumAccount.ValidateCode(Require<string>(SsoData.FRIENDLY_KEY_PLARIUM_CODE));
-            else
-                throw new PlatformException(message: $"Request did not contain one of two required fields: {SsoData.FRIENDLY_KEY_PLARIUM_CODE} or {SsoData.FRIENDLY_KEY_PLARIUM_TOKEN}.");
-
-            Player fromDevice = _playerService.FromDevice(device, GeoIPData);
-            Player fromPlarium = _playerService.FromPlarium(plarium);
-
-            if (fromPlarium == null)
-                return Ok(_playerService.AttachPlarium(fromDevice, plarium)?.Prune());
+            _playerService.EnsureSsoAccountDoesNotExist(Token.AccountId, plarium);
             
-            throw fromDevice.Id == fromPlarium.Id
-                ? new AlreadyLinkedAccountException("Plarium")
-                : new AccountOwnershipException("Plarium", fromDevice.Id, fromPlarium.Id);
+            return Ok(_playerService.AttachSsoAccount(player, plarium)?.Prune());
         }
         catch (PlatformException e)
         {
@@ -274,21 +226,16 @@ public class AccountController : PlatformController
     {
         try
         {
-            DeviceInfo device = _playerService.Find(Token?.AccountId)?.Device ?? Require<DeviceInfo>(Player.FRIENDLY_KEY_DEVICE) ;
             RumbleAccount rumble = Require<RumbleAccount>(SsoData.FRIENDLY_KEY_RUMBLE_ACCOUNT);
-
-            if (device == null)
-                throw new RecordNotFoundException(_playerService.CollectionName, "No device found for an account.", data: Token?.ToJson());
-
-            Player fromDevice = _playerService.FromDevice(device, GeoIPData);
-
-            _playerService.EnforceNoRumbleAccountExists(rumble, Token?.AccountId);
+            Player player = _playerService.Find(Token.AccountId);
             
-            _playerService.AttachRumble(fromDevice, rumble);
-
-            if (fromDevice.RumbleAccount.EmailBanned)
+            _playerService.EnsureSsoAccountDoesNotExist(Token.AccountId, rumble);
+            _playerService.AttachSsoAccount(player, rumble);
+            
+            if (player.RumbleAccount.EmailBanned)
                 throw new PlatformException($"That address has been rejected.", code: ErrorCode.EmailInvalidOrBanned);
-            return Ok(fromDevice.Prune());
+            
+            return Ok(player.Prune());
         }
         catch (PlatformException e)
         {

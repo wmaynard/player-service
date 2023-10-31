@@ -30,6 +30,11 @@ public class RumbleAccount : PlatformDataModel, ISsoAccount
     public const string FRIENDLY_KEY_HASH = "hash";
     public const string FRIENDLY_KEY_STATUS = "status";
     public const string FRIENDLY_KEY_USERNAME = "username";
+    
+    // Id is required for other SSOs using the interface ISsoAccount, though it is unused for our own accounts.
+    // TODO: Do we want to have a GUID for them?
+    [BsonIgnore, JsonIgnore]
+    public string Id { get; set; }
 
     [BsonElement(DB_KEY_ASSOCIATIONS)]
     [JsonPropertyName(FRIENDLY_KEY_ASSOCIATIONS)]

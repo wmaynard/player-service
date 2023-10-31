@@ -199,18 +199,48 @@ public class PlayerAccountService : MinqTimerService<Player>
         ? results.FirstOrDefault()
         : throw new RecordsFoundException(1, results?.Length ?? 0);
 
-    public Player FromApple(AppleAccount apple) => EnsureZeroOrOneResult(mongo
-        .Where(query => query.EqualTo(player => player.AppleAccount.Id, apple.Id))
-        .ToArray()
-    );
-    public Player FromGoogle(GoogleAccount google) => EnsureZeroOrOneResult(mongo
-        .Where(query => query.EqualTo(player => player.GoogleAccount.Id, google.Id))
-        .ToArray()
-    );
-    public Player FromPlarium(PlariumAccount plarium) => EnsureZeroOrOneResult(mongo
-        .Where(query => query.EqualTo(player => player.PlariumAccount.Id, plarium.Id))
-        .ToArray()
-    );
+    public void EnsureSsoAccountDoesNotExist(string accountId, ISsoAccount account)
+    {
+        string existing = mongo
+            .Where(query =>
+            {
+                switch (account)
+                {
+                    case AppleAccount apple:
+                        query.EqualTo(player => player.AppleAccount.Id, account.Id);
+                        break;
+                    case GoogleAccount google:
+                        query.EqualTo(player => player.GoogleAccount.Id, account.Id);
+                        break;
+                    case PlariumAccount plarium:
+                        query.EqualTo(player => player.PlariumAccount.Id, plarium.Id);
+                        break;
+                    case RumbleAccount rumble:
+                        query
+                            .EqualTo(player => player.RumbleAccount.Email, rumble.Email)
+                            .GreaterThanOrEqualTo(player => player.RumbleAccount.Status, RumbleAccount.AccountStatus.Confirmed);
+                        break;
+                }
+            })
+            .Limit(1)
+            .Project(player => player.Id)
+            .FirstOrDefault();
+
+        if (existing == null)
+            return;
+        
+        if (!PlatformEnvironment.IsProd)
+            Log.Info(Owner.Will, $"SSO account conflict encountered", data: new
+            {
+                SsoData = account,
+                ExistingAccountId = existing,
+                RequestingAccountId = accountId
+            });
+        
+        throw existing == accountId
+            ? new AlreadyLinkedAccountException(account.GetType().Name)
+            : new AccountOwnershipException(account.GetType().Name, accountId, existing);
+    }
 
     public Player CompleteLink(RumbleAccount rumble)
     {
@@ -238,29 +268,7 @@ public class PlayerAccountService : MinqTimerService<Player>
             _ => results.FirstOrDefault()
         };
     }
-
-    public void EnforceNoRumbleAccountExists(RumbleAccount rumble, string accountId)
-    {
-        Player[] results = mongo
-            .Where(query => query
-                .EqualTo(player => player.RumbleAccount.Email, rumble.Email)
-                .GreaterThanOrEqualTo(player => player.RumbleAccount.Status, RumbleAccount.AccountStatus.Confirmed)
-            )
-            .ToArray();
-        
-        switch (results.Length)
-        {
-            case 0:
-                return;
-            case 1:
-                throw results.Any(result => result.Id == accountId)
-                    ? new AlreadyLinkedAccountException("Rumble")
-                    : new AccountOwnershipException("Rumble", accountId, results.First().Id);
-            case > 1:
-                throw new RecordsFoundException(1, results.Length);
-        }
-    }
-
+    
     public Player UpdateHash(string username, string oldHash, string newHash, string callingAccountId)
     {
         Player output = mongo
@@ -344,19 +352,6 @@ public class PlayerAccountService : MinqTimerService<Player>
         }
         return player;
     }
-
-    // TODO: Remove these in favor of just using AttachSsoAccount()
-    public Player AttachRumble(Player player, RumbleAccount rumble) => AttachSsoAccount(player, rumble);
-    public Player AttachGoogle(Player player, GoogleAccount google) => AttachSsoAccount(player, google);
-    public Player AttachApple(Player player, AppleAccount apple) => AttachSsoAccount(player, apple);
-    public Player AttachPlarium(Player player, PlariumAccount plarium) => AttachSsoAccount(player, plarium);
-
-    public long DeleteUnconfirmedAccounts() => mongo
-        .Where(query => query
-            .EqualTo(player => player.RumbleAccount.Status, RumbleAccount.AccountStatus.NeedsConfirmation)
-            .LessThanOrEqualTo(player => player.RumbleAccount.CodeExpiration, Timestamp.Now)
-        )
-        .Update(query => query.Set(player => player.RumbleAccount, null));
 
     public Player UseConfirmationCode(string id, string code)
     {
@@ -870,43 +865,4 @@ public class PlayerAccountService : MinqTimerService<Player>
                 { "accountLevel", levels.ContainsKey(player.Id) ? levels[player.Id] : null }
             });
     }
-    
-    
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

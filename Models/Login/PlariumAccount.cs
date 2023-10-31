@@ -2,6 +2,7 @@ using System.Text.Json.Serialization;
 using MongoDB.Bson.Serialization.Attributes;
 using PlayerService.Services;
 using Rumble.Platform.Common.Attributes;
+using Rumble.Platform.Common.Exceptions;
 using Rumble.Platform.Data;
 
 namespace PlayerService.Models.Login;
@@ -44,4 +45,18 @@ public class PlariumAccount : PlatformDataModel, ISsoAccount
 	}
 
 	public static PlariumAccount ValidateToken(string token) => PlariumService.Instance.VerifyToken(token);
+
+	private static PlariumAccount FromRequest(string token, string code)
+	{
+		if (!string.IsNullOrWhiteSpace(token))
+			return ValidateToken(token);
+		if (!string.IsNullOrWhiteSpace(code))
+			return ValidateCode(code);
+		throw new PlatformException(message: $"Request did not contain one of two required fields: {SsoData.FRIENDLY_KEY_PLARIUM_CODE} or {SsoData.FRIENDLY_KEY_PLARIUM_TOKEN}.");
+	}
+
+	public static PlariumAccount FromRequest(RumbleJson body) => FromRequest(
+		token: body?.Optional<string>(SsoData.FRIENDLY_KEY_PLARIUM_TOKEN),
+		code: body?.Optional<string>(SsoData.FRIENDLY_KEY_PLARIUM_CODE)
+	);
 }
