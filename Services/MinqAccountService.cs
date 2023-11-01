@@ -854,15 +854,18 @@ public class PlayerAccountService : MinqTimerService<Player>
 
     public RumbleJson[] CreateLookupResults(string[] accountIds, Dictionary<string, string> avatars, Dictionary<string, int> levels)
     {
+        // TODO: Fix this kluge; PLATF-6498
         return mongo
             .Where(query => query.ContainedIn(player => player.Id, accountIds))
-            .Project(player => new RumbleJson
+            .ToArray()
+            .Select(player => new RumbleJson
             {
                 { TokenInfo.FRIENDLY_KEY_ACCOUNT_ID, player.Id },
                 { Player.FRIENDLY_KEY_SCREENNAME, player.Screenname },
                 { Player.FRIENDLY_KEY_DISCRIMINATOR, player.Discriminator.ToString().PadLeft(4, '0') },
                 { "accountAvatar", avatars.ContainsKey(player.Id) ? avatars[player.Id] : null },
                 { "accountLevel", levels.ContainsKey(player.Id) ? levels[player.Id] : null }
-            });
+            })
+            .ToArray();
     }
 }
