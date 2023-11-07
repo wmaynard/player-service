@@ -37,6 +37,7 @@ hpa:
     enabled: true
     requestsPerSecond: "10"
     serverAddress: http://prometheus-server.gitlab-managed-apps.svc:80
+    MemUtilizationPercentage: 95
 gitlab:
   app:
   env:
@@ -107,7 +108,7 @@ resources:
     memory: 512Mi
   requests:
     cpu: 256m
-    memory: 512Mi
+    memory: 480Mi
 
 ## Configure PodDisruptionBudget
 ## ref: https://kubernetes.io/docs/concepts/workloads/pods/disruptions/
