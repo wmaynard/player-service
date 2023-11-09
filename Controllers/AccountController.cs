@@ -25,7 +25,7 @@ using Rumble.Platform.Data;
 
 namespace PlayerService.Controllers;
 
-[ApiController, Route("player/v2/account")]
+[ApiController, Route("player/v2/account"), RequireAuth]
 public class AccountController : PlatformController
 {
 #pragma warning disable
@@ -275,7 +275,7 @@ public class AccountController : PlatformController
     /// We need to return Ok() even when the confirmation fails.  DMZ is expecting a 200-level code; anything other than
     /// 200 causes DMZ to throw the exception as per standardized behavior of other Platform services.
     /// </summary>
-    [HttpGet, Route("confirm")]
+    [HttpGet, Route("confirm"), NoAuth]
     public ActionResult ConfirmAccount()
     {
         string id = Require<string>("id");
@@ -350,7 +350,7 @@ public class AccountController : PlatformController
     /// <summary>
     /// Starts the password reset process.  Doing this sends an email to the player with a 2FA recovery code.
     /// </summary>
-    [HttpPatch, Route("recover")]
+    [HttpPatch, Route("recover"), NoAuth]
     public ActionResult RecoverAccount()
     {
         try
@@ -369,7 +369,7 @@ public class AccountController : PlatformController
     /// <summary>
     /// Primes a Rumble account to accept a new password hash without knowledge of the old one.  Comes in after 2FA codes.
     /// </summary>
-    [HttpPatch, Route("reset")]
+    [HttpPatch, Route("reset"), NoAuth]
     public ActionResult UsePasswordRecoveryCode()
     {
         try
@@ -397,7 +397,7 @@ public class AccountController : PlatformController
     /// <summary>
     /// Changes a password hash.  The oldHash is optional iff /reset has been hit successfully.
     /// </summary>
-    [HttpPatch, Route("password")]
+    [HttpPatch, Route("password"), NoAuth]
     public ActionResult ChangePassword()
     {
         try
@@ -424,10 +424,10 @@ public class AccountController : PlatformController
     /// <summary>
     /// Take over all related accounts as children.  The provided token represents the parent-to-be account.
     /// </summary>
-    [HttpPatch, Route("adopt"), RequireAuth]
+    [HttpPatch, Route("adopt")]
     public ActionResult Link() => Ok(_playerService.LinkAccounts(Token.AccountId));
 
-    [HttpGet, Route("salt"), RequireAuth]
+    [HttpGet, Route("salt")]
     public ActionResult GetSalt()
     {
         string username = Require<string>(RumbleAccount.FRIENDLY_KEY_USERNAME).ToLower();
@@ -452,7 +452,7 @@ public class AccountController : PlatformController
         });
     }
 
-    [HttpGet, Route("refresh"), RequireAuth]
+    [HttpGet, Route("refresh")]
     public ActionResult RefreshToken()
     {
         Player player = _playerService.Find(Token.AccountId);
