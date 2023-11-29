@@ -430,7 +430,7 @@ public class AccountController : PlatformController
     [HttpGet, Route("salt")]
     public ActionResult GetSalt()
     {
-        string username = Require<string>(RumbleAccount.FRIENDLY_KEY_USERNAME).ToLower();
+        string username = Require<string>(RumbleAccount.FRIENDLY_KEY_USERNAME).ToLower().Trim();
 
         if (!EmailRegex.IsValid(username))
         {

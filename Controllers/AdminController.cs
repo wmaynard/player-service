@@ -17,10 +17,8 @@ using Rumble.Platform.Common.Enums;
 using Rumble.Platform.Common.Exceptions;
 using Rumble.Platform.Common.Exceptions.Mongo;
 using Rumble.Platform.Common.Interop;
-using Rumble.Platform.Common.Models;
 using Rumble.Platform.Common.Utilities;
 using Rumble.Platform.Common.Web;
-using Rumble.Platform.Common.Services;
 using Rumble.Platform.Data;
 
 namespace PlayerService.Controllers;

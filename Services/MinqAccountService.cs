@@ -128,12 +128,16 @@ public class PlayerAccountService : MinqTimerService<Player>
                 .Where(query => query
                     .EqualTo(player => player.Screenname, sn)
                     .EqualTo(player => player.Discriminator, desired)
+                    .NotEqualTo(player => player.ParentId, account.Id)
                 )
                 .Count() > 0;
 
             if (exists)
+            {
+                desired = null;
                 continue;
-            
+            }
+
             mongo
                 .ExactId(account.Id)
                 .Limit(1)
