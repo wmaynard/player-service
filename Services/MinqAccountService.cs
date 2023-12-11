@@ -750,42 +750,74 @@ public class PlayerAccountService : MinqTimerService<Player>
 
     public Player LinkPlayerAccounts(string childId, string parentId, bool force, TokenInfo token)
     {
-        Player child = Find(childId);
-        Player parent = Find(parentId);
-
-        if (!string.IsNullOrWhiteSpace(child.ParentId))
-            if (!force)
-                throw new PlatformException("Account is already linked to another account.");
-            else
-                Log.Warn(Owner.Will, "Account was previously linked to another account, but the force flag allows a link override.", data: new
+        Player[] players = mongo
+            .WithTransaction(out Transaction transaction)
+            .Where(query => query.ContainedIn(player => player.Id, new[] { childId, parentId }))
+            .Limit(2)
+            .ToArray();
+        try
+        {
+            if (players.Length != 2)
+            {
+                Abort(transaction);
+                Log.Error(Owner.Will, "An administrator tried to link two accounts, but one or both accounts could not be found.", data: new
                 {
-                    Child = child,
-                    Parent = parent,
+                    ChildId = childId,
+                    ParentId = parentId,
                     Token = token
                 });
-
-        if (parent.GoogleAccount != null || parent.RumbleAccount != null || parent.AppleAccount != null)
-            if (!force)
+                throw new PlatformException("Could not find both accounts to link.");
+            }
+            
+            Player child = players.First(player => player.Id == childId);
+            Player parent = players.First(player => player.Id == parentId);
+            
+            if (!string.IsNullOrWhiteSpace(child.ParentId))
+                if (!force)
+                    throw new PlatformException("Account is already linked to another account.");
+                else
+                    Log.Warn(Owner.Will, "Account was previously linked to another account; the previous parent will be lost because the force flag is set.", data: new
+                    {
+                        Child = child,
+                        Parent = parent,
+                        Token = token
+                    });
+            
+            if (parent.HasSso && !force)
                 throw new PlatformException("Parent account has SSO; no link can be made without the force flag.");
-            else
-                Log.Warn(Owner.Will, "Parent account has SSO, but the force flag allows a link override.", data: new
-                {
-                    Child = child,
-                    Parent = parent,
-                    Token = token
-                });
 
-        // Link the two accounts together.
-        parent.Children ??= new List<string>();
-        parent.Children.Add(child.Id);
-        child.ParentId = parent.AccountId;
-		
-        Update(parent);
-        Update(child);
-        
-        // TODO: Transaction
-		
-        return child;
+            child = mongo
+                .WithTransaction(transaction)
+                .ExactId(child.Id)
+                .UpdateAndReturnOne(update => update
+                    .Set(player => player.AppleAccount, null)
+                    .Set(player => player.GoogleAccount, null)
+                    .Set(player => player.RumbleAccount, null)
+                    .Set(player => player.PlariumAccount, null)
+                    .Set(player => player.ParentId, parent.ParentId ?? parent.Id)
+                );
+
+            mongo
+                .WithTransaction(transaction)
+                .ExactId(parent.Id)
+                .Update(query => query.AddItems(player => player.Children, child.Id));
+            
+            Commit(transaction);
+            
+            Log.Info(Owner.Will, $"An account was linked to a parent account with{(parent.HasSso ? "" : "out")} SSO attached", data: new
+            {
+                Child = child,
+                Parent = parent,
+                Token = token
+            });
+            
+            return child;
+        }
+        catch
+        {
+            Abort(transaction);
+            throw;
+        }
     }
 
     public new void Update(Player model) => mongo

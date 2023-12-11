@@ -132,6 +132,13 @@ public class Player : PlatformCollectionDocument
 	[JsonPropertyName(FRIENDLY_KEY_TOKEN)]
 	public string Token { get; set; }
 	
+	[BsonIgnore]
+	[JsonIgnore]
+	public bool HasSso => AppleAccount != null
+		|| GoogleAccount != null
+		|| PlariumAccount != null
+		|| RumbleAccount != null;
+	
 	// This is a sanity check because using "install.Id" is confusing and hard to understand.
 	// This is a temporary kluge because this model should be called `Account`... it's unfortunate we have a component called `Account` as well, but no way around it.
 	[BsonIgnore]
