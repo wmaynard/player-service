@@ -233,11 +233,12 @@ public class TopController : PlatformController
 	public ActionResult GetConfig()
 	{
 		const string OVERRIDE = ":";
-		Version clientVersion = new Version(Optional<string>("clientVersion") ?? "0.0.0.0");
+		Version clientVersion = new (Optional<string>("clientVersion") ?? "0.0.0.0");
 		RumbleJson config = _dynamicConfig.GetValuesFor(Audience.GameClient);
-		RumbleJson variables = new RumbleJson();
+		RumbleJson variables = new();
 		
-		List<ConfigOverride> overrides = new List<ConfigOverride>();
+		List<ConfigOverride> overrides = new();
+		List<string> parsingErrors = new();
 		foreach (KeyValuePair<string, object> pair in config)
 		{
 			int index = pair.Key.IndexOf(OVERRIDE, StringComparison.Ordinal);
@@ -263,8 +264,8 @@ public class TopController : PlatformController
 
 			try
 			{
-				Version configVersion = new Version(version);
-				
+				Version configVersion = new (version);
+
 				if (clientVersion.CompareTo(configVersion) >= 0)
 					overrides.Add(new ConfigOverride
 					{
@@ -273,7 +274,14 @@ public class TopController : PlatformController
 						Value = pair.Value
 					});
 			}
-			catch {}
+			catch (Exception e)
+			{
+				if (!PlatformEnvironment.IsProd)
+					parsingErrors.Add(index > -1
+						? $"'{pair.Key}' Couldn't parse version; expected format is 'key:version'"
+						: $"'{pair.Key}' Couldn't parse variable; {e?.Message}"
+					);
+			}
 		}
 		
 		// Previous response before refactor
@@ -298,13 +306,17 @@ public class TopController : PlatformController
 		foreach (ConfigOverride o in ordered)
 			variables[o.Key] = o.Value;
 
-		
-		return Ok(new RumbleJson
+		RumbleJson output = new()
 		{
 			{ "success", true }, // TODO: Remove this after the client is no longer dependent on it; hardcoded on 2022.11.22
 			{ "clientVersion", clientVersion.ToString() },
 			{ "clientVars", variables.Sort() }
-		});
+		};
+
+		if (parsingErrors.Any())
+			output["parsingErrors"] = parsingErrors;
+		
+		return Ok(output);
 	}
 
 	[HttpGet, Route("items"), RequireAccountId]
