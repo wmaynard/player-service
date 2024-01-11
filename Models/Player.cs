@@ -58,9 +58,6 @@ public class Player : PlatformCollectionDocument
 	[JsonPropertyName(FRIENDLY_KEY_APPLE_ACCOUNT)]
 	public AppleAccount AppleAccount { get; set; }
 	
-	// [BsonElement(DB_KEY_CREATED)]
-	// [JsonPropertyName(FRIENDLY_KEY_CREATED)]
-	// public long CreatedOn { get; set; }
 	
 	[BsonElement(DB_KEY_DEVICE)]
 	[JsonPropertyName(FRIENDLY_KEY_DEVICE)]
@@ -80,14 +77,10 @@ public class Player : PlatformCollectionDocument
 	
 	[BsonElement(DB_KEY_LINK_CODE)]
 	[JsonIgnore]
-	[SimpleIndex]
-	[AdditionalIndexKey("linkCodeWithId", "_id", 1)]
-	[CompoundIndex("linkCodeWithId", 2)]
 	public string LinkCode { get; set; }
 	
 	[BsonElement(DB_KEY_LINK_CODE_EXPIRATION), BsonIgnoreIfDefault]
 	[JsonIgnore]
-	[SimpleIndex]
 	public long LinkExpiration { get; set; }
 	
 	[BsonIgnore]
@@ -104,9 +97,6 @@ public class Player : PlatformCollectionDocument
 	
 	[BsonElement(DB_KEY_PARENT_ID), BsonIgnoreIfNull]
 	[JsonPropertyName(FRIENDLY_KEY_PARENT_ID), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-	[SimpleIndex]
-	[AdditionalIndexKey("parentWithId", "_id", 1)]
-	[CompoundIndex("parentWithId", 2)]
 	public string ParentId { get; set; }
 	
 	[BsonElement(DB_KEY_PLARIUM_ACCOUNT)]
@@ -119,9 +109,6 @@ public class Player : PlatformCollectionDocument
 
 	[BsonElement(DB_KEY_SCREENNAME)]
 	[JsonPropertyName(FRIENDLY_KEY_SCREENNAME)]
-	[SimpleIndex]
-	[CompoundIndex(group: INDEX_KEY_SEARCH, priority: 2)]
-	[AdditionalIndexKey(group: INDEX_KEY_SEARCH, key: "_id", priority: 1)]
 	public string Screenname { get; set; }
 	
 	[BsonIgnore]
@@ -131,6 +118,10 @@ public class Player : PlatformCollectionDocument
 	[BsonIgnore]
 	[JsonPropertyName(FRIENDLY_KEY_TOKEN)]
 	public string Token { get; set; }
+	
+	[BsonElement("logins")]
+	[JsonIgnore]
+	public long SessionCount { get; set; }
 	
 	[BsonIgnore]
 	[JsonIgnore]

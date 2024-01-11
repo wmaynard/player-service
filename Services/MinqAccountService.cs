@@ -836,6 +836,7 @@ public class PlayerAccountService : MinqTimerService<Player>
             .Set(player => player.Device.OperatingSystem, model.Device.OperatingSystem)
             .Set(player => player.Device.Type, model.Device.Type) // Update everything except Device.InstallId / PK
             .Set(player => player.Screenname, model.Screenname)
+            .Increment(player => player.SessionCount)
             .SetToCurrentTimestamp(player => player.LastLogin)
         );
 
