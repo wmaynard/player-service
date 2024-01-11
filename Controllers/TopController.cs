@@ -199,7 +199,6 @@ public class TopController : PlatformController
 		// ~250-350ms concurrent reads
 		string[] names = Optional<string>("names")?.Split(',');
 
-		List<Task<Component>> tasks = new List<Task<Component>>();
 
 		string aid = Token.AccountId;
 
@@ -213,13 +212,13 @@ public class TopController : PlatformController
 			throw new PlatformException("Unable to find player account.", code: ErrorCode.AccountNotFound);
 		}
 		
+		List<Task<Component>> tasks = new ();
 		foreach (string name in names)
 		{
 			if (!ComponentServices.ContainsKey(name))
 				continue;
 			tasks.Add(ComponentServices[name].LookupAsync(aid));
 		}
-
 		Task.WaitAll(tasks.ToArray());
 
 		return Ok(value: new RumbleJson

@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text.RegularExpressions;
+using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Configuration;
 using MongoDB.Driver;
@@ -97,12 +98,20 @@ public class AdminController : PlatformController
 	public ActionResult Details()
 	{
 		string accountId = Require<string>("accountId");
+		string[] componentNames = Optional<string>("components")?.Split(',') ?? Array.Empty<string>();
 
-		RumbleJson output = new RumbleJson();
+		RumbleJson output = new();
 
-		RumbleJson components = new RumbleJson();
-		foreach (KeyValuePair<string, ComponentService> pair in ComponentServices)
-			components[pair.Key] = pair.Value.Lookup(accountId);
+		List<Task<Component>> tasks = new ();
+		if (componentNames.Any())
+			foreach (string name in componentNames)
+			{
+				if (!ComponentServices.ContainsKey(name))
+					continue;
+				tasks.Add(ComponentServices[name].LookupAsync(accountId));
+			}
+		Task.WaitAll(tasks.ToArray());
+		output["components"] = tasks.Select(task => task.Result);
 
 		Player player = _playerService.Find(accountId);
 		if (player == null)
@@ -112,8 +121,6 @@ public class AdminController : PlatformController
 			});
 
 		output["player"] = player;
-		output["components"] = components;
-		output["items"] = _itemService.GetItemsFor(accountId);
 		
 		return Ok(value: output);
 	}
