@@ -91,7 +91,7 @@ public class PlayerAccountService : MinqTimerService<Player>
                     .Set(player => player.Device.OperatingSystem, device.OperatingSystem)
                     .Set(player => player.Device.Type, device.Type)
                     .Set(player => player.LastLogin, Timestamp.Now)
-                    .Increment(player => player.LastLogin, 1)
+                    .Increment(player => player.SessionCount, 1)
                     .Set(player => player.Device.ConfirmedPrivateKey, device.PrivateKey)
                     .SetOnInsert(player => player.Screenname, Require<NameGeneratorService>().Next);
 
