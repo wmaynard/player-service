@@ -111,7 +111,9 @@ public class AdminController : PlatformController
 				tasks.Add(ComponentServices[name].LookupAsync(accountId));
 			}
 		Task.WaitAll(tasks.ToArray());
-		output["components"] = tasks.Select(task => task.Result);
+		foreach (Component c in tasks.Select(task => task.Result))
+			output[c.Name] = c;
+		// output["components"] = tasks.Select(task => task.Result);
 
 		Player player = _playerService.Find(accountId);
 		if (player == null)
