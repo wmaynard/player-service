@@ -19,21 +19,33 @@ namespace PlayerService.Services
 		internal static PlariumService Instance { get; private set; }
 
 		public PlariumService() => Instance = this;
+
+		public PlariumAccount Verify(string code = null, string token = null)
+		{
+			// Plarium can use either the code OR the token to log in.  Only use one or the other; and prevent a request that
+			// tries to use both.
+			if (!string.IsNullOrWhiteSpace(code) && !string.IsNullOrWhiteSpace(token))
+				throw new PlatformException("You can use a Plarium code or a Plarium token, but not both.");
+
+			return !string.IsNullOrWhiteSpace(code)
+				? VerifyCode(code)
+				: VerifyToken(token);
+		}
 		
-		public string VerifyCode(string plariumCode)
+		public PlariumAccount VerifyCode(string plariumCode)
 		{
 			if (string.IsNullOrWhiteSpace(plariumCode))
 				return null;
 			string authToken = null;
 			
-			string tokenUrl = _dynamicConfig.Require<string>(key: "plariumTokenUrl");
+			string tokenUrl = _dynamicConfig.Require<string>("plariumTokenUrl");
 
 			string failure = null;
 			_apiService
 				.Request(tokenUrl)
 				.ExpectNonJson()
-				.AddHeader(key: "game_id", value: PlatformEnvironment.Require<string>("PLARIUM_GAME"))
-				.AddHeader(key: "secret_key", value: PlatformEnvironment.Require<string>("PLARIUM_SECRET"))
+				.AddHeader("game_id", PlatformEnvironment.Require<string>("PLARIUM_GAME"))
+				.AddHeader("secret_key", PlatformEnvironment.Require<string>("PLARIUM_SECRET"))
 				.SetPayload(new RumbleJson 
 	            {
 		            { "clientId", 143},
@@ -49,32 +61,33 @@ namespace PlayerService.Services
 			if (!string.IsNullOrWhiteSpace(failure))
 				throw new PlatformException(failure, code: ErrorCode.ApiFailure);
 
-			return authToken;
+			return VerifyToken(authToken);
 		}
 
 		public PlariumAccount VerifyToken(string plariumToken)
 		{
 			if (string.IsNullOrWhiteSpace(plariumToken))
 				return null;
-			string url = _dynamicConfig.Require<string>(key: "plariumAuthUrl");
+			string url = _dynamicConfig.Require<string>("plariumAuthUrl");
 			_apiService
 				.Request(url)
-				.AddHeader(key: "game_id", value: PlatformEnvironment.Require<string>("PLARIUM_GAME"))
-				.AddHeader(key: "secret_key", value: PlatformEnvironment.Require<string>("PLARIUM_SECRET"))
+				.AddHeader("game_id", PlatformEnvironment.Require<string>("PLARIUM_GAME"))
+				.AddHeader("secret_key", PlatformEnvironment.Require<string>("PLARIUM_SECRET"))
 				.SetPayload(new RumbleJson 
 				{
 					{ "auth_token", plariumToken }
 				})
-				.OnSuccess(_ => Log.Local(Owner.Will, message: "Successfully validated Plarium token."))
-				.OnFailure(_ => Log.Error(Owner.Will, message: "Failed to validate Plarium token."))
+				.OnSuccess(_ => Log.Local(Owner.Will, "Successfully validated Plarium token."))
+				.OnFailure(_ => Log.Error(Owner.Will, "Failed to validate Plarium token."))
 				.Post(out RumbleJson response, out int code);
 			
 			try
 			{
-				return new PlariumAccount(
-					plariumId: response.Require<string>("plid"), 
-					email: response.Require<string>("login")
-				);
+				return new PlariumAccount
+				{
+					Id = response.Require<string>("plid"),
+					Email = response.Require<string>("login")
+				};
 			}
 			catch (Exception e)
 			{

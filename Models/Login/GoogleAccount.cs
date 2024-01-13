@@ -4,6 +4,7 @@ using Google.Apis.Auth;
 using MongoDB.Bson.Serialization.Attributes;
 using PlayerService.Services;
 using Rumble.Platform.Common.Attributes;
+using Rumble.Platform.Common.Models;
 using Rumble.Platform.Data;
 
 namespace PlayerService.Models.Login;
@@ -26,8 +27,6 @@ public class GoogleAccount : PlatformDataModel, ISsoAccount
     
     [BsonElement(DB_KEY_EMAIL)]
     [JsonPropertyName(FRIENDLY_KEY_EMAIL)]
-    [CompoundIndex(group: Player.INDEX_KEY_SEARCH, priority: 6)]
-    [SimpleIndex]
     public string Email { get; set; }
     
     [BsonElement(DB_KEY_EMAIL_VERIFIED)]
@@ -40,17 +39,39 @@ public class GoogleAccount : PlatformDataModel, ISsoAccount
     
     [BsonElement(DB_KEY_ID)]
     [JsonPropertyName(FRIENDLY_KEY_ID)]
-    [SimpleIndex]
     public string Id { get; set; }
     
     [BsonElement(DB_KEY_NAME)]
     [JsonPropertyName(FRIENDLY_KEY_NAME)]
-    [CompoundIndex(group: Player.INDEX_KEY_SEARCH, priority: 7)]
     public string Name { get; set; }
     
     [BsonElement(DB_KEY_PICTURE)]
     [JsonPropertyName(FRIENDLY_KEY_PICTURE)]
     public string Picture { get; set; }
+    
+    [BsonElement(PlatformCollectionDocument.DB_KEY_CREATED_ON)]
+    [JsonIgnore]
+    public long AddedOn { get; set; }
+
+    [BsonElement("period")]
+    [JsonIgnore]
+    public long RollingLoginTimestamp { get; set; }
+
+    [BsonElement("webLogins")]
+    [JsonIgnore]
+    public long WebValidationCount { get; set; }
+	
+    [BsonElement("clientLogins")]
+    [JsonIgnore]
+    public long ClientValidationCount { get; set; }
+	
+    [BsonElement("logins")]
+    [JsonIgnore]
+    public long LifetimeValidationCount { get; set; }
+	
+    [BsonElement(TokenInfo.DB_KEY_IP_ADDRESS)]
+    [JsonIgnore]
+    public string IpAddress { get; set; }
 
     private GoogleAccount(GoogleJsonWebSignature.Payload payload)
     {

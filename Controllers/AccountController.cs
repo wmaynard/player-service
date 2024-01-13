@@ -177,8 +177,13 @@ public class AccountController : PlatformController
     {
         try
         {
-            // TODO: Require<PlariumAccount>() / Validate()?
-            PlariumAccount plarium = PlariumAccount.FromRequest(Body);
+            string code = Optional<string>(SsoData.FRIENDLY_KEY_PLARIUM_CODE);
+            string token = Optional<string>(SsoData.FRIENDLY_KEY_PLARIUM_TOKEN);
+		
+            if (string.IsNullOrWhiteSpace(code) && string.IsNullOrWhiteSpace(token))
+                throw new PlatformException($"Request did not contain one of two required fields: {SsoData.FRIENDLY_KEY_PLARIUM_CODE} or {SsoData.FRIENDLY_KEY_PLARIUM_TOKEN}.", code: ErrorCode.RequiredFieldMissing);
+            
+            PlariumAccount plarium = PlariumService.Instance.Verify(code, token);   // TODO: Require<PlariumAccount>() / Validate()?
             Player player = _playerService.Find(Token.AccountId);
             
             _playerService.EnsureSsoAccountDoesNotExist(Token.AccountId, plarium);
@@ -476,21 +481,22 @@ public class AccountController : PlatformController
             // be an optional field.  Websites can't possibly know the correct installId, and as such can only be used
             // to access existing linked accounts through SSO.
             DeviceInfo device = Optional<DeviceInfo>(Player.FRIENDLY_KEY_DEVICE);
+            bool isWeb = device == null;
             sso = Optional<SsoData>("sso")?.ValidateTokens();
             Player player;
-            Player[] others = _playerService.FromSso(sso, IpAddress);
+            Player[] others = _playerService.FromSso(sso, IpAddress, isWeb);
             Log.Local(Owner.Will, others.FirstOrDefault()?.PlariumAccount?.Id);
-            
-            if (device != null) // The request originates from the game client since we have an installId.
-            {
-                Player fromDevice = _playerService.FromDevice(device, GeoIPData);
-                player = fromDevice.Parent ?? fromDevice;
-            }
-            else // The request originates from a web client trying to log in to an existing account.
+
+            if (isWeb)
             {
                 if (others.All(other => other == null))
                     throw new RecordsFoundException(expected: 1, found: 0, reason: "No player exists with provided SSO.");
                 player = others.First();
+            }
+            else
+            {
+                Player fromDevice = _playerService.FromDevice(device, GeoIPData);
+                player = fromDevice.Parent ?? fromDevice;
             }
 
             sso?.ValidatePlayers(others.Union(new[] { player }).ToArray());

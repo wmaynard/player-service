@@ -4,6 +4,7 @@ using System.Text.Json.Serialization;
 using MongoDB.Bson.Serialization.Attributes;
 using PlayerService.Services;
 using Rumble.Platform.Common.Attributes;
+using Rumble.Platform.Common.Models;
 using Rumble.Platform.Data;
 
 namespace PlayerService.Models.Login;
@@ -50,8 +51,6 @@ public class RumbleAccount : PlatformDataModel, ISsoAccount
     
     [BsonElement(DB_KEY_EMAIL)]
     [JsonPropertyName(FRIENDLY_KEY_EMAIL)]
-    [CompoundIndex(group: Player.INDEX_KEY_SEARCH, priority: 4)]
-    [CompoundIndex(group: INDEX_KEY_FROM_SSO, priority: 1)]
     public string Email { get; set; }
     
     // [BsonElement(DB_KEY_EMAIL_BANNED)]
@@ -61,21 +60,39 @@ public class RumbleAccount : PlatformDataModel, ISsoAccount
 
     [BsonElement(DB_KEY_HASH)]
     [JsonInclude, JsonPropertyName(FRIENDLY_KEY_HASH), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    [CompoundIndex(group: INDEX_KEY_FROM_SSO, priority: 2)]
-    [CompoundIndex(group: INDEX_KEY_USERNAME, priority: 1)]
     public string Hash { get; set; }
     
     [BsonElement(DB_KEY_STATUS)]
     [JsonPropertyName(FRIENDLY_KEY_STATUS)]
-    [CompoundIndex(group: INDEX_KEY_FROM_SSO, priority: 3)]
-    [CompoundIndex(group: INDEX_KEY_USERNAME, priority: 3)]
     public AccountStatus Status { get; set; }
     
     [BsonElement(DB_KEY_USERNAME)]
     [JsonPropertyName(FRIENDLY_KEY_USERNAME)]
-    [CompoundIndex(group: Player.INDEX_KEY_SEARCH, priority: 5)]
-    [CompoundIndex(group: INDEX_KEY_USERNAME, priority: 2)]
     public string Username { get; set; }
+    
+    [BsonElement(PlatformCollectionDocument.DB_KEY_CREATED_ON)]
+    [JsonIgnore]
+    public long AddedOn { get; set; }
+
+    [BsonElement("period")]
+    [JsonIgnore]
+    public long RollingLoginTimestamp { get; set; }
+    
+    [BsonElement("webLogins")]
+    [JsonIgnore]
+    public long WebValidationCount { get; set; }
+	
+    [BsonElement("clientLogins")]
+    [JsonIgnore]
+    public long ClientValidationCount { get; set; }
+	
+    [BsonElement("logins")]
+    [JsonIgnore]
+    public long LifetimeValidationCount { get; set; }
+	
+    [BsonElement(TokenInfo.DB_KEY_IP_ADDRESS)]
+    [JsonIgnore]
+    public string IpAddress { get; set; }
 
     [Flags]
     public enum AccountStatus
@@ -93,8 +110,8 @@ public class RumbleAccount : PlatformDataModel, ISsoAccount
 
     public static string GenerateCode(int segments = 2)
     {
-        List<int> digits = new List<int> { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9 };
-        List<string> codes = new List<string>();
+        List<int> digits = new() { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9 };
+        List<string> codes = new();
 
         while (segments-- > 0)
         {
@@ -108,7 +125,7 @@ public class RumbleAccount : PlatformDataModel, ISsoAccount
 
     private static string GenerateCodePart(ref List<int> digits)
     {
-        Random rando = new Random();
+        Random rando = new();
 
         int digit1 = digits[rando.Next(0, digits.Count)];
         digits.Remove(digit1);

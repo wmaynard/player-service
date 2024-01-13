@@ -135,7 +135,7 @@ public class MaintenanceFilter : PlatformFilter, IActionFilter
                 if (!string.IsNullOrWhiteSpace(email) && whitelist.Any(entry => email.EndsWith(entry)))
                     return;
                 
-                Player[] ssoPlayers = playerService.FromSso(ssoData, "0.0.0.0");
+                Player[] ssoPlayers = playerService.FromSso(ssoData, null, device != null);
                 
                 if (ssoPlayers
                     .Where(p => !string.IsNullOrWhiteSpace(p.Email))

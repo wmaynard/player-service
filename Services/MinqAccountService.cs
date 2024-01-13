@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
 using PlayerService.Controllers;
 using PlayerService.Exceptions;
 using PlayerService.Exceptions.Login;
@@ -42,7 +43,7 @@ public class PlayerAccountService : MinqTimerService<Player>
 
     public string CollectionName => mongo.CollectionName;
     
-    public PlayerAccountService(ApiService api, DynamicConfig config) : base("players", interval: TimeSpan.FromDays(1).TotalMilliseconds)
+    public PlayerAccountService(ApiService api, DynamicConfig config) : base("players", IntervalMs.FourHours)
     {
         _api = api;
         _config = config;
@@ -166,28 +167,75 @@ public class PlayerAccountService : MinqTimerService<Player>
     }
 
 
-    public Player[] FromSso(SsoData sso, string ipAddress)
+    public Player[] FromSso(SsoData sso, string ipAddress, bool fromWeb)
     {
         if (sso == null || !sso.HasAtLeastOneAccount())
             return Array.Empty<Player>();
-        
-        RequestChain<Player> request = mongo.CreateRequestChain();
 
-        // TODO: Clean this up with a single MINQ chain
-        if (sso.GoogleAccount != null)
-            request.Or(query => query.EqualTo(player => player.GoogleAccount.Id, sso.GoogleAccount.Id));
-        if (sso.AppleAccount != null)
-            request.Or(query => query.EqualTo(player => player.AppleAccount.Id, sso.AppleAccount.Id));
-        if (sso.PlariumAccount != null)
-            request.Or(query => query.EqualTo(player => player.PlariumAccount.Id, sso.PlariumAccount.Id));
-        if (sso.RumbleAccount != null && Require<LockoutService>().EnsureNotLockedOut(sso.RumbleAccount.Username, ipAddress))
-            request.Or(query => query
-                .EqualTo(player => player.RumbleAccount.Username, sso.RumbleAccount.Username)
-                .EqualTo(player => player.RumbleAccount.Hash, sso.RumbleAccount.Hash)
-                .GreaterThanOrEqualTo(player => player.RumbleAccount.Status, RumbleAccount.AccountStatus.Confirmed)
-            );
-
-        Player[] output = request.ToArray();
+        Player[] output = mongo
+            .Where(query =>
+            {
+                if (sso.GoogleAccount != null)
+                    query.EqualTo(player => player.GoogleAccount.Id, sso.GoogleAccount.Id);
+                if (sso.AppleAccount != null)
+                    query.EqualTo(player => player.AppleAccount.Id, sso.AppleAccount.Id);
+                if (sso.PlariumAccount != null)
+                    query.EqualTo(player => player.PlariumAccount.Id, sso.PlariumAccount.Id);
+                if (sso.RumbleAccount != null)
+                    query
+                        .EqualTo(player => player.RumbleAccount.Username, sso.RumbleAccount.Username)
+                        .EqualTo(player => player.RumbleAccount.Hash, sso.RumbleAccount.Hash)
+                        .GreaterThanOrEqualTo(player => player.RumbleAccount.Status, RumbleAccount.AccountStatus.Confirmed);
+            })
+            .UpdateAndReturn(update =>
+            {
+                if (fromWeb)
+                {
+                    if (sso.AppleAccount != null)
+                        update
+                            .Set(player => player.AppleAccount.IpAddress, ipAddress)
+                            .Increment(player => player.AppleAccount.WebValidationCount)
+                            .Increment(player => player.AppleAccount.LifetimeValidationCount);
+                    if (sso.GoogleAccount != null)
+                        update
+                            .Set(player => player.GoogleAccount.IpAddress, ipAddress)
+                            .Increment(player => player.GoogleAccount.WebValidationCount)
+                            .Increment(player => player.GoogleAccount.LifetimeValidationCount);
+                    if (sso.PlariumAccount != null)
+                        update
+                            .Set(player => player.PlariumAccount.IpAddress, ipAddress)
+                            .Increment(player => player.PlariumAccount.WebValidationCount)
+                            .Increment(player => player.PlariumAccount.LifetimeValidationCount);
+                    if (sso.RumbleAccount != null)
+                        update
+                            .Set(player => player.RumbleAccount.IpAddress, ipAddress)
+                            .Increment(player => player.RumbleAccount.WebValidationCount)
+                            .Increment(player => player.RumbleAccount.LifetimeValidationCount);
+                }
+                else
+                {
+                    if (sso.AppleAccount != null)
+                        update
+                            .Set(player => player.AppleAccount.IpAddress, ipAddress)
+                            .Increment(player => player.AppleAccount.ClientValidationCount)
+                            .Increment(player => player.AppleAccount.LifetimeValidationCount);
+                    if (sso.GoogleAccount != null)
+                        update
+                            .Set(player => player.GoogleAccount.IpAddress, ipAddress)
+                            .Increment(player => player.GoogleAccount.ClientValidationCount)
+                            .Increment(player => player.GoogleAccount.LifetimeValidationCount);
+                    if (sso.PlariumAccount != null)
+                        update
+                            .Set(player => player.PlariumAccount.IpAddress, ipAddress)
+                            .Increment(player => player.PlariumAccount.ClientValidationCount)
+                            .Increment(player => player.PlariumAccount.LifetimeValidationCount);
+                    if (sso.RumbleAccount != null)
+                        update
+                            .Set(player => player.RumbleAccount.IpAddress, ipAddress)
+                            .Increment(player => player.RumbleAccount.ClientValidationCount)
+                            .Increment(player => player.RumbleAccount.LifetimeValidationCount);
+                }
+            });
         
         if (sso.GoogleAccount != null && output.All(player => player.GoogleAccount == null))
             throw new GoogleUnlinkedException();
@@ -337,6 +385,13 @@ public class PlayerAccountService : MinqTimerService<Player>
             default:
                 throw new PlatformException("Unrecognized SSO account type");
         }
+
+        account.AddedOn = Timestamp.Now;
+        account.RollingLoginTimestamp = Timestamp.Now;
+        account.WebValidationCount = 0;
+        account.ClientValidationCount = 0;
+        account.LifetimeValidationCount = 0;
+        account.IpAddress = null;
 
         Update(player);
 
@@ -717,6 +772,44 @@ public class PlayerAccountService : MinqTimerService<Player>
             {
                 Affected = affected
             });
+
+        Task.Run(() =>
+        {
+            long _affected = 0;
+            _affected += mongo
+                .Where(query => query.LessThanOrEqualTo(player => player.AppleAccount.RollingLoginTimestamp, Timestamp.OneWeekAgo))
+                .Update(update => update
+                    .Set(player => player.AppleAccount.WebValidationCount, 0)
+                    .Set(player => player.AppleAccount.ClientValidationCount, 0)
+                    .Set(player => player.AppleAccount.RollingLoginTimestamp, Timestamp.Now)
+                );
+            _affected += mongo
+                .Where(query => query.LessThanOrEqualTo(player => player.GoogleAccount.RollingLoginTimestamp, Timestamp.OneWeekAgo))
+                .Update(update => update
+                    .Set(player => player.GoogleAccount.WebValidationCount, 0)
+                    .Set(player => player.GoogleAccount.ClientValidationCount, 0)
+                    .Set(player => player.GoogleAccount.RollingLoginTimestamp, Timestamp.Now)
+                );
+            _affected += mongo
+                .Where(query => query.LessThanOrEqualTo(player => player.RumbleAccount.RollingLoginTimestamp, Timestamp.OneWeekAgo))
+                .Update(update => update
+                    .Set(player => player.RumbleAccount.WebValidationCount, 0)
+                    .Set(player => player.RumbleAccount.ClientValidationCount, 0)
+                    .Set(player => player.RumbleAccount.RollingLoginTimestamp, Timestamp.Now)
+                );
+            _affected += mongo
+                .Where(query => query.LessThanOrEqualTo(player => player.PlariumAccount.RollingLoginTimestamp, Timestamp.OneWeekAgo))
+                .Update(update => update
+                    .Set(player => player.PlariumAccount.WebValidationCount, 0)
+                    .Set(player => player.PlariumAccount.ClientValidationCount, 0)
+                    .Set(player => player.PlariumAccount.RollingLoginTimestamp, Timestamp.Now)
+                );
+            
+            Log.Info(Owner.Will, "Reset the SSO rolling login timestamps", data: new
+            {
+                Affected = _affected
+            });
+        });
     }
     
     private PlatformException DiagnoseEmailPasswordLogin(string email, string hash, string code = null)

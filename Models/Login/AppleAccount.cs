@@ -6,6 +6,7 @@ using System.Text.Json.Serialization;
 using MongoDB.Bson.Serialization.Attributes;
 using PlayerService.Services;
 using Rumble.Platform.Common.Attributes;
+using Rumble.Platform.Common.Models;
 using Rumble.Platform.Data;
 
 namespace PlayerService.Models.Login;
@@ -38,12 +39,10 @@ public class AppleAccount : PlatformDataModel, ISsoAccount
     
     [BsonElement(DB_KEY_SUB)]
     [JsonInclude, JsonPropertyName(FRIENDLY_KEY_SUB)]
-    [SimpleIndex]
     public string Id { get; set; }
 
     [BsonElement(DB_KEY_EMAIL)]
     [JsonInclude, JsonPropertyName(FRIENDLY_KEY_EMAIL)]
-    [CompoundIndex(group: Player.INDEX_KEY_SEARCH, priority: 8)]
     public string Email { get; set; }
     
     [BsonElement(DB_KEY_EMAIL_VERIFIED)]
@@ -57,6 +56,30 @@ public class AppleAccount : PlatformDataModel, ISsoAccount
     [BsonElement(DB_KEY_AUTH_TIME)]
     [JsonInclude, JsonPropertyName(FRIENDLY_KEY_AUTH_TIME)]
     public long AuthTime { get; set; }
+    
+    [BsonElement(PlatformCollectionDocument.DB_KEY_CREATED_ON)]
+    [JsonIgnore]
+    public long AddedOn { get; set; }
+
+    [BsonElement("period")]
+    [JsonIgnore]
+    public long RollingLoginTimestamp { get; set; }
+
+    [BsonElement("webLogins")]
+    [JsonIgnore]
+    public long WebValidationCount { get; set; }
+	
+    [BsonElement("clientLogins")]
+    [JsonIgnore]
+    public long ClientValidationCount { get; set; }
+	
+    [BsonElement("logins")]
+    [JsonIgnore]
+    public long LifetimeValidationCount { get; set; }
+	
+    [BsonElement(TokenInfo.DB_KEY_IP_ADDRESS)]
+    [JsonIgnore]
+    public string IpAddress { get; set; }
 
     public AppleAccount(JwtSecurityToken token)
     {
