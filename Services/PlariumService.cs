@@ -22,6 +22,9 @@ namespace PlayerService.Services
 
 		public PlariumAccount Verify(string code = null, string token = null)
 		{
+			if (string.IsNullOrWhiteSpace(code) && string.IsNullOrWhiteSpace(token))
+				return null;
+			
 			// Plarium can use either the code OR the token to log in.  Only use one or the other; and prevent a request that
 			// tries to use both.
 			if (!string.IsNullOrWhiteSpace(code) && !string.IsNullOrWhiteSpace(token))

@@ -99,7 +99,7 @@ public class SsoData : PlatformDataModel
         {
             PlariumAccount = PlariumService.Instance.Verify(PlariumCode, PlariumToken);
 
-            if (PlariumAccount == null)
+            if ((!string.IsNullOrWhiteSpace(PlariumCode) || !string.IsNullOrWhiteSpace(PlariumToken)) && PlariumAccount == null)
                 throw new PlariumValidationException($"{PlariumCode}{PlariumToken}");
         }
         catch (Exception e)
