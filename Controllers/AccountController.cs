@@ -563,27 +563,6 @@ public class AccountController : PlatformController
     }
 
     #region Utilities
-    // private string GenerateToken(Player player) => player.Token = _apiService
-    //     .GenerateToken(
-    //         accountId: player.AccountId,
-    //         screenname: player.Screenname,
-    //         email: player.Email, 
-    //         discriminator: player.Discriminator ?? 0, 
-    //         audiences: TOKEN_AUDIENCE
-    //     );
-
-    private string[] GetEmailAddresses(IEnumerable<Player> players)
-    {
-        return players
-            .Where(player => player != null)
-            .SelectMany(player => new[]
-            {
-                player.GoogleAccount?.Email,
-                player.RumbleAccount?.Email
-            })
-            .Where(email => email != null)
-            .ToArray();
-    }
 
     private bool TwoFactorRequired(Player player, Player[] others, out ActionResult unverifiedResult)
     {
@@ -637,15 +616,17 @@ public class AccountController : PlatformController
         foreach (Player conflict in conflicts)
             _playerService.GenerateToken(conflict);
 
-        string[] emails = GetEmailAddresses(conflicts.Union(new[] { player }));
-        string[] ids = others
+        _playerService.SetLinkCode(others
             .Select(other => other.Id)
             .Union(new[] { player.Id })
-            .ToArray();
-
-        _playerService.SetLinkCode(ids);
-        foreach (string email in emails)
-            _playerService.SendLoginNotification(player, email);
+            .ToArray()
+        );
+        _playerService.SendLoginNotifications(player.Device?.Type, conflicts
+            .Union(new[] { player })
+            .Select(p => p?.RumbleAccount?.Email)
+            .Where(email => !string.IsNullOrWhiteSpace(email))
+            .ToArray()
+        );
 
         conflictResult = Problem(new RumbleJson
         {

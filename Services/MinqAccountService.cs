@@ -187,6 +187,7 @@ public class PlayerAccountService : MinqTimerService<Player>
                         .EqualTo(player => player.RumbleAccount.Hash, sso.RumbleAccount.Hash)
                         .GreaterThanOrEqualTo(player => player.RumbleAccount.Status, RumbleAccount.AccountStatus.Confirmed);
             })
+            .Limit(100)
             .UpdateAndReturn(update =>
             {
                 if (fromWeb)
@@ -650,20 +651,24 @@ public class PlayerAccountService : MinqTimerService<Player>
 
         return output;
     }
-    
-    public void SendLoginNotification(Player player, string email) => _api
-        .Request("/dmz/player/account/notification")
-        .AddAuthorization(_config.AdminToken)
-        .SetPayload(new RumbleJson
-        {
-            { "email", email },
-            { "device", player.Device.Type }
-        })
-        .OnFailure(response => Log.Error(Owner.Will, "Unable to send Rumble login account notification.", new
-        {
-            Response = response
-        }))
-        .Post();
+
+    public void SendLoginNotifications(string deviceType, params string[] emails)
+    {
+        foreach (string email in emails.Distinct().Where(address => !string.IsNullOrWhiteSpace(address)))
+            _api
+                .Request("/dmz/player/account/notification")
+                .AddAuthorization(_config.AdminToken)
+                .SetPayload(new RumbleJson
+                {
+                    { "email", email },
+                    { "device", deviceType }
+                })
+                .OnFailure(response => Log.Error(Owner.Will, "Unable to send Rumble login account notification.", new
+                {
+                    Response = response
+                }))
+                .Post();
+    }
 
     public Player[] Search(params string[] terms)
     {
