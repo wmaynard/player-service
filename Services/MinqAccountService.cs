@@ -369,7 +369,8 @@ public class PlayerAccountService : MinqTimerService<Player>
                         player.RumbleAccount.EmailBanned = true;
                         Log.Error(Owner.Will, "Unable to send Rumble account confirmation email.", new
                         {
-                            Response = response
+                            Response = response,
+                            Address = rumble.Email
                         });
                     })
                     .Post();

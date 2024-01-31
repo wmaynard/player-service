@@ -147,14 +147,13 @@ public class AdminController : PlatformController
 	public ActionResult Search()
 	{
 		string[] terms = Require<string>("terms").ToLower().Split(',');
+		string[] whitespaceSplit = terms.SelectMany(term => term.Split(' ')).ToArray();
+		string[] combinedTerms = terms.Union(whitespaceSplit).ToArray();
 
 		if (terms.Any(term => term.Length < 3))
 			throw new InvalidFieldException("terms", "Search terms must contain at least 3 characters each.");
 
-		Player[] results = _playerService.Search(terms);
-		// RumbleJson discs = _discriminatorService.Search(results.Select(player => player.AccountId).ToArray());
-		// foreach (Player player in results)
-		// 	player.Discriminator = discs.Optional<int?>(player.AccountId);
+		Player[] results = _playerService.Search(combinedTerms);
 
 		return Ok(new RumbleJson
 		{

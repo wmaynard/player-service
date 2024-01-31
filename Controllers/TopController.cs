@@ -171,7 +171,7 @@ public class TopController : PlatformController
 			throw e?.InnerException ?? e;
 		}
 
-		if (tasks.Select(task => task.Result).Any(success => !success))
+		if (tasks.Where(task => task != null).Select(task => task.Result).Any(success => !success))
 		{
 			session.AbortTransaction();
 			Log.Warn(Owner.Default, "The update was aborted.  One or more updates was unsuccessful.");
