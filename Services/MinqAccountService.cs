@@ -27,6 +27,7 @@ public class PlayerAccountService : MinqTimerService<Player>
     public const Audience TOKEN_AUDIENCE = 
         Audience.ChatService
         | Audience.DmzService
+        | Audience.GuildService
         | Audience.LeaderboardService
         | Audience.MailService
         | Audience.MatchmakingService
