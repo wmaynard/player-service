@@ -376,7 +376,10 @@ public class TopController : PlatformController
 	public ActionResult PlayerLookup()
 	{
 		// TODO: This is a little janky, and once the SummaryComponent is implemented, this should just return those entries.
-		string[] accountIds = Require<string>("accountIds")?.Split(",");
+		string[] accountIds = Require<string>("accountIds")
+			?.Split(",")
+			.Where(id => id.CanBeMongoId())
+			.ToArray();
 
 		Dictionary<string, string> avatars = new();
 		Dictionary<string, int> accountLevels = new();
