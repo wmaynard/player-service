@@ -381,31 +381,36 @@ public class TopController : PlatformController
 			.Where(id => id.CanBeMongoId())
 			.ToArray();
 
-		Dictionary<string, string> avatars = new();
-		Dictionary<string, int> accountLevels = new();
+		Dictionary<string, LookupData> accountComponentData = new();
+
+		// Dictionary<string, string> avatars = new();
+		// Dictionary<string, int> accountLevels = new();
 		foreach (Component component in ComponentServices[Component.ACCOUNT].Find(accountIds))
 		{
-			if (!avatars.ContainsKey(component.AccountId) || avatars[component.AccountId] == null)
-				avatars[component.AccountId] = component.Data.Optional<string>("accountAvatar");
-			accountLevels[component.AccountId] = component.Data.Optional<int?>("accountLevel") ?? -1;
+			// if (!avatars.ContainsKey(component.AccountId) || avatars[component.AccountId] == null)
+			// 	avatars[component.AccountId] = component.Data.Optional<string>("accountAvatar");
+			// accountLevels[component.AccountId] = component.Data.Optional<int?>("accountLevel") ?? -1;
+			accountComponentData[component.AccountId] = new LookupData
+			{
+				AccountLevel = component.Data.Optional<int?>("accountLevel") ?? -1,
+				Avatar = component.Data.Optional<string>("accountAvatar"),
+				ChatTitle = component.Data.Optional<string>("chatTitle")
+			};
 		}
 
-		RumbleJson[] output = _playerService.CreateLookupResults(accountIds, avatars, accountLevels);
-
-		// foreach (DiscriminatorGroup group in discriminators)
-		// 	foreach (DiscriminatorMember member in group.Members.Where(member => accountIds.Contains(member.AccountId)))
-		// 		output.Add(new RumbleJson
-		// 		{
-		// 			{ TokenInfo.FRIENDLY_KEY_ACCOUNT_ID, member.AccountId },
-		// 			{ Player.FRIENDLY_KEY_SCREENNAME, member.ScreenName },
-		// 			{ Player.FRIENDLY_KEY_DISCRIMINATOR, group.Number.ToString().PadLeft(4, '0') },
-		// 			{ "accountAvatar", avatars.ContainsKey(member.AccountId) ? avatars[member.AccountId] : null },
-		// 			{ "accountLevel", accountLevels.ContainsKey(member.AccountId) ? accountLevels[member.AccountId] : null }
-		// 		});
+		// RumbleJson[] output = _playerService.CreateLookupResults(accountIds, avatars, accountLevels);
+		RumbleJson[] output = _playerService.CreateLookupResults(accountIds, accountComponentData);
 
 		return Ok(new
 		{
 			Results = output
 		});
 	}
+}
+
+public struct LookupData
+{
+	public string Avatar;
+	public int AccountLevel;
+	public string ChatTitle;
 }
