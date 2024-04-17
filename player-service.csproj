@@ -37,7 +37,26 @@
 
 	</ItemGroup>
 
+	<ItemGroup>
+		<AssemblyAttribute Include="Rumble.Platform.Common.Attributes.BuildDateAttribute">
+			<_Parameter1>$([System.DateTime]::UtcNow.ToString("yyyyMMddHHmmss"))</_Parameter1>
+		</AssemblyAttribute>
+	</ItemGroup>
+	
+	<Target Name="SetSourceRevisionId" BeforeTargets="InitializeSourceControlInformation">
+		<Exec Command="git describe --long --always --exclude='*' --abbrev=40"
+			  ConsoleToMSBuild="True" IgnoreExitCode="False">
+			<Output PropertyName="SourceRevisionId" TaskParameter="ConsoleOutput" />
+		</Exec>
+	</Target>
 
+	<Target Name="SetHash" AfterTargets="InitializeSourceControlInformation">
+		<ItemGroup>
+			<AssemblyAttribute Include="Rumble.Platform.Common.Attributes.GitHashAttribute">
+				<_Parameter1>$(SourceRevisionId)</_Parameter1>
+			</AssemblyAttribute>
+		</ItemGroup>
+	</Target>
 
 
 	<!-- QOL comment-->
