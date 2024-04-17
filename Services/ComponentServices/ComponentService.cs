@@ -92,7 +92,8 @@ public abstract class ComponentService : PlatformMongoService<Component>
 				countRequired: 15,
 				timeframe: 600,
 				owner: Owner.Will,
-				impact: ImpactType.ServicePartiallyUsable
+				impact: ImpactType.ServicePartiallyUsable,
+				confluenceLink: "https://rumblegames.atlassian.net/wiki/spaces/TH/pages/3549429770/player-service+Player+Component+Update+Failure"
 			);
 			return false;
 		}
