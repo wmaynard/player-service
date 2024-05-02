@@ -901,11 +901,6 @@ public class PlayerAccountService : MinqTimerService<Player>
                     .Set(player => player.PlariumAccount, null)
                     .Set(player => player.ParentId, parent.ParentId ?? parent.Id)
                 );
-
-            mongo
-                .WithTransaction(transaction)
-                .ExactId(parent.Id)
-                .Update(query => query.AddItems(player => player.Children, child.Id));
             
             Commit(transaction);
             
