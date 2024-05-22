@@ -1022,7 +1022,8 @@ public class PlayerAccountService : MinqTimerService<Player>
                     { Player.FRIENDLY_KEY_DISCRIMINATOR, player.Discriminator.ToString().PadLeft(4, '0') },
                     { "accountAvatar", results.Avatar },
                     { "accountLevel", results.AccountLevel },
-                    { "chatTitle", results.ChatTitle }
+                    { "chatTitle", results.ChatTitle },
+                    { "totalHeroScore", results.TotalHeroScore }
                 };
             })
             .ToArray();
