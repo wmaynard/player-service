@@ -394,7 +394,8 @@ public class TopController : PlatformController
 			{
 				AccountLevel = component.Data.Optional<int?>("accountLevel") ?? -1,
 				Avatar = component.Data.Optional<string>("accountAvatar"),
-				ChatTitle = component.Data.Optional<string>("chatTitle")
+				ChatTitle = component.Data.Optional<string>("chatTitle"),
+				TotalHeroScore = component.Data.Optional<long>("totalHeroScore")
 			};
 		}
 
@@ -413,4 +414,5 @@ public struct LookupData
 	public string Avatar;
 	public int AccountLevel;
 	public string ChatTitle;
+	public long TotalHeroScore;
 }
