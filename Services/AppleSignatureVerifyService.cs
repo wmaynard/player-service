@@ -69,7 +69,7 @@ namespace PlayerService.Services
 					});
 					RefreshAppleAuthKeys(keyId, out authKey, out cacheValue);
 
-					// Apple SSO is unavailable or otherwise impossible; sufrace an error.
+					// Apple SSO is unavailable or otherwise impossible; surface an error.
 					if (authKey == null)
 						throw new PlatformException("Apple SSO attempt failed due to no matching Apple auth key being found.");
 				}
