@@ -16,6 +16,7 @@ namespace PlayerService.Services
 {
 	public class AppleSignatureVerifyService : PlatformService
 	{
+		private const string AUTH_KEYS_CACHE_KEY = "AppleAuth";
 #pragma warning disable
 		private readonly ApiService    _apiService;
 		private readonly CacheService  _cache;
@@ -23,99 +24,86 @@ namespace PlayerService.Services
 #pragma warning restore
 		
 		internal static AppleSignatureVerifyService Instance { get; private set; }
-		
-		private RSAParameters _rsaKeyInfo;
 
-		public AppleSignatureVerifyService() //CacheService cache)
+		public AppleSignatureVerifyService() => Instance = this;
+
+		private void RefreshAppleAuthKeys(string keyId, out AppleAuthKey authKey, out AppleResponse appleKeys)
 		{
-			Instance = this;
-			//_cache = cache;
+			_apiService
+				.Request(_dynamicConfig.Require<string>("appleAuthKeysUrl"))
+				.OnSuccess(_ => Log.Local(Owner.Will, "New Apple auth keys fetched."))
+				.OnFailure(_ => Log.Error(Owner.Will, "Unable to fetch new Apple auth keys."))
+				.Get(out AppleResponse response, out _);
+				
+			appleKeys = response;
+				
+			_cache.Store(AUTH_KEYS_CACHE_KEY, appleKeys, expirationMS: IntervalMs.TenMinutes);
+			
+			authKey = appleKeys?.Keys?.Any() ?? false
+				? appleKeys.Keys.Find(key => key.Kid == keyId)
+				: null;
 		}
-
+		
 		public AppleAccount Verify(string appleToken, string appleNonce)
 		{
-			// TODO: The API calls here are WET
-			if (!_cache.HasValue("AppleAuth", out AppleResponse cacheValue))
-			{
-				string url = _dynamicConfig.Require<string>(key: "appleAuthKeysUrl");
-				_apiService
-					.Request(url)
-					.OnSuccess(_ => Log.Local(Owner.Will, "New Apple auth keys fetched."))
-					.OnFailure(_ => Log.Error(Owner.Will, "Unable to fetch new Apple auth keys."))
-					.Get(out AppleResponse response, out int code);
-				
-				cacheValue = response;
-				
-				_cache.Store("AppleAuth", cacheValue, expirationMS: 600_000);
-			}
-
-			JwtSecurityTokenHandler handler = new JwtSecurityTokenHandler();
+			AppleAuthKey authKey = null;
+			JwtSecurityTokenHandler handler = new();
 			JwtSecurityToken token = handler.ReadJwtToken(appleToken);
-			string kid = token.Header.Kid;
-
-			AppleAuthKey authKey = cacheValue.Keys.Find(key => key.Kid == kid);
-
-			if (authKey == null)
+			string keyId = token.Header.Kid;
+			
+			// Cache the Apple public key; if it expired, refresh it.
+			if (!_cache.HasValue(AUTH_KEYS_CACHE_KEY, out AppleResponse cacheValue))
+				RefreshAppleAuthKeys(keyId, out authKey, out cacheValue);
+			else
 			{
-				Log.Warn(Owner.Will, message: "No valid Apple auth key was found for Apple SSO attempt. Attempting to fetch new auth keys.", data: new
-				{
-					AppleToken = appleToken,
-					AppleKeys = cacheValue
-				});
-				_cache.Clear("AppleAuth"); // TODO: No magic value here
+				authKey = cacheValue.Keys.Find(key => key.Kid == keyId);
 				
-				string url = _dynamicConfig.Require<string>(key: "appleAuthKeysUrl");
-				_apiService
-					.Request(url)
-					.OnSuccess(_ => Log.Local(Owner.Will, "New Apple auth keys fetched."))
-					.OnFailure(_ => Log.Error(Owner.Will, "Unable to fetch new Apple auth keys."))
-					.Get(out AppleResponse response, out int code);
-				
-				cacheValue = response;
-				
-				_cache.Store("AppleAuth", cacheValue, 600_000);
-				
-				authKey = cacheValue.Keys.Find(key => key.Kid == kid);
-
+				// In rare cases it might be possible that the cached public keys don't contain the keyId.  If this happens,
+				// it means Apple's side changed, and needs to be refreshed again.
 				if (authKey == null)
-					throw new PlatformException(message: "Apple SSO attempt failed due to no matching Apple auth key being found.");
-			}
+				{
+					Log.Warn(Owner.Will, "No valid Apple auth key was found for Apple SSO attempt. Attempting to fetch new auth keys.", data: new
+					{
+						AppleToken = appleToken,
+						AppleKeys = cacheValue
+					});
+					RefreshAppleAuthKeys(keyId, out authKey, out cacheValue);
 
-			_rsaKeyInfo = new RSAParameters()
+					// Apple SSO is unavailable or otherwise impossible; sufrace an error.
+					if (authKey == null)
+						throw new PlatformException("Apple SSO attempt failed due to no matching Apple auth key being found.");
+				}
+			}
+			
+			using RSACryptoServiceProvider rsa = new();
+			rsa.ImportParameters(new RSAParameters
 			{
 				Exponent = FromBase64Url(authKey.E),
 				Modulus = FromBase64Url(authKey.N)
+			});
+
+			TokenValidationParameters validationParameters = new()
+			{
+				RequireExpirationTime = true,
+				RequireSignedTokens = true,
+				ValidateAudience = true,
+				ValidateIssuer = true,
+				ValidateLifetime = true,
+				ValidIssuer = "https://appleid.apple.com",
+				ValidAudiences = new []
+				{
+					"com.rumbleentertainment.towersandtitans",
+					"com.towersandtitans.eng.dev"
+				},
+				TryAllIssuerSigningKeys = true,
+				IssuerSigningKey = new RsaSecurityKey(rsa),
+				IssuerSigningKeys = new [] { new RsaSecurityKey(rsa) }
 			};
-			
-			using RSACryptoServiceProvider rsa = new RSACryptoServiceProvider();
-			rsa.ImportParameters(_rsaKeyInfo);
-
-			List<string> validAudiences = new List<string>();
-			validAudiences.Add("com.rumbleentertainment.towersandtitans");
-			validAudiences.Add("com.towersandtitans.eng.dev");
-
-			TokenValidationParameters validationParameters = new TokenValidationParameters
-			                                                 {
-				                                                 RequireExpirationTime = true,
-				                                                 RequireSignedTokens = true,
-				                                                 ValidateAudience = true,
-				                                                 ValidateIssuer = true,
-				                                                 ValidateLifetime = true,
-				                                                 ValidIssuer = "https://appleid.apple.com",
-				                                                 ValidAudiences = validAudiences,
-				                                                 TryAllIssuerSigningKeys = true,
-				                                                 IssuerSigningKey = new RsaSecurityKey(rsa),
-				                                                 IssuerSigningKeys = new List<SecurityKey>() { new RsaSecurityKey(rsa) }
-			                                                 };
 
 			SecurityToken validatedSecurityToken = null;
 			try
 			{
 				handler.ValidateToken(appleToken, validationParameters, out validatedSecurityToken);
-			}
-			catch (SecurityTokenSignatureKeyNotFoundException e)
-			{
-				throw new AppleValidationException(appleToken, inner: e);
 			}
 			catch (Exception e)
 			{
@@ -124,19 +112,16 @@ namespace PlayerService.Services
 			JwtSecurityToken validatedJwt = validatedSecurityToken as JwtSecurityToken;
 
 			if (validatedJwt?.Claims.First(claim => claim.Type == "nonce").Value == appleNonce)
-			{
 				try
 				{
 					return new AppleAccount(validatedJwt);
 				}
 				catch (Exception e)
 				{
-					throw new PlatformException(message: "Error occurred parsing token data into AppleAccount.",
-					                            inner: e);
+					throw new PlatformException("Error occurred parsing token data into AppleAccount.", inner: e);
 				}
-			}
 
-			throw new AppleValidationException(appleToken, inner: new PlatformException(message: "Apple nonce did not match token."));
+			throw new AppleValidationException(appleToken, inner: new PlatformException("Apple nonce did not match token."));
 		}
 		
 		private static byte[] FromBase64Url(string base64Url)
