@@ -1,0 +1,177 @@
+.auto-deploy:
+  image: "$AUTO_DEPLOY_IMAGE"
+  dependencies: []
+  variables:
+    KUBE_CONTEXT: "platform-services/platform-services-agent:platform-services"
+    K8S_SECRET_RUMBLE_REGION: "US"
+  allow_failure: true
+  needs: ["build_image"]
+  script:
+  - kubectl config use-context $KUBE_CONTEXT
+  - auto-deploy check_kube_domain
+  - auto-deploy download_chart
+  - auto-deploy ensure_namespace
+  - auto-deploy create_secret
+  - auto-deploy deploy
+  after_script:
+  - |-
+    PAYLOAD=$(cat << JSON
+    {
+      "text": "$CI_PROJECT_NAME - Deployment Status: ${CI_JOB_STATUS} - <a href=\"$CI_PROJECT_URL/-/commit/$CI_COMMIT_SHA\">Git Commit</a> - <a href=\"$CI_PIPELINE_URL\">Pipeline Url</a>",
+      "tags": [
+        "${CI_PROJECT_NAME}",
+        "${CI_ENVIRONMENT_NAME}",
+        "${CI_JOB_STATUS}"
+      ]
+    }
+    JSON
+    )
+  - |-
+    SLACKPAYLOAD=$(cat << JSON
+    {
+      "username": "${CI_PROJECT_NAME}",
+      "channel": "C013XKM281J",
+      "icon_emoji": ":playersvc:",
+      "unfurl_links": "false",
+      "blocks": [{"type": "section", "text": {"type":"mrkdwn", "text": "Deployment Status: *${CI_JOB_STATUS}* - Env: ${CI_ENVIRONMENT_NAME} - Job: <${CI_JOB_URL}|#${CI_JOB_ID}>"}}]
+    }
+    JSON
+    )
+  - >
+    curl --location --http1.1 --request POST "https://grafana.rumblegames.com/api/annotations" --header 'Content-Type: application/json' --header "Authorization: Bearer $GRAFANA_TOKEN" --data "${PAYLOAD}" || true
+  - >
+    curl -X POST -H "Authorization: Bearer $SLACK_LOG_BOT_TOKEN" -H 'Content-type: application/json; charset=utf-8' --data "${SLACKPAYLOAD}" https://slack.com/api/chat.postMessage || true
+  rules:
+  - if: '$CI_COMMIT_BRANCH != $CI_DEFAULT_BRANCH'
+    when: never
+  - if: $CI_COMMIT_TAG
+    when: never
+  - if: '$RESTART_SERVICE == "true"'
+    when: never
+  - if: $DEPLOY_TYPE == "kubernetes" || $DEPLOY_TYPE == "both"
+    when: manual
+
+dev:
+  extends: .auto-deploy
+  stage: dev
+  tags:
+  - cluster
+  variables:
+    KUBE_INGRESS_BASE_DOMAIN: nonprod.tower.cdrentertainment.com
+    KUBE_NAMESPACE: player-service-v2-23-dev
+  environment:
+    name: dev
+    url: https://dev.nonprod.tower.cdrentertainment.com/
+
+
+stage-a:
+  extends: .auto-deploy
+  stage: staging
+  needs: ["dev"]
+  tags:
+  - cluster
+  variables:
+    KUBE_INGRESS_BASE_DOMAIN: nonprod.tower.cdrentertainment.com
+    KUBE_NAMESPACE: player-service-v2-23-stage-a
+  environment:
+    name: stage-a
+    url: https://stage-a.nonprod.tower.cdrentertainment.com/
+
+
+# stage-a-apse1:
+#   extends: .auto-deploy
+#   stage: staging
+#   needs: ["dev"]
+#   variables:
+#     KUBE_INGRESS_BASE_DOMAIN: nonprod.tower.cdrentertainment.com
+#     KUBE_NAMESPACE: player-service-v2-23-stage-a
+#     KUBE_CONTEXT: "platform-services/platform-services-agent:nonprod-apse1"
+#     K8S_SECRET_RUMBLE_REGION: "AP"
+#   tags:
+#     - nonprod-apse1
+#   environment:
+#     name: stage-a
+# url: https://stage-a.nonprod.tower.cdrentertainment.com/
+
+stage-b:
+  extends: .auto-deploy
+  stage: staging
+  needs: ["dev"]
+  tags:
+  - cluster
+  variables:
+    KUBE_INGRESS_BASE_DOMAIN: nonprod.tower.cdrentertainment.com
+    KUBE_NAMESPACE: player-service-v2-23-stage-b
+  environment:
+    name: stage-b
+    url: https://stage-b.nonprod.tower.cdrentertainment.com/
+
+
+
+# stage-c:
+#   extends: .auto-deploy
+#   stage: staging
+#   tags:
+#     - cluster
+#   variables:
+#     KUBE_INGRESS_BASE_DOMAIN: nonprod.tower.cdrentertainment.com
+#     KUBE_NAMESPACE: player-service-v2-23-stage-c
+#   environment:
+#     name: stage-c
+#     url: https://stage-c.nonprod.tower.cdrentertainment.com/
+
+TT-production-a1:
+  extends: .auto-deploy
+  stage: production
+  variables:
+    KUBE_CONTEXT: "platform-services/platform-services-agent:prod-a1-platform-services"
+    KUBE_INGRESS_BASE_DOMAIN: platform-a1.prod.tower.rumblegames.com
+    KUBE_NAMESPACE: "player-service-v2"
+  tags:
+  - production-a1
+  environment:
+    name: TT-Prod-A1
+    url: https://platform-a1.prod.tower.rumblegames.com/
+
+# TT-production-a1-apse1:
+#   extends: .auto-deploy
+#   stage: production
+#   needs: ["stage-a"]
+#   variables:
+#     KUBE_CONTEXT: "platform-services/platform-services-agent:prod-a1-apse1-platform-services"
+#     KUBE_INGRESS_BASE_DOMAIN: platform-a1.prod.tower.rumblegames.com
+#     KUBE_NAMESPACE: "player-service-v2"
+#     K8S_SECRET_RUMBLE_REGION: "AP"
+#   tags:
+#     - production-a1-apse1
+#   environment:
+#     name: TT-Prod-A1
+#     url: https://platform-a1.prod.tower.rumblegames.com/
+
+TT-production-a2:
+  extends: .auto-deploy
+  stage: production-2
+  variables:
+    KUBE_CONTEXT: "platform-services/platform-services-agent:prod-a2-platform-services"
+    KUBE_INGRESS_BASE_DOMAIN: platform-a2.prod.tower.rumblegames.com
+    KUBE_NAMESPACE: "player-service-v2"
+  tags:
+  - production-a2
+  environment:
+    name: TT-Prod-A2
+    url: https://platform-a2.prod.tower.rumblegames.com/
+
+# TT-production-a2-apse1:
+#   extends: .auto-deploy
+#   stage: production-2
+#   needs: ["stage-a"]
+#   variables:
+#     KUBE_CONTEXT: "platform-services/platform-services-agent:prod-a2-apse1-platform-services"
+#     KUBE_INGRESS_BASE_DOMAIN: platform-a2.prod.tower.rumblegames.com
+#     KUBE_NAMESPACE: "player-service-v2"
+#     K8S_SECRET_RUMBLE_REGION: "AP"
+#   tags:
+#     - production-a2-apse1
+#   environment:
+#     name: TT-Prod-A2
+#     url: https://platform-a2.prod.tower.rumblegames.com/
