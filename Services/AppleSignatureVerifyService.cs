@@ -7,7 +7,7 @@ using Microsoft.IdentityModel.Tokens;
 using PlayerService.Exceptions.Login;
 using PlayerService.Models.Login;
 using PlayerService.Models.Login.AppleAuth;
-using RCL.Logging;
+using Rumble.Platform.Common.Enums;
 using Rumble.Platform.Common.Exceptions;
 using Rumble.Platform.Common.Services;
 using Rumble.Platform.Common.Utilities;

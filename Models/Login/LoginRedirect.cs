@@ -1,5 +1,5 @@
 using System.Text.Json.Serialization;
-using Rumble.Platform.Data;
+using Rumble.Platform.Common.Utilities.JsonTools;
 
 namespace PlayerService.Models.Login;
 

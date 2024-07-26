@@ -18,7 +18,6 @@ using Rumble.Platform.Common.Web;
 using PlayerService.Services;
 using PlayerService.Services.ComponentServices;
 using PlayerService.Utilities;
-using RCL.Logging;
 using Rumble.Platform.Common.Attributes;
 using Rumble.Platform.Common.Enums;
 using Rumble.Platform.Common.Exceptions;
@@ -26,7 +25,7 @@ using Rumble.Platform.Common.Extensions;
 using Rumble.Platform.Common.Models;
 using Rumble.Platform.Common.Utilities;
 using Rumble.Platform.Common.Services;
-using Rumble.Platform.Data;
+using Rumble.Platform.Common.Utilities.JsonTools;
 #pragma warning disable CS0618
 
 namespace PlayerService.Controllers;

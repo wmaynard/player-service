@@ -10,8 +10,7 @@ using Rumble.Platform.Common.Attributes;
 using Rumble.Platform.Common.Models;
 using Rumble.Platform.Common.Utilities;
 using Rumble.Platform.Common.Web;
-using Rumble.Platform.Data;
-using Rumble.Platform.Data.Serializers;
+using Rumble.Platform.Common.Utilities.JsonTools;
 using JsonIgnore = System.Text.Json.Serialization.JsonIgnoreAttribute;
 
 namespace PlayerService.Models;

@@ -5,7 +5,7 @@ using Microsoft.AspNetCore.Mvc.Filters;
 using PlayerService.Models;
 using PlayerService.Models.Login;
 using Rumble.Platform.Common.Filters;
-using Rumble.Platform.Data;
+using Rumble.Platform.Common.Utilities.JsonTools;
 
 namespace PlayerService.Filters;
 

@@ -3,7 +3,7 @@ using System.Linq;
 using Microsoft.AspNetCore.Http;
 using MongoDB.Driver;
 using PlayerService.Models;
-using RCL.Logging;
+using Rumble.Platform.Common.Enums;
 using Rumble.Platform.Common.Models;
 using Rumble.Platform.Common.Utilities;
 

@@ -7,7 +7,7 @@ using MongoDB.Bson.Serialization.Attributes;
 using PlayerService.Services;
 using Rumble.Platform.Common.Attributes;
 using Rumble.Platform.Common.Models;
-using Rumble.Platform.Data;
+using Rumble.Platform.Common.Utilities.JsonTools;
 
 namespace PlayerService.Models.Login;
 

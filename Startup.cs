@@ -3,7 +3,6 @@ using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.Extensions.DependencyInjection;
 using PlayerService.Filters;
 using PlayerService.Services;
-using RCL.Logging;
 using Rumble.Platform.Common.Enums;
 using Rumble.Platform.Common.Services;
 using Rumble.Platform.Common.Utilities;

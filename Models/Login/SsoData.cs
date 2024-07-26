@@ -7,7 +7,7 @@ using PlayerService.Exceptions.Login;
 using PlayerService.Services;
 using Rumble.Platform.Common.Exceptions;
 using Rumble.Platform.Common.Exceptions.Mongo;
-using Rumble.Platform.Data;
+using Rumble.Platform.Common.Utilities.JsonTools;
 
 namespace PlayerService.Models.Login;
 

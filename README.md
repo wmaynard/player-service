@@ -4,6 +4,20 @@ An API for managing player inventory and stats.
 
 This is a replacement for the Groovy player-service.  Please read about the important changes to the API in the [upgrade documentation](GROOVY_UPGRADE.md).
 
+## Acknowledgment
+
+Player Service was originally created for Rumble Entertainment (which later became R Studios), a mobile gaming company.  This service is the primary datastore for player data, from accounts to game progression.  It's definitely the heaviest of the microservices; when I joined Rumble in 2021, it was the only real Platform project being used for our game, Towers & Titans, and it was written in Groovy.  While I'm proud of the conversion I wrote with subsequent speed and memory improvements, some of the data structure that I inherited was a far cry from what I would have built, and it was too expensive to reorganize it on the client team's side.  Still, the service did a great job, and aside from one notable release oversight, passed the four nines uptime test for our players.
+
+R Studios unfortunately closed its doors in July 2024.  This project has been released as open source with permission.
+
+As of this writing, there may still be existing references to Rumble's resources, such as Confluence links, but their absence doesn't have any significant impact.  Some documentation will also be missing until it can be recreated here, since with the company closure any feature specs and explainer articles originally written for Confluence / Slack channels were lost.
+
+While Rumble is shutting down, I'm grateful for the opportunities and human connections I had working there.
+
+## License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE.txt) file for details.
+
 # Introduction
 
 This service is the heavyweight and entry point for any game client.  Responsible for account management, player-service handles the important player data.  Something like chat-service can face downtime without much consequence, but if this service is down, the game itself is unplayable.
